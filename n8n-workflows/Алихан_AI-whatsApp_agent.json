@@ -1,0 +1,3441 @@
+{
+  "id": "PwTANwctgUAVogTt",
+  "name": "Алихан AI-whatsApp agent",
+  "active": 1,
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$('Edit Fields').item.json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$('Edit Fields').item.json.reply}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2192,
+        480
+      ],
+      "id": "02bb7062-f273-4268-859d-9bf907769593",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3728,
+        -368
+      ],
+      "id": "e18edf2f-0329-4157-9552-d30110f51e46",
+      "name": "Webhook3",
+      "webhookId": "855cc4af-5bf0-4eb0-836a-fa21fe468a7d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$node[\"Edit Fields1\"].json.number.trim()}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "reply",
+              "value": "={{$json.choices[0].message.content}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2560,
+        480
+      ],
+      "id": "e0ff2f3d-bc5d-4b3d-8531-6c06f2e9cea2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "78b412d8-ea3a-46b8-9b54-71b596e75934",
+              "name": "userMessage",
+              "value": "={{$json.userMessage}}",
+              "type": "string"
+            },
+            {
+              "id": "a2a58a20-ce0d-4c77-944f-bc3e8ac2cf2f",
+              "name": "number",
+              "value": "={{$json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "831f174e-054b-4cc9-a8ce-8780c89502b9",
+              "name": "chatId",
+              "value": "={{$json.chatId}}",
+              "type": "string"
+            },
+            {
+              "id": "89836ed1-18fd-49c5-9002-245d845e2409",
+              "name": "sender",
+              "value": "={{$json.body.data.pushName || 'Unknown'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4048,
+        48
+      ],
+      "id": "e9a2fe3c-0587-4584-ad5c-8c558cea7e83",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "value",
+        "key": "=memory:{{$('Edit Fields1').item.json.chatId}}",
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -3472,
+        48
+      ],
+      "id": "07a93f6a-662e-4486-8d44-c313e2e47079",
+      "name": "Redis",
+      "credentials": {
+        "redis": {
+          "id": "vRi6RRNU1YIxKvQV",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=memory:{{$('Edit Fields1').item.json.chatId}}",
+        "value": "=={{(($('Redis').item.json.value || '') + '\\nUser: ' + $('Edit Fields1').item.json.userMessage + '\\nAssistant: ' + $('HTTP Request к xAI-1').item.json.choices[0].message.content).trim()}}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -2624,
+        48
+      ],
+      "id": "116db9b6-c339-4c74-a736-dd800c176e62",
+      "name": "Redis1",
+      "credentials": {
+        "redis": {
+          "id": "vRi6RRNU1YIxKvQV",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_memory_messages (\n  chat_id,\n  sender,\n  message_time,\n  role,\n  message_type,\n  content\n)\nVALUES (\n  '{{$json.chatId}}',\n  '{{$json.body.data.pushName || $json.body.data.key.remoteJid}}',\n  TO_TIMESTAMP({{$json.body.data.messageTimestamp}}),\n  'user',\n  '{{$json.body.data.messageType || \"text\"}}',\n  '{{$json.userMessage}}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3856,
+        48
+      ],
+      "id": "dbf6a57d-3833-46c1-860c-c3b97681f218",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_memory_messages (\n  chat_id,\n  sender,\n  message_time,\n  role,\n  message_type,\n  content\n)\nVALUES (\n  '{{$json.number}}',\n  'Алихан',\n  NOW(),\n  'assistant',\n  'text',\n  '{{$json.reply}}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2384,
+        480
+      ],
+      "id": "ae530805-e8b4-4d55-a88b-95c4ce57e755",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(\n  (\n    SELECT summary\n    FROM bot_memory_summaries\n    WHERE chat_id = '{{$json.chatId}}'\n    ORDER BY updated_at DESC\n    LIMIT 1\n  ),\n  ''\n) AS summary;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3664,
+        48
+      ],
+      "id": "f19fd80d-aa1a-47db-81a1-f4c1569775fe",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "af063c51-6c54-4c96-a707-60145d352772",
+              "name": "shortMemory",
+              "value": "={{($json.value || '').replace(/\\n/g, ' ').replace(/\\r/g, ' ')}}",
+              "type": "string"
+            },
+            {
+              "id": "3ada7ecf-598d-42c6-9588-57db822cf16a",
+              "name": "longMemory",
+              "value": "={{($('Execute a SQL query2').item.json.summary || 'Пока нет долгой памяти.').replace(/\\n/g, ' ').replace(/\\r/g, ' ')}}",
+              "type": "string"
+            },
+            {
+              "id": "82d5f704-a92d-47f5-ad68-13f8b7c4bd74",
+              "name": "userMessage",
+              "value": "={{$('Edit Fields1').item.json.userMessage}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3312,
+        48
+      ],
+      "id": "b9dd4462-efa9-45a9-82eb-e4df1372c396",
+      "name": "Edit Fields Memory"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47e443bb-a1ed-4438-ab9c-bce5979c3734",
+              "name": "userMessage",
+              "value": "={{String($('Edit Fields1').item.json.userMessage || '').replace(/^Алихан\\s*/i, '').trim().replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, ' ').replace(/\"/g, \"'\")}}",
+              "type": "string"
+            },
+            {
+              "id": "82a9bbe1-12b1-4d8d-a072-d629f045c4d7",
+              "name": "shortMemory",
+              "value": "={{String($('Redis').item.json.value || '').replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, ' ').replace(/\\\\/g, '/').replace(/\"/g, \"'\").slice(0, 2500)}}",
+              "type": "string"
+            },
+            {
+              "id": "0f98194f-9bcd-435a-b685-a7cd1b0a5fa2",
+              "name": "longMemory",
+              "value": "={{String($('Execute a SQL query2').item.json.summary || 'Пока нет долгой памяти summary').replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, ' ').replace(/\\\\/g, '/').replace(/\"/g, \"'\").slice(0, 3000)}}",
+              "type": "string"
+            },
+            {
+              "id": "58821123-eb0b-4123-bc07-21b9fd9d3541",
+              "name": "longFacts",
+              "value": "={{String($json.long_facts || '').replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, ' ').replace(/\\\\/g, '/').replace(/\"/g, \"'\").slice(0, 4000)}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2976,
+        48
+      ],
+      "id": "01d5511f-642b-4a65-805d-86e1bf763811",
+      "name": "Build Long Facts"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH q AS (\n  SELECT lower('{{$('Edit Fields1').item.json.userMessage.replace(/'/g, \"''\")}}') AS text\n),\nterms AS (\n  SELECT term\n  FROM regexp_split_to_table(\n    regexp_replace((SELECT text FROM q), '[^a-zа-яё0-9]+', ' ', 'g'),\n    '\\s+'\n  ) AS term\n  WHERE length(term) > 2\n    AND term NOT IN (\n      'алихан',\n      'какие',\n      'какой',\n      'какая',\n      'какое',\n      'есть',\n      'что',\n      'где',\n      'как',\n      'мне',\n      'про',\n      'для',\n      'это',\n      'тот',\n      'эта',\n      'эти',\n      'документ',\n      'документы',\n      'файл',\n      'файлы',\n      'покажи',\n      'расскажи',\n      'кратко',\n      'последние',\n      'последних'\n    )\n),\nrelevant_messages AS (\n  SELECT\n    b.*,\n    COALESCE(b.message_time, b.created_at) AS memory_time,\n    (\n      CASE\n        WHEN b.message_type = 'document'\n          AND (\n            (SELECT text FROM q) LIKE '%документ%'\n            OR (SELECT text FROM q) LIKE '%pdf%'\n            OR (SELECT text FROM q) LIKE '%пдф%'\n            OR (SELECT text FROM q) LIKE '%docx%'\n            OR (SELECT text FROM q) LIKE '%xlsx%'\n            OR (SELECT text FROM q) LIKE '%dwg%'\n            OR (SELECT text FROM q) LIKE '%ппр%'\n            OR (SELECT text FROM q) LIKE '%чертеж%'\n            OR (SELECT text FROM q) LIKE '%чертёж%'\n            OR (SELECT text FROM q) LIKE '%акт%'\n            OR (SELECT text FROM q) LIKE '%график%'\n            OR (SELECT text FROM q) LIKE '%смет%'\n            OR (SELECT text FROM q) LIKE '%схем%'\n          )\n        THEN 50 ELSE 0\n      END\n      +\n      CASE\n        WHEN EXISTS (\n          SELECT 1 FROM terms t\n          WHERE lower(COALESCE(b.file_name, '')) LIKE '%' || t.term || '%'\n        )\n        THEN 40 ELSE 0\n      END\n      +\n      CASE\n        WHEN EXISTS (\n          SELECT 1 FROM terms t\n          WHERE lower(COALESCE(b.content, '')) LIKE '%' || t.term || '%'\n        )\n        THEN 25 ELSE 0\n      END\n      +\n      CASE\n        WHEN b.content ILIKE '%запомни%'\n          OR b.content ILIKE '%объект%'\n          OR b.content ILIKE '%код%'\n          OR b.content ILIKE '%подрядчик%'\n          OR b.content ILIKE '%Джеруй%'\n          OR b.content ILIKE '%ТЗРК%'\n        THEN 5 ELSE 0\n      END\n    ) AS score\n  FROM bot_memory_messages b\n  WHERE (\n      b.chat_id = '{{$('Edit Fields1').item.json.chatId}}'\n      OR b.chat_id = 'project:main'\n    )\n    AND (\n      EXISTS (\n        SELECT 1 FROM terms t\n        WHERE lower(COALESCE(b.content, '')) LIKE '%' || t.term || '%'\n           OR lower(COALESCE(b.file_name, '')) LIKE '%' || t.term || '%'\n      )\n      OR (\n        ((SELECT text FROM q) LIKE '%фото%' OR (SELECT text FROM q) LIKE '%изображ%')\n        AND b.message_type = 'image'\n      )\n      OR (\n        (\n          (SELECT text FROM q) LIKE '%документ%'\n          OR (SELECT text FROM q) LIKE '%pdf%'\n          OR (SELECT text FROM q) LIKE '%пдф%'\n          OR (SELECT text FROM q) LIKE '%docx%'\n          OR (SELECT text FROM q) LIKE '%xlsx%'\n          OR (SELECT text FROM q) LIKE '%dwg%'\n          OR (SELECT text FROM q) LIKE '%ппр%'\n          OR (SELECT text FROM q) LIKE '%чертеж%'\n          OR (SELECT text FROM q) LIKE '%чертёж%'\n          OR (SELECT text FROM q) LIKE '%акт%'\n          OR (SELECT text FROM q) LIKE '%график%'\n          OR (SELECT text FROM q) LIKE '%смет%'\n          OR (SELECT text FROM q) LIKE '%схем%'\n        )\n        AND b.message_type = 'document'\n        AND EXISTS (\n          SELECT 1 FROM terms t\n          WHERE lower(COALESCE(b.content, '')) LIKE '%' || t.term || '%'\n             OR lower(COALESCE(b.file_name, '')) LIKE '%' || t.term || '%'\n        )\n      )\n      OR b.content ILIKE '%запомни%'\n      OR b.content ILIKE '%объект%'\n      OR b.content ILIKE '%код%'\n      OR b.content ILIKE '%подрядчик%'\n      OR b.content ILIKE '%Джеруй%'\n      OR b.content ILIKE '%ТЗРК%'\n    )\n  ORDER BY score DESC, COALESCE(b.message_time, b.created_at) DESC\n  LIMIT 50\n)\nSELECT COALESCE(\n  string_agg(\n    '[' || to_char(memory_time, 'YYYY-MM-DD HH24:MI') || '] ' ||\n    COALESCE(sender, 'unknown') || ' (' || COALESCE(role, 'user') || ', ' || COALESCE(message_type, 'text') || '): ' ||\n    COALESCE(file_name || ' — ', '') ||\n    regexp_replace(COALESCE(content, ''), E'[\\\\n\\\\r]+', ' ', 'g'),\n    ' | '\n    ORDER BY score DESC, memory_time DESC\n  ),\n  ''\n) AS long_facts\nFROM relevant_messages;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3136,
+        48
+      ],
+      "id": "8e901c32-6eba-4f34-a7c5-06b4ceccb5c7",
+      "name": "Search Long Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COUNT(*) FILTER (WHERE chat_id = 'project:main' AND message_type = 'text') AS project_text_messages,\n  COUNT(*) FILTER (WHERE chat_id = 'project:main' AND message_type = 'image') AS project_image_messages,\n  COUNT(*) FILTER (\n    WHERE chat_id = 'project:main'\n      AND message_type = 'image'\n      AND content ILIKE '%Ошибка анализа изображения%'\n  ) AS project_image_errors,\n  COUNT(*) FILTER (WHERE chat_id = '{{$json.body.data.key.remoteJid}}') AS current_chat_messages\nFROM bot_memory_messages;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2976,
+        -544
+      ],
+      "id": "23bb169a-00e0-4773-a9ab-a10635194bc8",
+      "name": "Postgres Memory Status",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f9977c76-a389-4be9-8be6-c09fb137f11e",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86e444c0-bc9d-469a-901c-7c96a5fa57fd",
+              "name": "reply",
+              "value": "={{'Память проекта:\\nТекстовых сообщений: ' + $json.project_text_messages + '\\nФотоописаний: ' + $json.project_image_messages + '\\nФото с ошибкой анализа: ' + $json.project_image_errors + '\\nСообщений текущего чата: ' + $json.current_chat_messages + '\\nТекущий чат: ' + $('Router Алихан').item.json.chatId}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2784,
+        -544
+      ],
+      "id": "857d938b-ee06-4cef-93f8-9230282fd57b",
+      "name": "Build Memory Status"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.reply}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2624,
+        -544
+      ],
+      "id": "20303262-d2d8-4324-8715-52290ee7fb33",
+      "name": "WhatsApp HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowedGroups = [\n  '120363400682390076@g.us'\n];\n\nconst data = $json.body?.data || {};\nconst key = data.key || {};\nconst msg = data.message || {};\n\nconst chatId = String(key.remoteJid || '').trim();\n\nif (!allowedGroups.includes(chatId)) {\n  return [];\n}\n\nif (key.fromMe === true) {\n  return [];\n}\n\nconst text = String(\n  msg.conversation ||\n  msg.extendedTextMessage?.text ||\n  msg.imageMessage?.caption ||\n  msg.documentMessage?.caption ||\n  ''\n).trim();\n\nconst lower = text.toLowerCase();\n\nconst isAlikhan =\n  lower === 'алихан' ||\n  lower.startsWith('алихан ') ||\n  lower.includes('алихан');\n\nif (!isAlikhan) {\n  return [];\n}\n\nreturn [\n  {\n    json: {\n      ...$json,\n      userText: text,\n      userMessage: text,\n      chatId,\n      number: chatId,\n      fromMe: false,\n      sender: data.pushName || 'Unknown',\n      messageId: key.id || '',\n      messageTimestamp: data.messageTimestamp || null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3536,
+        -368
+      ],
+      "id": "7fb7bd97-4a55-45ed-b1d2-fd42b66f09b2",
+      "name": "Guard Алихан"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.body?.data || {};\nconst msg = data.message || {};\nconst contextInfo = data.contextInfo || {};\n\nconst text = String(\n  msg.conversation ||\n  msg.extendedTextMessage?.text ||\n  msg.imageMessage?.caption ||\n  msg.documentMessage?.caption ||\n  ''\n).trim();\n\nconst lower = text.toLowerCase();\n\nconst quotedDoc =\n  contextInfo.quotedMessage?.documentMessage ||\n  contextInfo.quotedMessage?.documentWithCaptionMessage?.message?.documentMessage ||\n  contextInfo.quotedMessage?.documentWithCaptionMessage?.documentMessage ||\n  null;\n\nfunction parseDateRu(s) {\n  const m1 = s.match(/(\\d{2})\\.(\\d{2})\\.(\\d{4})/);\n  if (m1) return `${m1[3]}-${m1[2]}-${m1[1]}`;\n\n  const m2 = s.match(/(\\d{4})-(\\d{2})-(\\d{2})/);\n  if (m2) return `${m2[1]}-${m2[2]}-${m2[3]}`;\n\n  return null;\n}\n\nfunction todayIso() {\n  return new Date().toISOString().slice(0, 10);\n}\n\nfunction shiftDate(days) {\n  const d = new Date();\n  d.setDate(d.getDate() + days);\n  return d.toISOString().slice(0, 10);\n}\n\nfunction pad2(n) {\n  return String(n).padStart(2, '0');\n}\n\nconst MONTHS_RU = {\n  'январь': 1,\n  'января': 1,\n  'февраль': 2,\n  'февраля': 2,\n  'март': 3,\n  'марта': 3,\n  'апрель': 4,\n  'апреля': 4,\n  'май': 5,\n  'мая': 5,\n  'июнь': 6,\n  'июня': 6,\n  'июль': 7,\n  'июля': 7,\n  'август': 8,\n  'августа': 8,\n  'сентябрь': 9,\n  'сентября': 9,\n  'октябрь': 10,\n  'октября': 10,\n  'ноябрь': 11,\n  'ноября': 11,\n  'декабрь': 12,\n  'декабря': 12\n};\n\nfunction parseMonthRangeRu(s) {\n  const m = s.match(\n    /(январь|января|февраль|февраля|март|марта|апрель|апреля|май|мая|июнь|июня|июль|июля|август|августа|сентябрь|сентября|октябрь|октября|ноябрь|ноября|декабрь|декабря)\\s+(\\d{4})/i\n  );\n\n  if (!m) return null;\n\n  const monthName = m[1].toLowerCase();\n  const year = Number(m[2]);\n  const month = MONTHS_RU[monthName];\n\n  if (!month || !year) return null;\n\n  const start = `${year}-${pad2(month)}-01`;\n  const lastDay = new Date(year, month, 0).getDate();\n  const end = `${year}-${pad2(month)}-${pad2(lastDay)}`;\n\n  return { start, end };\n}\n\nconst idMatch =\n  lower.match(/\\bid\\s*(\\d+)\\b/i) ||\n  lower.match(/\\bид\\s*(\\d+)\\b/i);\n\nconst lookupId = idMatch ? idMatch[1] : '';\n\nconst docCompareIds = Array.from(\n  text.matchAll(/\\b(?:id|ид)\\s*(\\d+)\\b/gi),\n  (m) => m[1]\n);\n\nfunction firstMatchId(patterns) {\n  for (const pattern of patterns) {\n    const m = lower.match(pattern);\n    if (m) return m[1];\n  }\n  return '';\n}\n\nconst explicitOldId = firstMatchId([\n  /стар(?:ый|ая|ое|ую|ой)?(?:\\s+\\S+){0,6}?\\s+(?:id|ид)\\s*(\\d+)/i,\n  /(?:id|ид)\\s*(\\d+)(?:\\s+\\S+){0,6}?\\s+стар(?:ый|ая|ое|ую|ой)?/i,\n  /пер(?:вый|вая|вое)(?:\\s+\\S+){0,6}?\\s+(?:id|ид)\\s*(\\d+)/i,\n]);\n\nconst explicitNewId = firstMatchId([\n  /нов(?:ый|ая|ое|ую|ой)?(?:\\s+\\S+){0,6}?\\s+(?:id|ид)\\s*(\\d+)/i,\n  /(?:id|ид)\\s*(\\d+)(?:\\s+\\S+){0,6}?\\s+нов(?:ый|ая|ое|ую|ой)?/i,\n  /втор(?:ой|ая|ое|ую)(?:\\s+\\S+){0,6}?\\s+(?:id|ид)\\s*(\\d+)/i,\n]);\n\nconst hasDocumentCompareIntent =\n  lower.includes('сравни документ') ||\n  lower.includes('сравнить документ') ||\n  lower.includes('сравни регламент') ||\n  lower.includes('сравнить регламент') ||\n  lower.includes('что изменилось между') ||\n  lower.includes('найди отличия') ||\n  lower.includes('найти отличия') ||\n  lower.includes('отличия между') ||\n  lower.includes('что появилось нового') ||\n  lower.includes('нового в новой версии') ||\n  (\n    lower.includes('первый') &&\n    lower.includes('стар') &&\n    lower.includes('втор') &&\n    lower.includes('нов')\n  );\n\nconst hasRegulationFactQuestionIntent =\n  lower.includes('можно ли') ||\n  lower.includes('разрешено ли') ||\n  lower.includes('запрещено ли') ||\n  lower.includes('нельзя ли') ||\n  lower.includes('какой штраф') ||\n  lower.includes('штраф') ||\n  lower.includes('по регламенту') ||\n  lower.includes('согласно регламенту') ||\n  lower.includes('пункт') ||\n  lower.includes('раздел') ||\n  lower.includes('шашлык') ||\n  lower.includes('мангал') ||\n  lower.includes('костер') ||\n  lower.includes('костёр') ||\n  lower.includes('барашек') ||\n  lower.includes('барашка') ||\n  lower.includes('бараш') ||\n  lower.includes('баран') ||\n  lower.includes('обряд') ||\n  lower.includes('обычай') ||\n  lower.includes('зарезать') ||\n  lower.includes('кровь') ||\n  lower.includes('пролить') ||\n  lower.includes('отход') ||\n  lower.includes('мусор') ||\n  lower.includes('пожарн') ||\n  lower.includes('санитар') ||\n  lower.includes('оос') ||\n  lower.includes('окружающей среды');\n\nconst docCompareOldId = explicitOldId || docCompareIds[0] || '';\nconst docCompareNewId =\n  explicitNewId ||\n  docCompareIds.find((id) => id !== docCompareOldId) ||\n  docCompareIds[1] ||\n  '';\n\nlet command = 'ai';\nlet summaryStartDate = '';\nlet summaryEndDate = '';\nlet calendarRange = 'all';\n\nif (lower === 'алихан') {\n  command = 'only_name';\n\n} else if (lower.includes('статус памяти')) {\n  command = 'memory_status';\n\n} else if (\n  lookupId &&\n  (\n    lower.includes('удали событие') ||\n    lower.includes('удалить событие') ||\n    lower.includes('отмени событие') ||\n    lower.includes('отменить событие')\n  )\n) {\n  command = 'calendar_delete';\n\n} else if (\n  docCompareIds.length >= 2 &&\n  hasDocumentCompareIntent\n) {\n  command = 'document_compare';\n\n} else if (\n  lower.includes('какой сегодня день') ||\n  lower.includes('какая сегодня дата') ||\n  lower.includes('дата сегодня') ||\n  lower.includes('сегодняшняя дата') ||\n  lower.includes('какое сегодня число') ||\n  lower.includes('какой день календаря') ||\n  lower.includes('день календаря') ||\n  lower.includes('сколько времени') ||\n  lower.includes('который час') ||\n  lower.includes('время сейчас') ||\n  lower.includes('текущее время')\n) {\n  command = 'current_datetime';\n\n} else if (hasRegulationFactQuestionIntent) {\n  command = 'fact_lookup';\n\n} else if (\n  lookupId &&\n  (\n    lower.includes('id') ||\n    lower.includes('ид') ||\n    lower.includes('покажи') ||\n    lower.includes('найди') ||\n    lower.includes('подними')\n  )\n) {\n  command = 'id_lookup';\n\n} else if (\n  lower.includes('добавь событие') ||\n  lower.includes('создай событие') ||\n  lower.includes('запланируй') ||\n  lower.includes('поставь в календарь') ||\n  lower.includes('добавь в календарь') ||\n  lower.includes('состоится') ||\n  (\n    (lower.includes('напомни') || lower.includes('напомнить')) &&\n    (\n      lower.includes('совещание') ||\n      lower.includes('встреч') ||\n      lower.includes('планерк') ||\n      lower.includes('планёрк') ||\n      lower.includes('событие') ||\n      lower.includes('звонок')\n    )\n  )\n) {\n  command = 'calendar_create';\n\n} else if (\n  lower.includes('что сегодня') ||\n  lower.includes('события на сегодня') ||\n  lower.includes('календарь на сегодня')\n) {\n  command = 'calendar_list';\n  calendarRange = 'today';\n\n} else if (\n  lower.includes('что завтра') ||\n  lower.includes('события на завтра') ||\n  lower.includes('календарь на завтра')\n) {\n  command = 'calendar_list';\n  calendarRange = 'tomorrow';\n\n} else if (\n  lower.includes('календарь на неделю') ||\n  lower.includes('события на неделю') ||\n  lower.includes('что на неделю')\n) {\n  command = 'calendar_list';\n  calendarRange = 'week';\n\n} else if (\n  lower.includes('какие события') ||\n  lower.includes('что в календаре') ||\n  lower.includes('что запланировано') ||\n  lower.includes('события добавлены')\n) {\n  command = 'calendar_list';\n  calendarRange = 'all';\n\n} else if (\n  lower.includes('кто чаще всего писал') ||\n  lower.includes('активность участников') ||\n  lower.includes('кто выкладывал фото') ||\n  lower.includes('кто выкладывал документы') ||\n  lower.includes('кто отправлял фото') ||\n  lower.includes('кто отправлял документы')\n) {\n  command = 'participant_activity';\n\n} else if (\n  lower.includes('участники') ||\n  lower.includes('кто в группе') ||\n  lower.includes('люди в группе')\n) {\n  command = 'group_participants';\n\n} else if (\n  lower.includes('сводка') ||\n  lower.includes('самари') ||\n  lower.includes('итоги')\n) {\n  command = 'period_summary';\n\n  summaryStartDate = todayIso();\n  summaryEndDate = todayIso();\n\n  if (lower.includes('вчера')) {\n    summaryStartDate = shiftDate(-1);\n    summaryEndDate = shiftDate(-1);\n\n  } else if (lower.includes('сегодня')) {\n    summaryStartDate = todayIso();\n    summaryEndDate = todayIso();\n\n  } else {\n    const monthRange = parseMonthRangeRu(lower);\n\n    if (monthRange) {\n      summaryStartDate = monthRange.start;\n      summaryEndDate = monthRange.end;\n\n    } else {\n      const range = lower.match(\n        /с\\s+(\\d{2}\\.\\d{2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})\\s+по\\s+(\\d{2}\\.\\d{2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})/\n      );\n\n      if (range) {\n        summaryStartDate = parseDateRu(range[1]) || summaryStartDate;\n        summaryEndDate = parseDateRu(range[2]) || summaryEndDate;\n      } else {\n        const singleDate = parseDateRu(lower);\n        if (singleDate) {\n          summaryStartDate = singleDate;\n          summaryEndDate = singleDate;\n        }\n      }\n    }\n  }\n\n} else if (\n  quotedDoc &&\n  (\n    lower.includes('документ') ||\n    lower.includes('содержание') ||\n    lower.includes('кратко') ||\n    lower.includes('что в')\n  )\n) {\n  command = 'quoted_document_summary';\n\n} else if (\n  lower.includes('подними') ||\n  lower.includes('найди') ||\n  lower.includes('покажи') ||\n  lower.includes('подробнее') ||\n  lower.includes('расскажи подробнее') ||\n  lower.includes('когда это было') ||\n  lower.includes('конкретные фото') ||\n  lower.includes('переписку')\n) {\n  command = 'fact_lookup';\n\n} else if (lower.includes('кто ты') || lower.includes('ты кто')) {\n  command = 'who_are_you';\n}\n\nconst cleanedUserMessage = text.replace(/^алихан\\s*/i, '').trim();\nconst current_datetime = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      ...$json,\n      command,\n      userMessage: cleanedUserMessage || text,\n      number: String(data.key?.remoteJid || '').trim(),\n      chatId: String(data.key?.remoteJid || '').trim(),\n      fromMe: data.key?.fromMe === true,\n\n      quotedDocumentMessageId: contextInfo.stanzaId || '',\n      quotedDocumentFileName: quotedDoc?.fileName || quotedDoc?.title || '',\n      quotedDocumentMimeType: quotedDoc?.mimetype || '',\n\n      summaryStartDate,\n      summaryEndDate,\n\n      calendarRange,\n      lookupId,\n      docCompareOldId,\n      docCompareNewId,\n      docCompareIds,\n\n      current_datetime,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3376,
+        -368
+      ],
+      "id": "1ed6bf66-63b0-4856-8f6a-343ae6e34dcc",
+      "name": "Router Алихан"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2c68b300-c42e-4b8c-977a-9c849fee70b8",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "only_name",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5be39b52-1f69-4d7f-85dc-3de0d244d8f5",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "memory_status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0a8944c7-6536-446a-9978-cb44402e505c",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "who_are_you",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b4654cfd-351d-4e11-84a0-aff0aac7afa7",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "ai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e26cf951-d449-45b7-830b-86e0ab7b4bae",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "quoted_document_summary",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "93afe1b2-3f6d-4fab-ba64-78b007304249",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "group_participants",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d588d73b-3248-4abc-b9a5-4f9cab6a7dd7",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "participant_activity",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8a89154f-770d-4edd-b583-534e7694c899",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "period_summary",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "84f3a6c2-12a5-44a2-a137-447af8670e5b",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "fact_lookup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "63803868-e936-4b7a-95a7-ba8d236529b7",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "id_lookup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ece33135-c64f-4546-89bd-0ebe85bdb347",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "calendar_create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9fdc607f-db6d-4b86-b80a-0ad0019488f1",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "calendar_list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b0da4015-1720-48fd-b98d-32ed7d6da80b",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "calendar_delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e6231dd9-9ff1-4a66-9561-07b732e26e7b",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "current_datetime",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8ed95646-92ee-4aee-9340-5c7778ac7376",
+                    "leftValue": "={{$json.command}}",
+                    "rightValue": "document_compare",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -3232,
+        -544
+      ],
+      "id": "7e59a23a-96c4-4653-a2ef-580faa4e5be1",
+      "name": "Switch Command"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{String($('Router Алихан').item.json.number).trim()}}"
+            },
+            {
+              "name": "text",
+              "value": "Привет. Что нужно?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        -512
+      ],
+      "id": "9a383461-7c28-4cc4-b8d4-55e9a0a3ed6d",
+      "name": "Алихан"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "Инженер-строитель"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        -352
+      ],
+      "id": "ff82f939-f48c-4563-bb29-496731dcf6d0",
+      "name": "Кто ты?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowedGroups = [\n  '120363400682390076@g.us'\n];\n\nconst data = $json.body?.data || {};\nconst key = data.key || {};\nconst msg = data.message || {};\n\nconst chatId = String(key.remoteJid || '').trim();\n\nif (!allowedGroups.includes(chatId)) {\n  return [];\n}\n\nif (key.fromMe === true) {\n  return [];\n}\n\nconst messageType = String(data.messageType || '').toLowerCase();\n\nconst imageMessage =\n  msg.imageMessage ||\n  msg.viewOnceMessage?.message?.imageMessage ||\n  msg.viewOnceMessageV2?.message?.imageMessage ||\n  msg.ephemeralMessage?.message?.imageMessage ||\n  null;\n\nconst isImage =\n  messageType.includes('image') ||\n  !!imageMessage;\n\nif (!isImage) {\n  return [];\n}\n\nconst img = imageMessage || {};\n\nreturn [\n  {\n    json: {\n      ...$json,\n      chatId,\n      number: chatId,\n      fromMe: false,\n      sender: data.pushName || 'Unknown',\n      messageId: key.id || '',\n      messageTimestamp: data.messageTimestamp || null,\n      messageType: data.messageType || '',\n      caption: img.caption || '',\n      mimetype: img.mimetype || 'image/jpeg',\n      fileName: `${key.id || 'photo'}.jpeg`,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3744,
+        -736
+      ],
+      "id": "9283693b-6fc7-4056-a738-415bfec2a69c",
+      "name": "Guard Photo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/chat/getBase64FromMediaMessage/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"key\": {\n      \"id\": \"{{$json.messageId}}\"\n    }\n  },\n  \"convertToMp4\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3584,
+        -736
+      ],
+      "id": "a0f6925a-7860-4db6-8ac3-18fb08e44554",
+      "name": "Get Photo Base64"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c2209f0f-75ff-4e52-baad-e9b60175e876",
+              "name": "chatId",
+              "value": "={{$('Guard Photo').item.json.chatId}}",
+              "type": "string"
+            },
+            {
+              "id": "04f5450d-b1b9-4313-ab49-17d9cd04e8b8",
+              "name": "sender",
+              "value": "={{new Date(($('Guard Photo').item.json.messageTimestamp || Math.floor(Date.now()/1000)) * 1000).toISOString()}}",
+              "type": "string"
+            },
+            {
+              "id": "91b0b879-094b-4288-9f94-7b5f435d32a0",
+              "name": "caption",
+              "value": "={{$json.caption || $('Guard Photo').item.json.caption || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "e4ee96ce-b8fb-4671-9fea-ee583fc5946c",
+              "name": "fileName",
+              "value": "={{$json.fileName || ($('Guard Photo').item.json.messageId + '.jpg')}}",
+              "type": "string"
+            },
+            {
+              "id": "f71f1111-53ac-45e2-8fe1-1cd81d1c850a",
+              "name": "mimeType",
+              "value": "={{$json.mimetype || $('Guard Photo').item.json.mimeType || 'image/jpeg'}}",
+              "type": "string"
+            },
+            {
+              "id": "1999db9b-4589-446e-8949-36c87e23b555",
+              "name": "imageBase64",
+              "value": "={{$json.base64}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3392,
+        -736
+      ],
+      "id": "67640681-9fb7-4b8e-8ad0-0568dc844b3e",
+      "name": "Build Image Memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"grok-4.20\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты анализируешь фото из строительного проекта. Кратко и по делу опиши, что изображено на фото, какие объекты, работы, техника, материалы, документы или проблемы видны. Если есть подпись к фото — учти её. Ответ дай на русском языке, 3-6 предложений.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"Подпись к фото: {{$json.caption}}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"data:{{$json.mimeType}};base64,{{$json.imageBase64}}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"temperature\": 0.2\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3216,
+        -736
+      ],
+      "id": "2350ccc8-50e9-4846-a764-35c56ab3d7f1",
+      "name": "xAI Vision Photo"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "90a0e573-90e4-4d2a-8650-68a4806e229d",
+              "name": "chatId",
+              "value": "={{$('Build Image Memory').item.json.chatId}}",
+              "type": "string"
+            },
+            {
+              "id": "6165acda-1dc2-49bd-86d9-23a8cec59530",
+              "name": "sender",
+              "value": "={{$('Build Image Memory').item.json.sender}}",
+              "type": "string"
+            },
+            {
+              "id": "00154da2-f486-4090-8600-66e5ad5c5ccc",
+              "name": "messageTime",
+              "value": "={{$('Build Image Memory').item.json.messageTime}}",
+              "type": "string"
+            },
+            {
+              "id": "62273b92-ceb2-4c66-a01c-2f8859d1bdf1",
+              "name": "fileName",
+              "value": "={{$('Build Image Memory').item.json.fileName}}",
+              "type": "string"
+            },
+            {
+              "id": "2e3d5fe5-fd9e-4fd4-82bb-dca443378b6e",
+              "name": "content",
+              "value": "={{\"Фото из группы. Файл: \" + $('Build Image Memory').item.json.fileName + \". Подпись: \" + ($('Build Image Memory').item.json.caption || \"нет\") + \". Описание: \" + $json.choices[0].message.content}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3056,
+        -736
+      ],
+      "id": "a633baf6-9694-41cf-bf39-ceeac2966e7a",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowedGroups = [\n  '120363400682390076@g.us'\n];\n\nconst data = $json.body?.data || {};\nconst key = data.key || {};\nconst msg = data.message || {};\n\nconst chatId = String(key.remoteJid || '').trim();\n\nif (!allowedGroups.includes(chatId)) {\n  return [];\n}\n\nif (key.fromMe === true) {\n  return [];\n}\n\nconst messageType = String(data.messageType || '').toLowerCase();\n\nconst doc =\n  msg.documentMessage ||\n  msg.documentWithCaptionMessage?.message?.documentMessage ||\n  msg.documentWithCaptionMessage?.documentMessage ||\n  msg.documentWithCaptionMessage ||\n  msg.documentMessageV2 ||\n  msg.ephemeralMessage?.message?.documentMessage ||\n  msg.viewOnceMessage?.message?.documentMessage ||\n  msg.viewOnceMessageV2?.message?.documentMessage ||\n  null;\n\nconst isDocument =\n  messageType.includes('document') ||\n  !!doc;\n\nif (!isDocument) {\n  return [];\n}\n\nconst documentMessage = doc || {};\n\nconst caption =\n  documentMessage.caption ||\n  documentMessage.message?.documentMessage?.caption ||\n  '';\n\nconst fileName =\n  documentMessage.fileName ||\n  documentMessage.title ||\n  documentMessage.message?.documentMessage?.fileName ||\n  `${key.id || 'document'}.bin`;\n\nconst mimetype =\n  documentMessage.mimetype ||\n  documentMessage.message?.documentMessage?.mimetype ||\n  'application/octet-stream';\n\nreturn [\n  {\n    json: {\n      ...$json,\n      chatId,\n      number: chatId,\n      fromMe: false,\n      messageId: key.id || '',\n      sender: data.pushName || 'Unknown',\n      caption,\n      fileName,\n      mimetype,\n      messageTimestamp: data.messageTimestamp || null,\n      messageType: data.messageType || '',\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3744,
+        -928
+      ],
+      "id": "ce90390b-ae01-4f4f-8b34-5cd0bc3da14c",
+      "name": "Guard Document"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/chat/getBase64FromMediaMessage/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"key\": {\n      \"id\": \"{{$json.messageId}}\"\n    }\n  },\n  \"convertToMp4\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3584,
+        -928
+      ],
+      "id": "4f835fcb-06f6-41d0-aaee-988cdb74a189",
+      "name": "Get Document Base64"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_memory_messages\n(chat_id, sender, message_time, role, message_type, content, file_name)\nVALUES\n(\n  '{{$('Guard Photo').item.json.chatId}}',\n  '{{$('Guard Photo').item.json.sender.replace(/'/g, \"''\")}}',\n  to_timestamp({{$('Guard Photo').item.json.messageTimestamp}}),\n  'user',\n  'image',\n  '{{$json.content.replace(/'/g, \"''\")}}',\n  '{{$json.fileName}}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2880,
+        -736
+      ],
+      "id": "7668a394-4227-4cfc-ad85-2b2e551158f7",
+      "name": "Save Photo Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_memory_messages\n(chat_id, sender, message_time, role, message_type, content, file_name)\nVALUES\n(\n  '{{$json.chatId}}',\n  '{{$json.sender.replace(/'/g, \"''\")}}',\n  '{{$json.messageTime}}',\n  'user',\n  'document',\n  '{{(\"MessageId: \" + $(\"Guard Document\").item.json.messageId + \". \" + $json.content).replace(/'/g, \"''\")}}',\n  '{{$json.fileName.replace(/'/g, \"''\")}}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3200,
+        -928
+      ],
+      "id": "d53ea345-746b-4030-9325-6c9e4ad4f09a",
+      "name": "Save Document Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8099/extract-document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{$('Guard Document').item.json.chatId}}\",\n  \"sender\": \"{{$('Guard Document').item.json.sender}}\",\n  \"messageTimestamp\": \"{{$('Guard Document').item.json.messageTimestamp}}\",\n  \"messageId\": \"{{$('Guard Document').item.json.messageId}}\",\n  \"fileName\": \"{{$json.fileName || $('Guard Document').item.json.fileName}}\",\n  \"mimetype\": \"{{$json.mimetype || $('Guard Document').item.json.mimetype}}\",\n  \"caption\": \"{{$json.caption || $('Guard Document').item.json.caption || ''}}\",\n  \"base64\": \"{{$json.base64}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3392,
+        -928
+      ],
+      "id": "94caeaeb-5b0b-446c-81e5-5b6a1d5c80fc",
+      "name": "Extract Document Text"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  id,\n  chat_id,\n  sender,\n  message_time,\n  file_name,\n  content\nFROM bot_memory_messages\nWHERE (\n    chat_id = '{{$('Router Алихан').item.json.chatId}}'\n    OR chat_id = 'project:main'\n  )\n  AND message_type = 'document'\n  AND (\n    file_name = '{{$('Router Алихан').item.json.quotedDocumentFileName.replace(/'/g, \"''\")}}'\n    OR content ILIKE '%{{$('Router Алихан').item.json.quotedDocumentFileName.replace(/'/g, \"''\")}}%'\n    OR content ILIKE '%{{$('Router Алихан').item.json.quotedDocumentMessageId.replace(/'/g, \"''\")}}%'\n  )\nORDER BY\n  CASE\n    WHEN chat_id = '{{$('Router Алихан').item.json.chatId}}' THEN 0\n    ELSE 1\n  END,\n  COALESCE(message_time, created_at) DESC,\n  id DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2976,
+        -352
+      ],
+      "id": "b1b4a8a4-8231-4a13-8942-aba15ecd0300",
+      "name": "Get Quoted Document",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "prompt",
+              "value": "={{\"Сделай краткое содержание именно этого документа. Не используй другие документы. Структура ответа: 1) что это за документ, 2) ключевое содержание, 3) важные даты/цифры/таблицы/обязательства, 4) что нужно проверить или сделать. Если документ не найден в памяти — скажи, что он ещё не обработан.\\n\\nФайл из reply: \" + $('Router Алихан').item.json.quotedDocumentFileName + \"\\nНайденный файл: \" + ($json.file_name || \"не найден\") + \"\\nСодержимое:\\n\" + String($json.content || \"Документ не найден в памяти.\").slice(0, 18000)}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2784,
+        -352
+      ],
+      "id": "d5f1107d-6b74-4671-9915-28474567e50f",
+      "name": "Build Quoted Document Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"grok-4.20\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Ты WhatsApp-ассистент по имени Алихан. Отвечай кратко и по делу. Если в найденных фактах из PostgreSQL есть ответ на вопрос, используй этот факт как источник истины. Не говори, что не знаешь, если факт есть в памяти.\"\n    },\n    {\n      \"role\": \"system\",\n      \"content\": \"={{'Долгая память summary: ' + $json.longMemory}}\"\n    },\n    {\n      \"role\": \"system\",\n      \"content\": \"={{'Короткая память Redis: ' + $json.shortMemory}}\"\n    },\n    {\n      \"role\": \"system\",\n      \"content\": \"={{'Найденные факты из PostgreSQL: ' + $json.longFacts}}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{$json.userMessage}}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2800,
+        48
+      ],
+      "id": "9fab5e24-ea7b-4cd2-ba59-6fd58d4d6860",
+      "name": "HTTP Request к xAI-1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты помощник руководителя строительного проекта. Кратко пересказывай документы строго по предоставленному тексту. Не фантазируй. Если данных мало — честно скажи.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.prompt || \"\").slice(0, 18000)\n    }\n  ],\n  temperature: 0.2\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2304,
+        -352
+      ],
+      "id": "1f2e01e9-a684-447c-894d-ed805ea94c0b",
+      "name": "xAI Quoted Document Summary",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{String($json.choices[0].message.content || 'Не смог сделать краткое содержание документа.')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2112,
+        -352
+      ],
+      "id": "64309b5f-9895-42a5-9bbc-ab02470ba32e",
+      "name": "Build Quoted Document Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1920,
+        -352
+      ],
+      "id": "ff6278ba-78cc-4dea-9065-6ef5e743f487",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowedGroups = [\n  '120363400682390076@g.us'\n];\n\nconst data = $json.body?.data || {};\nconst key = data.key || {};\n\nconst chatId = String(key.remoteJid || '').trim();\n\nif (!allowedGroups.includes(chatId)) {\n  return [];\n}\n\nif (!chatId.endsWith('@g.us')) {\n  return [];\n}\n\nif (key.fromMe === true) {\n  return [];\n}\n\nconst participantId =\n  key.participant ||\n  key.participantAlt ||\n  $json.body?.sender ||\n  '';\n\nif (!participantId) {\n  return [];\n}\n\nreturn [\n  {\n    json: {\n      chatId,\n      participantId: String(participantId || '').trim(),\n      participantAlt: String(key.participantAlt || '').trim(),\n      pushName: String(data.pushName || 'Unknown').trim(),\n      messageId: key.id || '',\n      messageTimestamp: data.messageTimestamp || null,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3744,
+        -544
+      ],
+      "id": "6721afc1-8e21-4dd3-9ad3-501b0e989371",
+      "name": "Build Participant"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bot_group_participants\n(chat_id, participant_id, participant_alt, push_name, last_seen, first_seen, message_count)\nVALUES\n(\n  '{{$json.chatId}}',\n  '{{$json.participantId.replace(/'/g, \"''\")}}',\n  '{{$json.participantAlt.replace(/'/g, \"''\")}}',\n  '{{$json.pushName.replace(/'/g, \"''\")}}',\n  NOW(),\n  NOW(),\n  1\n)\nON CONFLICT (chat_id, participant_id)\nDO UPDATE SET\n  participant_alt = EXCLUDED.participant_alt,\n  push_name = EXCLUDED.push_name,\n  last_seen = NOW(),\n  message_count = bot_group_participants.message_count + 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3424,
+        -544
+      ],
+      "id": "9f5c3641-4fe1-4b13-bcbd-1a5737b9d963",
+      "name": "Save Participant",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(\n  string_agg(\n    source_label || ': ' ||\n    push_name ||\n    ' — сообщений: ' || message_count ||\n    ', последний раз: ' || to_char(last_seen, 'YYYY-MM-DD HH24:MI'),\n    E'\\n'\n    ORDER BY source_order, message_count DESC\n  ),\n  'Участники пока не накоплены.'\n) AS participants_text\nFROM (\n  SELECT\n    CASE\n      WHEN chat_id = 'project:main' THEN 'Прошлое'\n      ELSE 'Текущая группа'\n    END AS source_label,\n    CASE\n      WHEN chat_id = 'project:main' THEN 2\n      ELSE 1\n    END AS source_order,\n    push_name,\n    message_count,\n    last_seen\n  FROM bot_group_participants\n  WHERE chat_id = '{{$('Router Алихан').item.json.chatId}}'\n     OR chat_id = 'project:main'\n) x;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -4400,
+        -912
+      ],
+      "id": "d51a29a5-1f3e-46b4-a066-44c3f5a76f6b",
+      "name": "Get Group Participants",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "14fbc82b-896d-4830-978b-8321f2ac8425",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "3949b460-95b9-4074-a275-21e00ed5f5d2",
+              "name": "text",
+              "value": "={{\"Участники группы:\\n\" + $json.participants_text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4208,
+        -912
+      ],
+      "id": "1f8549b0-0267-421d-9d54-81e39c64cde1",
+      "name": "Build Participants Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        -912
+      ],
+      "id": "ef40cebc-c6ba-4fbd-9c78-294925c55ecc",
+      "name": "WhatsApp HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH messages AS (\n  SELECT\n    sender,\n    message_type,\n    COUNT(*) AS cnt\n  FROM bot_memory_messages\n  WHERE chat_id = 'project:main'\n    AND sender IS NOT NULL\n    AND sender NOT IN ('archive_photo', 'archive_document')\n    AND content NOT ILIKE '%удалили данное сообщение%'\n    AND content NOT ILIKE '%deleted this message%'\n  GROUP BY sender, message_type\n),\nsummary AS (\n  SELECT\n    sender,\n    SUM(cnt) AS total_messages,\n    SUM(cnt) FILTER (WHERE message_type = 'text') AS text_messages,\n    SUM(cnt) FILTER (WHERE message_type = 'image') AS image_messages,\n    SUM(cnt) FILTER (WHERE message_type = 'document') AS document_messages\n  FROM messages\n  GROUP BY sender\n)\nSELECT COALESCE(\n  string_agg(\n    sender ||\n    ' — всего: ' || COALESCE(total_messages, 0) ||\n    ', текст: ' || COALESCE(text_messages, 0) ||\n    ', фото: ' || COALESCE(image_messages, 0) ||\n    ', документы: ' || COALESCE(document_messages, 0),\n    E'\\n'\n    ORDER BY total_messages DESC\n  ),\n  'Данных по прошлому пока нет.'\n) AS activity_text\nFROM summary;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -4784,
+        48
+      ],
+      "id": "64ec5ba3-c049-4df7-9cca-136d322d8252",
+      "name": "Get Participant Activity",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a26548ac-5587-40a7-8354-83a2dccac332",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "91824dfd-4e12-4b1b-9a8a-4656fd593191",
+              "name": "text",
+              "value": "={{\"Активность участников прошлого:\\n\" + $json.activity_text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4576,
+        48
+      ],
+      "id": "d53934ba-a29f-4055-90f9-21a98156b43f",
+      "name": "Build Participant Activity Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4384,
+        48
+      ],
+      "id": "686b06e9-9bee-46bf-84ec-f2a642417ec3",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH source_items AS (\n  SELECT\n    id,\n    COALESCE(message_time, created_at) AS item_time,\n    COALESCE(message_time, created_at)::date AS day,\n    COALESCE(sender, 'unknown') AS sender,\n    COALESCE(message_type, 'text') AS message_type,\n    COALESCE(file_name, '') AS file_name,\n    left(regexp_replace(COALESCE(content, ''), E'[\\\\n\\\\r]+', ' ', 'g'), 900) AS short_content\n  FROM bot_memory_messages\n  WHERE (\n      chat_id = '{{$('Router Алихан').item.json.chatId}}'\n      OR chat_id = 'project:main'\n    )\n    AND COALESCE(message_time, created_at)::date BETWEEN\n      '{{$('Router Алихан').item.json.summaryStartDate}}'::date\n      AND\n      '{{$('Router Алихан').item.json.summaryEndDate}}'::date\n    AND message_type IN ('text', 'image', 'document', 'conversation')\n    AND COALESCE(content, '') NOT ILIKE '%удалили данное сообщение%'\n    AND COALESCE(content, '') NOT ILIKE '%deleted this message%'\n),\ndaily AS (\n  SELECT\n    day,\n    COUNT(*) FILTER (WHERE message_type IN ('text', 'conversation')) AS text_count,\n    COUNT(*) FILTER (WHERE message_type = 'image') AS image_count,\n    COUNT(*) FILTER (WHERE message_type = 'document') AS document_count,\n    string_agg(DISTINCT sender, ', ') AS participants,\n    string_agg(\n      'ID ' || id ||\n      ' | ' || to_char(item_time, 'YYYY-MM-DD HH24:MI') ||\n      ' | ' || sender ||\n      ' | ' || message_type ||\n      CASE WHEN file_name <> '' THEN ' | файл: ' || file_name ELSE '' END ||\n      ' | ' || short_content,\n      E'\\n'\n      ORDER BY item_time, id\n    ) AS day_items\n  FROM source_items\n  GROUP BY day\n)\nSELECT COALESCE(\n  string_agg(\n    'Дата: ' || to_char(day, 'YYYY-MM-DD') ||\n    E'\\nУчастники: ' || COALESCE(participants, 'нет') ||\n    E'\\nКоличество: текст=' || text_count ||\n    ', фото=' || image_count ||\n    ', документы=' || document_count ||\n    E'\\nЗаписи дня:\\n' || left(COALESCE(day_items, ''), 3500),\n    E'\\n\\n---\\n\\n'\n    ORDER BY day\n  ),\n  ''\n) AS period_data\nFROM daily;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -3312,
+        256
+      ],
+      "id": "60aa24e9-cf15-4706-a685-a5276cc82471",
+      "name": "Get Period Data",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "prompt",
+              "value": "={{\"Сделай краткую сводку за период \" + $('Router Алихан').item.json.summaryStartDate + \" — \" + $('Router Алихан').item.json.summaryEndDate + \". Критически важные правила: 1) Используй только записи, переданные ниже в блоке Данные. 2) Не добавляй факты, которых нет в данных. 3) Не переноси события из других месяцев или дат. 4) Если видишь риск или проблему, укажи ID записей, на которых основан вывод. 5) Не пиши точные причины дефектов, если они прямо не указаны в данных. 6) Если данных по какому-то дню нет, не делай общий вывод, что данных нет за весь период. 7) Если факт сомнительный, пиши: в данных есть признак или описание, требуется проверка. Структура ответа: 1) главные события периода; 2) работы, материалы, техника; 3) риски и проблемы только с ID источников; 4) документы и фото; 5) активные участники; 6) что требует внимания. Данные сгруппированы по дням:\\n\\n\" + String($json.period_data || 'нет данных').slice(0, 70000)}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3120,
+        256
+      ],
+      "id": "da6bb3fa-7724-4d28-bb48-7a2d53392616",
+      "name": "Build Period Summary Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты помощник руководителя строительного проекта. Делай сводку строго по предоставленным данным. Запрещено придумывать даты, дефекты, причины, участников, документы, фото и цитаты. Если факт не подтверждён данными, не включай его. Для рисков и проблем указывай ID записей-источников. Если источника нет — не пиши факт.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.prompt || \"\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2928,
+        256
+      ],
+      "id": "f61d9f08-2ca7-496e-ad22-d8f0a8835074",
+      "name": "xAI Period Summary",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{String($json.choices[0].message.content || 'Не смог сделать сводку за период.')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2752,
+        256
+      ],
+      "id": "48d93f2e-b326-494b-b94e-b0804556c5e6",
+      "name": "Build Period Summary Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2560,
+        256
+      ],
+      "id": "8c5f84f7-4196-4b55-88ed-914e2ea8a48a",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input AS (\n  SELECT\n    lower('{{$('Router Алихан').item.json.userMessage.replace(/'/g, \"''\")}}') AS q,\n    NULLIF('{{$('Router Алихан').item.json.lookupId}}', '')::bigint AS explicit_id,\n    '{{$('Router Алихан').item.json.chatId.replace(/'/g, \"''\")}}'::text AS chat_id\n),\nexpanded_terms AS (\n  SELECT unnest(ARRAY[\n    'регламент','альянс алтын','пожарная безопасность','пожароопасные работы',\n    'огневые работы','открытый огонь','мангал','шашлык','костер','костёр',\n    'готовить мясо','барашек','барашка','баран','зарезать','кровь',\n    'пролить кровь','обряд','обычай','ритуал','санитарно-эпидемиологические',\n    'санитарные требования','оос','охрана окружающей среды','окружающей среды',\n    'отходы','пищевые отходы','кости','мусор','загрязнение территории',\n    'ответственность','штраф','штрафные санкции'\n  ]) AS term\n),\nquestion_terms AS (\n  SELECT term\n  FROM regexp_split_to_table(\n    regexp_replace((SELECT q FROM input), '[^a-zа-яё0-9]+', ' ', 'g'),\n    '\\s+'\n  ) AS term\n  WHERE length(term) > 2\n),\nsemantic_terms AS (\n  SELECT term FROM question_terms\n  UNION\n  SELECT term FROM expanded_terms\n  WHERE (\n    (SELECT q FROM input) LIKE '%шашлык%' OR\n    (SELECT q FROM input) LIKE '%мангал%' OR\n    (SELECT q FROM input) LIKE '%костер%' OR\n    (SELECT q FROM input) LIKE '%костёр%' OR\n    (SELECT q FROM input) LIKE '%готовить мясо%' OR\n    (SELECT q FROM input) LIKE '%готовить бараш%'\n  )\n  AND term IN ('пожарная безопасность','пожароопасные работы','огневые работы','открытый огонь','мангал','костер','костёр')\n  UNION\n  SELECT term FROM expanded_terms\n  WHERE (\n    (SELECT q FROM input) LIKE '%зарезать%' OR\n    (SELECT q FROM input) LIKE '%баран%' OR\n    (SELECT q FROM input) LIKE '%бараш%' OR\n    (SELECT q FROM input) LIKE '%кровь%' OR\n    (SELECT q FROM input) LIKE '%пролить%' OR\n    (SELECT q FROM input) LIKE '%обряд%' OR\n    (SELECT q FROM input) LIKE '%обычай%' OR\n    (SELECT q FROM input) LIKE '%ритуал%'\n  )\n  AND term IN ('санитарно-эпидемиологические','санитарные требования','оос','охрана окружающей среды','отходы','пищевые отходы','загрязнение территории')\n),\ncandidate_messages AS (\n  SELECT\n    b.*,\n    COALESCE(b.message_time, b.created_at) AS memory_time,\n    CASE\n      WHEN (SELECT explicit_id FROM input) IS NOT NULL AND b.id = (SELECT explicit_id FROM input) THEN 10000\n      WHEN b.message_type = 'document' THEN 100\n      ELSE 0\n    END\n    +\n    CASE\n      WHEN EXISTS (\n        SELECT 1 FROM semantic_terms t\n        WHERE lower(COALESCE(b.content, '')) LIKE '%' || t.term || '%'\n           OR lower(COALESCE(b.file_name, '')) LIKE '%' || t.term || '%'\n      )\n      THEN 100 ELSE 0\n    END AS score\n  FROM bot_memory_messages b\n  WHERE\n    ((SELECT explicit_id FROM input) IS NOT NULL AND b.id = (SELECT explicit_id FROM input))\n    OR (\n      (SELECT explicit_id FROM input) IS NULL\n      AND (b.chat_id = (SELECT chat_id FROM input) OR b.chat_id = 'project:main')\n      AND b.message_type = 'document'\n      AND (\n        lower(COALESCE(b.file_name, '')) LIKE '%регламент%' OR\n        lower(COALESCE(b.content, '')) LIKE '%регламент%' OR\n        lower(COALESCE(b.file_name, '')) LIKE '%альянс алтын%' OR\n        lower(COALESCE(b.content, '')) LIKE '%альянс алтын%' OR\n        lower(COALESCE(b.content, '')) LIKE '%пожарная безопасность%' OR\n        lower(COALESCE(b.content, '')) LIKE '%санитарно-эпидемиолог%' OR\n        lower(COALESCE(b.content, '')) LIKE '%оос%' OR\n        lower(COALESCE(b.content, '')) LIKE '%охрана окружающей среды%' OR\n        EXISTS (\n          SELECT 1 FROM semantic_terms t\n          WHERE lower(COALESCE(b.content, '')) LIKE '%' || t.term || '%'\n             OR lower(COALESCE(b.file_name, '')) LIKE '%' || t.term || '%'\n        )\n      )\n    )\n  ORDER BY score DESC, memory_time DESC\n  LIMIT 8\n)\nSELECT\n  (SELECT explicit_id FROM input) AS lookup_id,\n  COALESCE(\n    string_agg(\n      'SOURCE_ID: ' || id || E'\\n' ||\n      'DOCUMENT: ' || COALESCE(file_name, 'без имени файла') || E'\\n' ||\n      'TYPE: ' || COALESCE(message_type, 'unknown') || E'\\n' ||\n      'TIME: ' || to_char(memory_time, 'YYYY-MM-DD HH24:MI') || E'\\n' ||\n      'CONTENT: ' || left(regexp_replace(COALESCE(content, ''), E'[\\\\n\\\\r]+', E'\\n', 'g'), 120000),\n      E'\\n\\n--- FOUND FACT ---\\n\\n'\n      ORDER BY score DESC, memory_time DESC\n    ),\n    ''\n  ) AS found_facts\nFROM candidate_messages;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -4784,
+        288
+      ],
+      "id": "5762818d-0bc9-4721-af74-ef9d7db229b8",
+      "name": "Find Fact In Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a26548ac-5587-40a7-8354-83a2dccac332",
+              "name": "number",
+              "value": "={{ $('Router Алихан').item.json.number }}",
+              "type": "string"
+            },
+            {
+              "id": "91824dfd-4e12-4b1b-9a8a-4656fd593191",
+              "name": "prompt",
+              "value": "={{\n(() => {\n  const router = $('Router Алихан').item.json;\n  const userMessage = String(router.userMessage || $json.userMessage || '').trim();\n  const foundFacts = String($json.found_facts || $json.long_facts || '').trim();\n  const explicitId = String(router.lookupId || $json.lookup_id || '').trim();\n\n  return [\n    'Ты отвечаешь на вопрос пользователя по регламентам и памяти проекта Алихан.',\n    '',\n    `Вопрос пользователя: ${userMessage}`,\n    explicitId ? `Пользователь явно указал ID документа: ${explicitId}` : 'Пользователь не указал явный ID документа.',\n    '',\n    'Если вопрос пользователя задан бытовыми, разговорными или непрямыми словами, сначала переведи его в регламентные категории.',\n    '',\n    'Примеры перевода бытовых формулировок:',\n    '- шашлык, мангал, костёр, костер, готовить мясо/барашка, газовый баллон для готовки → открытый огонь, огневые/пожароопасные работы, пожарная безопасность.',\n    '- зарезать барана, пролить кровь, обряд/ритуал на площадке → санитарно-эпидемиологические требования, ООС, загрязнение территории, биологические/пищевые отходы, порядок пребывания на объекте.',\n    '- пищевые отходы, кости, мусор, закопать/оставить отходы → ООС, санитарные требования, обращение с отходами.',\n    '- бытовка, лагерь, проживание, столовая, еда, вода, туалет, душ → санитарно-бытовые условия, вахтовый посёлок/лагерь, санитарно-эпидемиологические требования.',\n    '',\n    'Главные правила ответа:',\n    '- Отвечай строго по найденным документам и памяти ниже.',\n    '- Не выдумывай номера пунктов, разделов и суммы штрафов.',\n    '- Обязательно указывай документ, ID, раздел и пункт, если они есть в найденном тексте.',\n    '- Отделяй прямые нормы регламента от своей квалификации.',\n    '- Используй формулировки: “регламент прямо требует...”, “регламент запрещает...”, “может быть квалифицировано как...”, “точная квалификация зависит от решения Заказчика/ответственных лиц”.',\n    '- Если точная сумма штрафа не найдена, прямо напиши: “точная сумма штрафа в найденном фрагменте не подтверждена”.',\n    '- Если найденный текст недостаточен, честно скажи, чего не хватает.',\n    '',\n    'Правило безопасности для спорных действий:',\n    '- Если действие связано с потенциальным нарушением санитарных, экологических, пожарных требований или порядка пребывания на объекте, не давай инструкцию “как провести это действие на площадке”.',\n    '- Формулируй безопасный вывод: не проводить на строительной площадке; при необходимости согласовать альтернативное место и порядок вне зоны работ с Заказчиком и ответственными службами.',\n    '- Практические действия должны быть направлены на предотвращение нарушения, а не на организацию спорного действия.',\n    '',\n    'Структура ответа:',\n    '1) Вывод: разрешено / запрещено / разрешено только при официальном согласовании и выполнении условий.',\n    '2) Основание: документ, ID, раздел, пункт.',\n    '3) Связь с вопросом пользователя: объясни, почему бытовое действие относится к указанным разделам регламента.',\n    '4) Штраф/ответственность: раздел, пункт и сумма, если они найдены. Если сумма не подтверждена — прямо так и напиши.',\n    '5) Что сделать правильно: безопасные действия для предотвращения нарушения.',\n    '',\n    'Стиль ответа:',\n    '- Коротко, по делу, без воды.',\n    '- Не морализируй.',\n    '- Не спорь с культурными/бытовыми мотивами пользователя; оценивай только применимость регламента на строительной площадке.',\n    '- Если действие самовольное — прямо пиши “самовольно нельзя”.',\n    '',\n    'НАЙДЕННЫЕ ДОКУМЕНТЫ И ФАКТЫ:',\n    foundFacts || '[ничего не найдено]',\n  ].join('\\\\n');\n})()\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4576,
+        288
+      ],
+      "id": "df08082f-c63f-48d2-870a-b842ac2836f9",
+      "name": "Build Fact Lookup Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты помощник по регламентам строительного проекта. Отвечай только на основании найденных документов и памяти. Если вопрос задан бытовыми словами, переводи его в категории регламента. Обязательно указывай документ, ID, раздел, пункт и штраф, если они есть. Не выдумывай пункты и суммы. Не давай инструкций по организации спорных действий на строительной площадке; формулируй безопасный вывод и меры предотвращения нарушения.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.prompt || \"Ошибка: prompt пустой.\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4384,
+        288
+      ],
+      "id": "c237a467-80b8-469b-8d5d-457c957f7b8c",
+      "name": "xAI Fact Lookup",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{String($json.choices[0].message.content || 'Не нашёл подтверждение в памяти.')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4176,
+        288
+      ],
+      "id": "0034ce2d-5ad2-4490-9ed0-c3be9e1886a0",
+      "name": "Build Fact Lookup Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -3968,
+        288
+      ],
+      "id": "664e55b2-6465-42d6-a470-134d529d6086",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  id,\n  chat_id,\n  COALESCE(message_time, created_at) AS item_time,\n  sender,\n  role,\n  message_type,\n  file_name,\n  content\nFROM bot_memory_messages\nWHERE id = {{$('Router Алихан').item.json.lookupId || 0}}\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2800,
+        -1120
+      ],
+      "id": "db4999dd-80cb-418f-9a28-42ec5eae57c1",
+      "name": "Get Memory By ID",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{$json.id ? (\"ID \" + $json.id + \"\\nДата: \" + $json.item_time + \"\\nОтправитель: \" + ($json.sender || \"unknown\") + \"\\nТип: \" + ($json.message_type || \"\") + \"\\nФайл: \" + ($json.file_name || \"нет\") + \"\\n\\n\" + String($json.content || \"\").slice(0, 3500)) : \"Запись с таким ID не найдена в памяти проекта.\"}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2608,
+        -1120
+      ],
+      "id": "6c2e1a6e-54c9-4bad-b1a7-ef6c1c1ddc62",
+      "name": "Build ID Lookup Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.number}}"
+            },
+            {
+              "name": "text",
+              "value": "={{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2400,
+        -1120
+      ],
+      "id": "91f89bd8-1776-4a31-9c04-a1d57dcb19ad",
+      "name": "HTTP Request5",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты извлекаешь календарное событие из русского текста. Верни только валидный JSON без markdown. Часовые пояса: Бишкек, Кыргызстан, местное по Бишкеку = Asia/Bishkek. Москва, МСК, московское время = Europe/Moscow. Если часовой пояс не указан, используй Asia/Bishkek. Если длительность не указана, event_end оставь пустым. Если напоминание не указано, remind_minutes_before = null. Название должно быть коротким. Описание — полный смысл события.\"\n    },\n    {\n      role: \"user\",\n      content: \"Сегодня по системному времени: \" + new Date().toISOString() + \". Извлеки событие из текста и верни JSON с полями: title, description, location, date, time, timezone, event_end_date, event_end_time, remind_minutes_before. Текст: \" + String($('Router Алихан').item.json.userMessage || \"\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2784,
+        -944
+      ],
+      "id": "13a3ee89-d939-4b1a-b6c8-d0265387014d",
+      "name": "xAI Extract Calendar Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($json.choices?.[0]?.message?.content || '').trim();\n\nlet cleaned = raw\n  .replace(/^```json/i, '')\n  .replace(/^```/i, '')\n  .replace(/```$/i, '')\n  .trim();\n\nlet event;\n\ntry {\n  event = JSON.parse(cleaned);\n} catch (e) {\n  return [\n    {\n      json: {\n        ok: false,\n        error: 'Не смог разобрать JSON события',\n        raw,\n        number: $('Router Алихан').item.json.number,\n        chatId: $('Router Алихан').item.json.chatId,\n      },\n    },\n  ];\n}\n\nfunction cleanText(v) {\n  return String(v || '').trim();\n}\n\nfunction normalizeTimezone(tz) {\n  const s = String(tz || '').toLowerCase();\n\n  if (\n    s.includes('moscow') ||\n    s.includes('моск') ||\n    s.includes('мск') ||\n    s.includes('europe/moscow')\n  ) {\n    return 'Europe/Moscow';\n  }\n\n  if (\n    s.includes('bishkek') ||\n    s.includes('бишк') ||\n    s.includes('кыргыз') ||\n    s.includes('asia/bishkek')\n  ) {\n    return 'Asia/Bishkek';\n  }\n\n  return 'Asia/Bishkek';\n}\n\nfunction normalizeMinutes(v) {\n  if (v === null || v === undefined || v === '') return null;\n  const n = Number(v);\n  if (!Number.isFinite(n) || n < 0) return null;\n  return Math.round(n);\n}\n\nconst title = cleanText(event.title || 'Событие');\nconst description = cleanText(event.description || title);\nconst location = cleanText(event.location || '');\nconst date = cleanText(event.date || '');\nconst time = cleanText(event.time || '');\nconst timezone = normalizeTimezone(event.timezone);\nconst eventEndDate = cleanText(event.event_end_date || '');\nconst eventEndTime = cleanText(event.event_end_time || '');\nconst remindMinutesBefore = normalizeMinutes(event.remind_minutes_before);\n\nif (!date || !time) {\n  return [\n    {\n      json: {\n        ok: false,\n        error: 'Не хватает даты или времени события',\n        raw,\n        number: $('Router Алихан').item.json.number,\n        chatId: $('Router Алихан').item.json.chatId,\n      },\n    },\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      number: $('Router Алихан').item.json.number,\n      chatId: $('Router Алихан').item.json.chatId,\n      createdBy: $('Router Алихан').item.json.sender || $('Router Алихан').item.json.body?.data?.pushName || 'Unknown',\n      sourceMessageId: $('Router Алихан').item.json.messageId || $('Router Алихан').item.json.body?.data?.key?.id || '',\n\n      title,\n      description,\n      location,\n      date,\n      time,\n      timezone,\n      eventEndDate,\n      eventEndTime,\n      remindMinutesBefore,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2592,
+        -944
+      ],
+      "id": "5c6ceba0-6135-495f-bb6a-eb1857eebc98",
+      "name": "Parse Calendar Event"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input AS (\n  SELECT\n    '{{$json.chatId.replace(/'/g, \"''\")}}'::text AS chat_id,\n    '{{$json.createdBy.replace(/'/g, \"''\")}}'::text AS created_by,\n    '{{$json.sourceMessageId.replace(/'/g, \"''\")}}'::text AS source_message_id,\n    '{{$json.title.replace(/'/g, \"''\")}}'::text AS title,\n    '{{$json.description.replace(/'/g, \"''\")}}'::text AS description,\n    '{{$json.location.replace(/'/g, \"''\")}}'::text AS location,\n    '{{$json.date}}'::text AS event_date,\n    '{{$json.time}}'::text AS event_time,\n    '{{$json.timezone}}'::text AS timezone,\n    NULLIF('{{$json.eventEndDate}}', '')::text AS event_end_date,\n    NULLIF('{{$json.eventEndTime}}', '')::text AS event_end_time,\n    {{$json.remindMinutesBefore === null ? 'NULL' : $json.remindMinutesBefore}}::integer AS remind_minutes_before\n),\nprepared AS (\n  SELECT\n    *,\n    ((event_date || ' ' || event_time)::timestamp AT TIME ZONE timezone) AS event_start,\n    CASE\n      WHEN event_end_date IS NOT NULL AND event_end_time IS NOT NULL\n      THEN ((event_end_date || ' ' || event_end_time)::timestamp AT TIME ZONE timezone)\n      ELSE NULL\n    END AS event_end\n  FROM input\n),\ninserted AS (\n  INSERT INTO bot_calendar_events\n  (\n    chat_id,\n    created_by,\n    source_message_id,\n    title,\n    description,\n    location,\n    event_start,\n    event_end,\n    timezone,\n    remind_at,\n    remind_minutes_before,\n    reminder_sent,\n    status\n  )\n  SELECT\n    chat_id,\n    created_by,\n    source_message_id,\n    title,\n    description,\n    location,\n    event_start,\n    event_end,\n    timezone,\n    CASE\n      WHEN remind_minutes_before IS NOT NULL\n      THEN event_start - (remind_minutes_before || ' minutes')::interval\n      ELSE NULL\n    END AS remind_at,\n    remind_minutes_before,\n    FALSE,\n    'active'\n  FROM prepared\n  RETURNING *\n)\nSELECT\n  id,\n  chat_id,\n  title,\n  description,\n  location,\n  timezone,\n  remind_minutes_before,\n  to_char(event_start AT TIME ZONE timezone, 'YYYY-MM-DD HH24:MI') AS event_start_local,\n  to_char(remind_at AT TIME ZONE timezone, 'YYYY-MM-DD HH24:MI') AS remind_at_local\nFROM inserted;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2400,
+        -944
+      ],
+      "id": "b9f30049-f3c6-474f-80bd-01bd9a073310",
+      "name": "Save Calendar Event",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{\"Событие добавлено.\\n\\nID: \" + $json.id + \"\\nНазвание: \" + $json.title + \"\\nКогда: \" + $json.event_start_local + \" (\" + $json.timezone + \")\\nГде: \" + ($json.location || \"не указано\") + \"\\nНапоминание: \" + ($json.remind_minutes_before ? (\"за \" + $json.remind_minutes_before + \" мин., \" + $json.remind_at_local + \" (\" + $json.timezone + \")\") : \"не задано\")}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2160,
+        -928
+      ],
+      "id": "bca49d57-34a4-4ce4-a25b-8a78353b433d",
+      "name": "Build Calendar Create Reply"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH params AS (\n  SELECT\n    '{{$('Router Алихан').item.json.chatId.replace(/'/g, \"''\")}}'::text AS chat_id,\n    COALESCE(NULLIF('{{$('Router Алихан').item.json.calendarRange || \"all\"}}', ''), 'all')::text AS range,\n    'Asia/Bishkek'::text AS default_timezone\n),\nbounds AS (\n  SELECT\n    chat_id,\n    range,\n    CASE\n      WHEN range = 'today'\n      THEN (date_trunc('day', NOW() AT TIME ZONE default_timezone) AT TIME ZONE default_timezone)\n      WHEN range = 'tomorrow'\n      THEN ((date_trunc('day', NOW() AT TIME ZONE default_timezone) + interval '1 day') AT TIME ZONE default_timezone)\n      WHEN range = 'week'\n      THEN NOW()\n      ELSE NOW()\n    END AS start_at,\n    CASE\n      WHEN range = 'today'\n      THEN ((date_trunc('day', NOW() AT TIME ZONE default_timezone) + interval '1 day') AT TIME ZONE default_timezone)\n      WHEN range = 'tomorrow'\n      THEN ((date_trunc('day', NOW() AT TIME ZONE default_timezone) + interval '2 days') AT TIME ZONE default_timezone)\n      WHEN range = 'week'\n      THEN NOW() + interval '7 days'\n      ELSE NULL\n    END AS end_at\n  FROM params\n),\nevents AS (\n  SELECT\n    e.id,\n    e.title,\n    e.description,\n    e.location,\n    e.timezone,\n    e.event_start,\n    e.remind_at,\n    e.remind_minutes_before\n  FROM bot_calendar_events e\n  JOIN bounds b ON b.chat_id = e.chat_id\n  WHERE e.status = 'active'\n    AND e.event_start >= b.start_at\n    AND (b.end_at IS NULL OR e.event_start < b.end_at)\n)\nSELECT\n  CASE (SELECT range FROM bounds)\n    WHEN 'today' THEN 'сегодня'\n    WHEN 'tomorrow' THEN 'завтра'\n    WHEN 'week' THEN 'неделю'\n    ELSE 'все будущие'\n  END AS range_label,\n  COALESCE(\n    (\n      SELECT string_agg(\n        'ID ' || id || E'\\n' ||\n        'Время: ' || to_char(event_start AT TIME ZONE timezone, 'YYYY-MM-DD HH24:MI') || ' (' || timezone || ')' || E'\\n' ||\n        'Название: ' || title || E'\\n' ||\n        'Где: ' || COALESCE(NULLIF(location, ''), 'не указано') || E'\\n' ||\n        'Напоминание: ' ||\n          CASE\n            WHEN remind_at IS NOT NULL\n            THEN to_char(remind_at AT TIME ZONE timezone, 'YYYY-MM-DD HH24:MI') ||\n                 CASE\n                   WHEN remind_minutes_before IS NOT NULL\n                   THEN ' (за ' || remind_minutes_before || ' мин.)'\n                   ELSE ''\n                 END\n            ELSE 'не задано'\n          END,\n        E'\\n\\n'\n        ORDER BY event_start\n      )\n      FROM events\n    ),\n    'Активных событий нет.'\n  ) AS events_text;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2496,
+        -752
+      ],
+      "id": "5b529f52-300e-455e-82da-30788e6b0c13",
+      "name": "Get Calendar Events",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{\"Календарь Алихана: \" + $json.range_label + \"\\n\\n\" + $json.events_text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2288,
+        -752
+      ],
+      "id": "b5188785-4061-464b-9925-db1dc4435571",
+      "name": "Build Calendar List Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  number: String($json.number || \"\"),\n  text: String($json.text || \"\")\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1872,
+        -832
+      ],
+      "id": "5cb3aeb7-1992-4051-8310-91f25034c564",
+      "name": "WhatsApp Calendar Reply",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH deleted AS (\n  UPDATE bot_calendar_events\n  SET status = 'deleted',\n      updated_at = NOW()\n  WHERE id = {{$('Router Алихан').item.json.lookupId || 0}}\n    AND chat_id = '{{$('Router Алихан').item.json.chatId.replace(/'/g, \"''\")}}'\n    AND status = 'active'\n  RETURNING\n    id,\n    title,\n    location,\n    timezone,\n    to_char(event_start AT TIME ZONE timezone, 'YYYY-MM-DD HH24:MI') AS event_start_local\n)\nSELECT\n  COALESCE(MAX(id)::text, '') AS id,\n  COALESCE(MAX(title), '') AS title,\n  COALESCE(MAX(location), '') AS location,\n  COALESCE(MAX(timezone), '') AS timezone,\n  COALESCE(MAX(event_start_local), '') AS event_start_local,\n  CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END AS deleted\nFROM deleted;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2336,
+        -560
+      ],
+      "id": "70970a55-29a0-4b82-b450-f6aac1b0a8a4",
+      "name": "Delete Calendar Event",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{$json.deleted ? (\"Событие удалено.\\n\\nID: \" + $json.id + \"\\nНазвание: \" + $json.title + \"\\nКогда: \" + $json.event_start_local + \" (\" + $json.timezone + \")\\nГде: \" + ($json.location || \"не указано\")) : (\"Активное событие с ID \" + $('Router Алихан').item.json.lookupId + \" не найдено.\")}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2128,
+        -560
+      ],
+      "id": "9c2d349f-b2a9-40f0-82e1-c2bcdcfeec05",
+      "name": "Build Calendar Delete Reply"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  to_char(NOW() AT TIME ZONE 'Asia/Bishkek', 'YYYY-MM-DD HH24:MI') AS bishkek_time,\n  to_char(NOW() AT TIME ZONE 'Europe/Moscow', 'YYYY-MM-DD HH24:MI') AS moscow_time,\n  to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI') AS utc_time,\n\n  CASE EXTRACT(ISODOW FROM NOW() AT TIME ZONE 'Asia/Bishkek')\n    WHEN 1 THEN 'понедельник'\n    WHEN 2 THEN 'вторник'\n    WHEN 3 THEN 'среда'\n    WHEN 4 THEN 'четверг'\n    WHEN 5 THEN 'пятница'\n    WHEN 6 THEN 'суббота'\n    WHEN 7 THEN 'воскресенье'\n  END AS bishkek_weekday,\n\n  CASE EXTRACT(ISODOW FROM NOW() AT TIME ZONE 'Europe/Moscow')\n    WHEN 1 THEN 'понедельник'\n    WHEN 2 THEN 'вторник'\n    WHEN 3 THEN 'среда'\n    WHEN 4 THEN 'четверг'\n    WHEN 5 THEN 'пятница'\n    WHEN 6 THEN 'суббота'\n    WHEN 7 THEN 'воскресенье'\n  END AS moscow_weekday;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2800,
+        -144
+      ],
+      "id": "3ad8d7e5-9d8b-4a70-b144-595a9129186c",
+      "name": "Get Current DateTime",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5315d88-bcc3-4322-b040-1b1243f9041b",
+              "name": "number",
+              "value": "={{$('Router Алихан').item.json.number}}",
+              "type": "string"
+            },
+            {
+              "id": "86f075b6-a762-4dc9-afa6-9edbbce32201",
+              "name": "text",
+              "value": "={{\"Сегодня по календарю:\\n\\nБишкек: \" + $json.bishkek_time + \", \" + $json.bishkek_weekday + \"\\nМосква: \" + $json.moscow_time + \", \" + $json.moscow_weekday + \"\\nUTC: \" + $json.utc_time}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2592,
+        -144
+      ],
+      "id": "bc184b6a-4222-4a91-8d33-539c7f8ca4b5",
+      "name": "Build Current DateTime Reply"
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2560,
+        -352
+      ],
+      "id": "772dd0b2-3682-460a-9823-1ef310f46ec1",
+      "name": "Wait Before xAI Summary",
+      "webhookId": "f5be8d64-0835-4f57-90a0-f77c49df6881"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты сравниваешь две версии строительного документа. Отвечай только по переданному тексту, без догадок. Если подтверждения нет, прямо пиши, что в переданном тексте это не подтверждено.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.comparePrompt || \"Ошибка: comparePrompt пустой. Проверь ноду Build Document Compare Prompt.\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1072,
+        576
+      ],
+      "id": "c96b40fd-bab4-4b38-9369-caeda40219bf",
+      "name": "xAI Compare Documents",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH requested AS (\n  SELECT\n    {{$('Router Алихан').item.json.docCompareOldId}}::bigint AS old_id,\n    {{$('Router Алихан').item.json.docCompareNewId}}::bigint AS new_id\n),\nold_doc AS (\n  SELECT b.id, b.file_name, COALESCE(b.message_time, b.created_at) AS doc_time, b.message_type, b.content\n  FROM bot_memory_messages b\n  JOIN requested r ON b.id = r.old_id\n  LIMIT 1\n),\nnew_doc AS (\n  SELECT b.id, b.file_name, COALESCE(b.message_time, b.created_at) AS doc_time, b.message_type, b.content\n  FROM bot_memory_messages b\n  JOIN requested r ON b.id = r.new_id\n  LIMIT 1\n)\nSELECT\n  r.old_id,\n  old_doc.file_name AS old_file_name,\n  old_doc.doc_time AS old_time,\n  old_doc.message_type AS old_message_type,\n  old_doc.content AS old_content,\n  r.new_id,\n  new_doc.file_name AS new_file_name,\n  new_doc.doc_time AS new_time,\n  new_doc.message_type AS new_message_type,\n  new_doc.content AS new_content,\n  (old_doc.id IS NOT NULL) AS found_old,\n  (new_doc.id IS NOT NULL) AS found_new\nFROM requested r\nLEFT JOIN old_doc ON TRUE\nLEFT JOIN new_doc ON TRUE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2400,
+        -16
+      ],
+      "id": "e3f1751f-a435-4f6a-87af-df682e41a1ca",
+      "name": "Get Documents For Compare",
+      "credentials": {
+        "postgres": {
+          "id": "Q05KuqQtYjbdgucJ",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f5da339b-646f-48ea-8dd0-35041097b569",
+              "leftValue": "={{$json.shouldCallXai.toBoolean()}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1312,
+        528
+      ],
+      "id": "383fb869-20e6-4cb4-98c9-8104fad777e1",
+      "name": "Compare Documents Found"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nreturn inputItems.map((item) => {\n  const row = item.json;\n\n  const router = $('Router Алихан').item.json;\n\n  const oldId = String(row.old_id || router.docCompareOldId || '').trim();\n  const newId = String(row.new_id || router.docCompareNewId || '').trim();\n\n  const foundOld = row.found_old === true || row.found_old === 'true';\n  const foundNew = row.found_new === true || row.found_new === 'true';\n\n  // Temporary limit for first deployment. Next step: replace this with chunk-compare by document sections.\n  const MAX_CHARS_PER_DOC = 80000;\n\n  function cleanText(value) {\n    return String(value || '')\n      .replace(/\\u0000/g, ' ')\n      .replace(/\\r/g, '\\n')\n      .replace(/\\n{3,}/g, '\\n\\n')\n      .trim();\n  }\n\n  function truncateDoc(value) {\n    const text = cleanText(value);\n\n    if (text.length <= MAX_CHARS_PER_DOC) {\n      return {\n        text,\n        truncated: false,\n        originalLength: text.length,\n      };\n    }\n\n    return {\n      text: text.slice(0, MAX_CHARS_PER_DOC),\n      truncated: true,\n      originalLength: text.length,\n    };\n  }\n\n  let status = 'ok';\n  let errorText = '';\n\n  if (!foundOld && !foundNew) {\n    status = 'missing';\n    errorText = `Старый документ ID ${oldId} не найден.\\nНовый документ ID ${newId} не найден.`;\n  } else if (!foundOld) {\n    status = 'missing';\n    errorText = `Старый документ ID ${oldId} не найден.`;\n  } else if (!foundNew) {\n    status = 'missing';\n    errorText = `Новый документ ID ${newId} не найден.`;\n  }\n\n  const oldDoc = truncateDoc(row.old_content);\n  const newDoc = truncateDoc(row.new_content);\n\n  const truncated = oldDoc.truncated || newDoc.truncated;\n\n  const oldFileName = String(row.old_file_name || 'без имени файла');\n  const newFileName = String(row.new_file_name || 'без имени файла');\n\n  const truncationNote = truncated\n    ? (\n        'ВНИМАНИЕ: сравнение предварительное из-за лимита текста. ' +\n        `Старый документ: использовано ${oldDoc.text.length} из ${oldDoc.originalLength} символов. ` +\n        `Новый документ: использовано ${newDoc.text.length} из ${newDoc.originalLength} символов. ` +\n        'Не делай выводы по частям, которых нет в переданном тексте. ' +\n        'Следующий этап — chunk-compare по разделам документа.'\n      )\n    : 'Тексты документов переданы без обрезки на уровне этой ноды.';\n\n  const prompt = status === 'ok'\n    ? [\n        `Старый документ: ID ${oldId}, файл ${oldFileName}`,\n        `Новый документ: ID ${newId}, файл ${newFileName}`,\n        '',\n        truncationNote,\n        '',\n        'Задача: сравни строго старый документ с новым. Не фантазируй.',\n        'Если в тексте нет подтверждения изменения, не пиши его как факт.',\n        'Используй формулировки \"в новой версии добавлено\", \"усилено\", \"изменено\" только если это следует из текста.',\n        'Для регламентов особенно проверь обязанности подрядчика, штрафы, ОТ, ПБ, РБ, ООС, санитарные требования, приложения и формы.',\n        '',\n        'Выведи результат строго по разделам:',\n        '1) Краткий вывод',\n        '2) Что появилось нового в новой версии',\n        '3) Что изменилось',\n        '4) Что удалено или не найдено в новой версии',\n        '5) Новые/усиленные обязанности подрядчика',\n        '6) Изменения по штрафам и ответственности',\n        '7) Изменения по ОТ, ПБ, РБ',\n        '8) Изменения по ООС',\n        '9) Санитарно-эпидемиологические требования',\n        '10) Изменения по документам, отчётности и приложениям',\n        '11) Что нужно сделать проектной команде',\n        '',\n        'СТАРЫЙ ДОКУМЕНТ:',\n        oldDoc.text || '[нет текста старого документа]',\n        '',\n        'НОВЫЙ ДОКУМЕНТ:',\n        newDoc.text || '[нет текста нового документа]',\n      ].join('\\n')\n    : '';\n\n  return {\n    json: {\n      ...row,\n      status,\n      shouldCallXai: status === 'ok',\n      errorText,\n      number: router.number,\n      text: errorText,\n      old_id: oldId,\n      new_id: newId,\n      old_file_name: oldFileName,\n      new_file_name: newFileName,\n      old_content_truncated: oldDoc.truncated,\n      new_content_truncated: newDoc.truncated,\n      truncationNote,\n      comparePrompt: prompt,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        368
+      ],
+      "id": "29a54d1b-03f6-44ff-9a13-8e1798a5de17",
+      "name": "Build Document Compare Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nfunction readFirstNodeJson(name) {\n  try {\n    const items = $items(name);\n    return items?.[0]?.json || {};\n  } catch (e) {\n    return {};\n  }\n}\n\nreturn inputItems.map((item) => {\n  const row = item.json || {};\n\n  const aggregate = readFirstNodeJson('Aggregate Document Chunk Results');\n\n  const answer = String(\n    row.choices?.[0]?.message?.content ||\n    row.message?.content ||\n    row.content ||\n    row.text ||\n    ''\n  ).trim();\n\n  const number = String(\n    aggregate.number ||\n    row.number ||\n    ''\n  );\n\n  const oldId = aggregate.old_id || row.old_id || '';\n  const newId = aggregate.new_id || row.new_id || '';\n  const oldFileName = aggregate.old_file_name || row.old_file_name || 'старый документ';\n  const newFileName = aggregate.new_file_name || row.new_file_name || 'новый документ';\n\n  const header = [\n    'Сравнение документов:',\n    `Старый документ: ID ${oldId}, файл ${oldFileName}`,\n    `Новый документ: ID ${newId}, файл ${newFileName}`,\n  ].join('\\n');\n\n  return {\n    json: {\n      ...row,\n      number,\n      text: `${header}\\n\\n${answer || 'xAI не вернул финальный текст сравнения.'}`,\n      old_id: oldId,\n      new_id: newId,\n      old_file_name: oldFileName,\n      new_file_name: newFileName,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        -192
+      ],
+      "id": "12961802-a257-40cc-b02e-9fa06e6ff47a",
+      "name": "Build Document Compare Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8080/message/sendText/bot1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "SuperSecretKey_Grok2026_!@#"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  number: String($json.number || \"\"),\n  text: String($json.text || \"\")\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -896,
+        -192
+      ],
+      "id": "ae449f9b-8895-4bbb-b215-b84d948ecdfb",
+      "name": "WhatsApp Reply Documents",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\nconst row = inputItems[0]?.json || {};\n\nconst oldId = String(row.old_id || $('Router Алихан').item.json.docCompareOldId || '').trim();\nconst newId = String(row.new_id || $('Router Алихан').item.json.docCompareNewId || '').trim();\nconst foundOld = row.found_old === true || row.found_old === 'true';\nconst foundNew = row.found_new === true || row.found_new === 'true';\n\nfunction cleanText(value) {\n  return String(value || '')\n    .replace(/\\u0000/g, ' ')\n    .replace(/\\r/g, '\\n')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/\\n[ \\t]+/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction normalizeForSearch(value) {\n  return cleanText(value)\n    .replace(/[ё]/gi, 'е')\n    .replace(/[‐‑‒–—―]/g, '-')\n    .toLowerCase();\n}\n\nconst oldContent = cleanText(row.old_content);\nconst newContent = cleanText(row.new_content);\nconst oldSearch = normalizeForSearch(oldContent);\nconst newSearch = normalizeForSearch(newContent);\n\nconst oldFileName = String(row.old_file_name || 'без имени файла');\nconst newFileName = String(row.new_file_name || 'без имени файла');\n\nlet errorText = '';\nif (!foundOld && !foundNew) {\n  errorText = `Старый документ ID ${oldId} не найден.\\nНовый документ ID ${newId} не найден.`;\n} else if (!foundOld) {\n  errorText = `Старый документ ID ${oldId} не найден.`;\n} else if (!foundNew) {\n  errorText = `Новый документ ID ${newId} не найден.`;\n}\n\nif (errorText) {\n  return [\n    {\n      json: {\n        status: 'missing',\n        shouldCallXai: false,\n        isDocumentCompareChunk: false,\n        number: $('Router Алихан').item.json.number,\n        text: errorText,\n        errorText,\n        old_id: oldId,\n        new_id: newId,\n        old_file_name: oldFileName,\n        new_file_name: newFileName,\n      },\n    },\n  ];\n}\n\nconst sections = [\n  { number: 1, key: '01_terms', title: '1. Термины и сокращения', titleTerms: ['термины и сокращения', 'термины', 'терминология', 'сокращения', 'обозначения', 'определения'], keywords: ['термины', 'сокращения', 'определения'] },\n  { number: 2, key: '02_general', title: '2. Основные положения', titleTerms: ['основные положения', 'общие положения', 'область применения'], keywords: ['основные положения', 'общие положения', 'область применения'] },\n  { number: 3, key: '03_contractor_duties', title: '3. Обязанности подрядчиков', titleTerms: ['обязанности подрядчиков', 'обязанности подрядчика', 'обязанности подрядчиков в области', 'требования к подрядчикам', 'обязанности'], keywords: ['обязанности подрядчика', 'обязанности подрядчиков', 'подрядчик обязан'] },\n  { number: 4, key: '04_hse_industrial_radiation', title: '4. ОТ, ПБ, РБ / отдельные требования', titleTerms: ['охрана труда', 'промышленная безопасность', 'радиационная безопасность', 'отдельные требования', 'от', 'пб', 'рб'], keywords: ['охрана труда', 'промышленная безопасность', 'радиационная безопасность', 'от пб рб'] },\n  { number: 5, key: '05_environment', title: '5. ООС', titleTerms: ['оос', 'охрана окружающей среды', 'экологические требования', 'окружающей среды'], keywords: ['оос', 'охрана окружающей среды', 'экологические требования'] },\n  { number: 6, key: '06_fire_safety', title: '6. Пожарная безопасность', titleTerms: ['пожарная безопасность', 'пожарной безопасности', 'требования пожарной безопасности', 'требования по обеспечению пожарной безопасности', 'обеспечение пожарной безопасности'], keywords: ['пожарная безопасность', 'пожарной безопасности', 'противопожар'] },\n  { number: 7, key: '07_sanitary', title: '7. Санитарно-эпидемиологические требования', titleTerms: ['санитарно-эпидемиологические', 'санитарно эпидемиологические', 'санитарные требования', 'санэпид', 'требования в области санитарно-эпидемиологического благополучия', 'санитарно-эпидемиологического благополучия'], keywords: ['санитарно-эпидемиологические', 'санитарные требования', 'санэпид', 'санитарно-эпидемиологического благополучия', 'вахтовый городок', 'лагерь'] },\n  { number: 8, key: '08_reporting', title: '8. Отчётность подрядчиков', titleTerms: ['отчетность подрядчиков', 'отчётность подрядчиков', 'требования к отчетности подрядчиков', 'требования к отчётности подрядчиков', 'отчетность', 'отчётность', 'предоставление отчетности'], keywords: ['отчетность подрядчиков', 'отчётность подрядчиков', 'предоставление отчетности', 'предоставление отчётности'] },\n  { number: 9, key: '09_responsibility', title: '9. Ответственность подрядчиков', titleTerms: ['ответственность подрядчиков', 'ответственность подрядчика', 'ответственность'], keywords: ['ответственность подрядчика', 'ответственность подрядчиков', 'несет ответственность'] },\n  { number: 10, key: '10_penalties', title: '10. Штрафные санкции', titleTerms: ['штрафные санкции', 'штрафы', 'санкции', 'неустойка'], keywords: ['штрафные санкции', 'штрафы', 'санкции', 'неустойка'] },\n  { number: 11, key: '11_approval', title: '11. Порядок согласования регламента', titleTerms: ['порядок согласования', 'порядок согласования регламента', 'согласование регламента', 'согласование'], keywords: ['порядок согласования', 'согласование регламента', 'согласование'] },\n  { number: 12, key: '12_appendices', title: '12. Приложения / перечень приложений', titleTerms: ['приложения', 'перечень приложений', 'формы', 'приложение'], keywords: ['приложения', 'перечень приложений', 'приложение', 'формы'] },\n];\n\nconst knownPageMap4014To4013 = {\n  '01_terms': { oldPages: [4, 5], newPages: [3, 4] },\n  '02_general': { oldPages: [6], newPages: [5] },\n  '03_contractor_duties': { oldPages: [7, 8, 9, 10, 11, 12], newPages: [5, 6, 7, 8, 9, 10, 11] },\n  '04_hse_industrial_radiation': { oldPages: [13, 14, 15], newPages: [11, 12, 13, 14, 15] },\n  '05_environment': { oldPages: [16, 17, 18], newPages: [15, 16, 17] },\n  '06_fire_safety': { oldPages: [], newPages: [18, 19] },\n  '07_sanitary': { oldPages: [], newPages: [19, 20] },\n  '08_reporting': { oldPages: [19], newPages: [20] },\n  '09_responsibility': { oldPages: [20, 21, 22, 23, 24], newPages: [21, 22, 23, 24] },\n  '10_penalties': { oldPages: [24, 25, 26], newPages: [25, 26, 27, 28] },\n  '11_approval': { oldPages: [25, 26], newPages: [28, 29] },\n  '12_appendices': { oldPages: [1, 2, 27], newPages: [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43] },\n};\n\nconst sectionMappingNotes4014To4013 = {\n  '08_reporting': 'old section 6 → new section 8',\n  '09_responsibility': 'old section 7 → new section 9',\n  '10_penalties': 'old section 8 → new section 10',\n  '11_approval': 'old section 9 → new section 11',\n  '12_appendices': 'old section 10 → new section 12',\n};\n\nfunction splitByPageMarkers(text) {\n  const source = String(text || '');\n  const markerPattern = /(?:^|\\n)\\s*---\\s*(vision\\s+)?page\\s+(\\d{1,4})\\s*---\\s*(?=\\n|$)/gi;\n  const markers = [];\n  let match;\n\n  while ((match = markerPattern.exec(source)) !== null) {\n    markers.push({\n      markerStart: match.index,\n      markerEnd: markerPattern.lastIndex,\n      pageNumber: Number(match[2]),\n      isVision: Boolean(match[1]),\n    });\n  }\n\n  const pageMap = new Map();\n  for (let index = 0; index < markers.length; index += 1) {\n    const current = markers[index];\n    const next = markers[index + 1];\n    const pageText = source.slice(current.markerEnd, next ? next.markerStart : source.length).trim();\n    pageMap.set(current.pageNumber, pageText);\n  }\n\n  return pageMap;\n}\n\nfunction getPages(pageMap, pagesArray) {\n  const foundPages = [];\n  const missingPages = [];\n  const parts = [];\n\n  for (const page of pagesArray || []) {\n    if (pageMap.has(page)) {\n      foundPages.push(page);\n      parts.push(`--- page ${page} ---\\n${pageMap.get(page)}`);\n    } else {\n      missingPages.push(page);\n    }\n  }\n\n  return {\n    text: parts.join('\\n\\n').trim(),\n    foundPages,\n    missingPages,\n  };\n}\n\nfunction hasClassicPageMarkers(text) {\n  return /(?:^|\\n)\\s*---\\s*page\\s+\\d{1,4}\\s*---\\s*(?=\\n|$)/i.test(String(text || ''));\n}\n\nfunction hasVisionPageMarkers(text) {\n  return /(?:^|\\n)\\s*---\\s*vision\\s+page\\s+\\d{1,4}\\s*---\\s*(?=\\n|$)/i.test(String(text || ''));\n}\n\nfunction escapeRegExp(value) {\n  return String(value).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n}\n\nfunction titleTermPattern(term) {\n  return escapeRegExp(term.replace(/ё/gi, 'е').toLowerCase()).replace(/\\s+/g, '\\\\s+');\n}\n\nfunction buildHeadingPatterns(section) {\n  const titleAlternation = section.titleTerms.map(titleTermPattern).join('|');\n  const number = section.number;\n  const markdownPrefix = String.raw`\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?\\s*`;\n  const markdownSuffix = String.raw`\\s*(?:\\*\\*)?\\s*`;\n\n  return [\n    new RegExp(\n      `(?:^|\\\\n)${markdownPrefix}(?:раздел\\\\s*)?${number}\\\\s*(?:[.)\\\\-–—:]|\\\\s)\\\\s*(?:\\\\*\\\\*)?\\\\s*(?:${titleAlternation})[^\\\\n]{0,220}${markdownSuffix}`,\n      'i'\n    ),\n    new RegExp(\n      `(?:^|\\\\n)${markdownPrefix}(?:${titleAlternation})${markdownSuffix}(?:\\\\n|$)`,\n      'i'\n    ),\n  ];\n}\n\nfunction isTocLikeLine(line) {\n  const value = String(line || '').trim();\n  if (!value) return false;\n\n  return (\n    /\\.{3,}\\s*\\d{1,4}\\s*$/.test(value) ||\n    /\\s{3,}\\d{1,4}\\s*$/.test(value) ||\n    /…+\\s*\\d{1,4}\\s*$/.test(value)\n  );\n}\n\nfunction isSummaryLikeLine(line) {\n  const value = String(line || '')\n    .replace(/[ё]/gi, 'е')\n    .toLowerCase()\n    .trim();\n\n  return (\n    value.includes('краткое описание смысла страницы') ||\n    value.includes('краткое описание страницы') ||\n    value.includes('описание смысла страницы') ||\n    value.includes('summary') ||\n    value.includes('page summary')\n  );\n}\n\nfunction lineAt(originalText, index) {\n  const start = originalText.lastIndexOf('\\n', Math.max(0, index - 1)) + 1;\n  const endIndex = originalText.indexOf('\\n', index);\n  const end = endIndex >= 0 ? endIndex : originalText.length;\n  return originalText.slice(start, end);\n}\n\nfunction detectBodyStart(originalText, searchText) {\n  const contentMarkers = [];\n  const contentPattern = /(?:^|\\n)\\s*с\\s*о\\s*д\\s*е\\s*р\\s*ж\\s*а\\s*н\\s*и\\s*е\\s*(?:\\n|$)/gi;\n  let contentMatch;\n  while ((contentMatch = contentPattern.exec(searchText)) !== null) {\n    contentMarkers.push(contentMatch.index);\n  }\n\n  const firstSectionPatterns = [\n    /(?:^|\\n)\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?\\s*(?:раздел\\s*)?1\\s*(?:[.)\\-–—:]|\\s)\\s*(?:\\*\\*)?\\s*(?:термины|терминология|сокращения|обозначения|определения)[^\\n]{0,220}(?:\\*\\*)?\\s*/gi,\n    /(?:^|\\n)\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?\\s*(?:термины|терминология|сокращения|обозначения|определения)(?:\\*\\*)?\\s*(?:\\n|$)/gi,\n  ];\n\n  const candidates = [];\n  for (const pattern of firstSectionPatterns) {\n    let match;\n    while ((match = pattern.exec(searchText)) !== null) {\n      const start = match.index + (match[0].startsWith('\\n') ? 1 : 0);\n      const line = lineAt(originalText, start);\n      if (!isTocLikeLine(line) && !isSummaryLikeLine(line)) {\n        candidates.push(start);\n      }\n    }\n  }\n\n  if (!candidates.length) {\n    return 0;\n  }\n\n  candidates.sort((a, b) => a - b);\n\n  if (!contentMarkers.length) {\n    return candidates[0];\n  }\n\n  const lastContentMarker = Math.max(...contentMarkers);\n  const afterContent = candidates.find((index) => index > lastContentMarker + 20);\n  return afterContent ?? candidates[candidates.length - 1];\n}\n\nfunction findHeadingStart(originalText, searchText, section, bodyStart) {\n  const bodySearchText = searchText.slice(bodyStart);\n  const patterns = buildHeadingPatterns(section);\n  for (const pattern of patterns) {\n    const match = bodySearchText.match(pattern);\n    if (match && typeof match.index === 'number') {\n      const absoluteIndex = bodyStart + match.index + (match[0].startsWith('\\n') ? 1 : 0);\n      const line = lineAt(originalText, absoluteIndex);\n      if (!isTocLikeLine(line) && !isSummaryLikeLine(line)) {\n        return absoluteIndex;\n      }\n    }\n  }\n  return -1;\n}\n\nfunction collectStarts(originalText, searchText, bodyStart) {\n  const starts = sections.map((section) => {\n    const start = findHeadingStart(originalText, searchText, section, bodyStart);\n    return {\n      ...section,\n      start,\n      matchedBy: start >= 0 ? 'exact_heading' : 'not_found',\n    };\n  });\n\n  return starts.map((entry) => {\n    if (entry.start < 0) return { ...entry, end: -1 };\n    const laterStarts = starts\n      .filter((other) => other.start > entry.start)\n      .map((other) => other.start)\n      .sort((a, b) => a - b);\n    return { ...entry, end: laterStarts[0] || originalText.length };\n  });\n}\n\nfunction sliceSection(originalText, startInfo) {\n  if (startInfo.start < 0 || startInfo.end <= startInfo.start) return '';\n  return originalText.slice(startInfo.start, startInfo.end).trim();\n}\n\nfunction findKeywordIndexes(searchText, section) {\n  return section.keywords\n    .map((keyword) => searchText.indexOf(keyword.replace(/ё/gi, 'е').toLowerCase()))\n    .filter((index) => index >= 0)\n    .sort((a, b) => a - b);\n}\n\nfunction makeSnippet(originalText, searchText, section) {\n  const indexes = findKeywordIndexes(searchText, section).filter((index) => {\n    const line = lineAt(originalText, index);\n    return !isTocLikeLine(line) && !isSummaryLikeLine(line);\n  });\n\n  if (!indexes.length) return '';\n\n  const parts = [];\n  const seen = new Set();\n  for (const index of indexes.slice(0, 3)) {\n    const start = Math.max(0, index - 2500);\n    const end = Math.min(originalText.length, index + 8000);\n    const key = `${start}:${end}`;\n    if (!seen.has(key)) {\n      parts.push(originalText.slice(start, end).trim());\n      seen.add(key);\n    }\n  }\n  return parts.join('\\n\\n--- related fragment ---\\n\\n').trim();\n}\n\nfunction buildKnownPageMapChunks() {\n  const oldPageMap = splitByPageMarkers(oldContent);\n  const newPageMap = splitByPageMarkers(newContent);\n\n  return sections.map((section) => {\n    const pageConfig = knownPageMap4014To4013[section.key] || { oldPages: [], newPages: [] };\n    const oldPages = pageConfig.oldPages || [];\n    const newPages = pageConfig.newPages || [];\n    const oldPageResult = getPages(oldPageMap, oldPages);\n    const newPageResult = getPages(newPageMap, newPages);\n    const oldFound = oldPages.length > 0 && oldPageResult.foundPages.length > 0;\n    const newFound = newPages.length > 0 && newPageResult.foundPages.length > 0;\n    const oldRelatedText = oldFound ? '' : makeSnippet(oldContent, oldSearch, section);\n    const newRelatedText = newFound ? '' : makeSnippet(newContent, newSearch, section);\n    const oldChunkMethod = oldFound ? 'known_page_map' : (oldRelatedText ? 'related_fragment' : 'not_found');\n    const newChunkMethod = newFound ? 'known_page_map' : (newRelatedText ? 'related_fragment' : 'not_found');\n    const sectionMappingNote = sectionMappingNotes4014To4013[section.key] || '';\n\n    const oldSectionStatus = oldFound\n      ? `В старом документе раздел выделен по страницам ${oldPageResult.foundPages.join(', ')}.`\n      : oldRelatedText\n        ? 'В старом документе отдельный раздел не выделен, передан только related fragment при наличии. Не считай его отдельным разделом старой версии.'\n        : 'В старом документе отдельный раздел и related fragment не найдены.';\n\n    const newSectionStatus = newFound\n      ? `В новом документе раздел выделен по страницам ${newPageResult.foundPages.join(', ')}.`\n      : newRelatedText\n        ? 'В новом документе отдельный раздел не выделен, передан только related fragment при наличии. Не считай его отдельным разделом новой версии.'\n        : 'В новом документе отдельный раздел и related fragment не найдены.';\n\n    return {\n      json: {\n        status: 'ok',\n        shouldCallXai: true,\n        isDocumentCompareChunk: true,\n        number: $('Router Алихан').item.json.number,\n        old_id: oldId,\n        new_id: newId,\n        old_file_name: oldFileName,\n        new_file_name: newFileName,\n        sectionKey: section.key,\n        sectionTitle: section.title,\n        chunkMethod: 'known_page_map',\n        oldChunkMethod,\n        newChunkMethod,\n        oldPages,\n        newPages,\n        oldFoundPages: oldPageResult.foundPages,\n        newFoundPages: newPageResult.foundPages,\n        oldMissingPages: oldPageResult.missingPages,\n        newMissingPages: newPageResult.missingPages,\n        sectionMappingNote,\n        oldText: oldPageResult.text,\n        newText: newPageResult.text,\n        oldRelatedText,\n        newRelatedText,\n        oldFound,\n        newFound,\n        oldIsExactSection: oldFound,\n        newIsExactSection: newFound,\n        oldIsRelatedFragment: !oldFound && Boolean(oldRelatedText),\n        newIsRelatedFragment: !newFound && Boolean(newRelatedText),\n        oldBodyStart: -1,\n        newBodyStart: -1,\n        oldHeadingStart: -1,\n        newHeadingStart: -1,\n        oldHeadingLine: '',\n        newHeadingLine: '',\n        headingLine: '',\n        oldMatchedBy: oldChunkMethod,\n        newMatchedBy: newChunkMethod,\n        chunkInstruction: [\n          `Старый документ: ID ${oldId}, файл ${oldFileName}`,\n          `Новый документ: ID ${newId}, файл ${newFileName}`,\n          `Раздел: ${section.title}`,\n          'Раздел выделен по известной карте страниц для пары 4014 → 4013.',\n          'Это не универсальное правило для всех документов.',\n          sectionMappingNote ? `Смысловое соответствие разделов: ${sectionMappingNote}.` : 'Смысловое соответствие разделов: номера разделов могут отличаться между версиями.',\n          'Старый раздел 6 “Отчётность” соответствует новому разделу 8.',\n          'Старый раздел 7 “Ответственность” соответствует новому разделу 9.',\n          'Старый раздел 8 “Штрафы” соответствует новому разделу 10.',\n          'Старый раздел 9 “Согласование” соответствует новому разделу 11.',\n          'Старый раздел 10 “Приложения” соответствует новому разделу 12.',\n          'Не считай раздел удалённым только потому, что его номер изменился.',\n          oldSectionStatus,\n          newSectionStatus,\n          `oldPages: ${JSON.stringify(oldPages)}`,\n          `newPages: ${JSON.stringify(newPages)}`,\n          `oldMissingPages: ${JSON.stringify(oldPageResult.missingPages)}`,\n          `newMissingPages: ${JSON.stringify(newPageResult.missingPages)}`,\n          '',\n          'Сравни только этот раздел. Не делай выводы по другим разделам.',\n          'Не фантазируй. Если подтверждения нет в переданном тексте, так и напиши.',\n          'Если oldPages/newPages заданы и соответствующие oldMissingPages/newMissingPages пустые, считай релевантные страницы переданными в анализ.',\n          'Не пиши “не подтверждено” только потому, что раздел найден по карте страниц, а не по regex-заголовку.',\n          'Если страница содержит начало следующего раздела, анализируй только часть, относящуюся к текущему sectionTitle, и не делай выводов об удалении, если соответствующий блок присутствует на странице.',\n          'Если содержание найдено под другим номером раздела, пиши “перенумеровано” или “перенесено”, а не “удалено”.',\n          'Для known_page_map сравнивай смысловые соответствия разделов, а не одинаковые номера.',\n          'Если раздел есть только в новом документе, укажи: \"новый раздел\".',\n          'Если раздел есть только в старом документе, укажи: \"не найдено в новой версии\".',\n          'Связанный фрагмент по ключевым словам — это только контекст, не доказательство наличия отдельного раздела.',\n          'Верни строгий markdown с полями:',\n          '- sectionTitle',\n          '- keyChanges',\n          '- added',\n          '- changed',\n          '- removedOrNotFound',\n          '- risksForProject',\n          '- actions',\n          '',\n          'СТАРЫЙ РАЗДЕЛ ПО СТРАНИЦАМ:',\n          oldPageResult.text || '[отдельный раздел по карте страниц не выделен в старом документе]',\n          '',\n          'СТАРЫЙ СВЯЗАННЫЙ ФРАГМЕНТ:',\n          oldRelatedText || '[связанный фрагмент не найден или не нужен]',\n          '',\n          'НОВЫЙ РАЗДЕЛ ПО СТРАНИЦАМ:',\n          newPageResult.text || '[отдельный раздел по карте страниц не выделен в новом документе]',\n          '',\n          'НОВЫЙ СВЯЗАННЫЙ ФРАГМЕНТ:',\n          newRelatedText || '[связанный фрагмент не найден или не нужен]',\n        ].join('\\n'),\n      },\n    };\n  });\n}\n\nfunction buildHeadingSectionChunks() {\n  const oldBodyStart = detectBodyStart(oldContent, oldSearch);\n  const newBodyStart = detectBodyStart(newContent, newSearch);\n  const oldStarts = collectStarts(oldContent, oldSearch, oldBodyStart);\n  const newStarts = collectStarts(newContent, newSearch, newBodyStart);\n\n  return sections.map((section) => {\n    const oldInfo = oldStarts.find((item) => item.key === section.key);\n    const newInfo = newStarts.find((item) => item.key === section.key);\n\n    const oldExactText = sliceSection(oldContent, oldInfo);\n    const newExactText = sliceSection(newContent, newInfo);\n    const oldHeadingLine = Number.isFinite(oldInfo?.start) && oldInfo.start >= 0 ? lineAt(oldContent, oldInfo.start).trim() : '';\n    const newHeadingLine = Number.isFinite(newInfo?.start) && newInfo.start >= 0 ? lineAt(newContent, newInfo.start).trim() : '';\n    const oldRelatedText = oldExactText ? '' : makeSnippet(oldContent, oldSearch, section);\n    const newRelatedText = newExactText ? '' : makeSnippet(newContent, newSearch, section);\n\n    const oldIsExactSection = Boolean(oldExactText);\n    const newIsExactSection = Boolean(newExactText);\n    const oldIsRelatedFragment = !oldIsExactSection && Boolean(oldRelatedText);\n    const newIsRelatedFragment = !newIsExactSection && Boolean(newRelatedText);\n    const oldText = oldExactText || oldRelatedText;\n    const newText = newExactText || newRelatedText;\n    const oldChunkMethod = oldIsExactSection ? 'heading_section' : (oldIsRelatedFragment ? 'related_fragment' : 'not_found');\n    const newChunkMethod = newIsExactSection ? 'heading_section' : (newIsRelatedFragment ? 'related_fragment' : 'not_found');\n\n    const oldSectionStatus = oldIsExactSection\n      ? 'В старом документе найден точный раздел.'\n      : oldIsRelatedFragment\n        ? 'В старом документе точный раздел не найден; найден только связанный фрагмент. Не считай его отдельным разделом старой версии.'\n        : 'В старом документе точный раздел и связанный фрагмент не найдены.';\n\n    const newSectionStatus = newIsExactSection\n      ? 'В новом документе найден точный раздел.'\n      : newIsRelatedFragment\n        ? 'В новом документе точный раздел не найден; найден только связанный фрагмент. Не считай его отдельным разделом новой версии.'\n        : 'В новом документе точный раздел и связанный фрагмент не найдены.';\n\n    return {\n      json: {\n        status: 'ok',\n        shouldCallXai: true,\n        isDocumentCompareChunk: true,\n        number: $('Router Алихан').item.json.number,\n        old_id: oldId,\n        new_id: newId,\n        old_file_name: oldFileName,\n        new_file_name: newFileName,\n        sectionKey: section.key,\n        sectionTitle: section.title,\n        chunkMethod: oldIsExactSection || newIsExactSection ? 'heading_section' : (oldIsRelatedFragment || newIsRelatedFragment ? 'related_fragment' : 'not_found'),\n        oldChunkMethod,\n        newChunkMethod,\n        oldPages: [],\n        newPages: [],\n        oldFoundPages: [],\n        newFoundPages: [],\n        oldMissingPages: [],\n        newMissingPages: [],\n        sectionMappingNote: '',\n        oldText,\n        newText,\n        oldFound: oldIsExactSection,\n        newFound: newIsExactSection,\n        oldRelatedText,\n        newRelatedText,\n        oldIsExactSection,\n        newIsExactSection,\n        oldIsRelatedFragment,\n        newIsRelatedFragment,\n        oldBodyStart,\n        newBodyStart,\n        oldHeadingStart: oldInfo?.start ?? -1,\n        newHeadingStart: newInfo?.start ?? -1,\n        oldHeadingLine,\n        newHeadingLine,\n        headingLine: newHeadingLine || oldHeadingLine,\n        oldMatchedBy: oldInfo?.matchedBy || 'not_found',\n        newMatchedBy: newInfo?.matchedBy || 'not_found',\n        chunkInstruction: [\n          `Старый документ: ID ${oldId}, файл ${oldFileName}`,\n          `Новый документ: ID ${newId}, файл ${newFileName}`,\n          `Раздел: ${section.title}`,\n          oldSectionStatus,\n          newSectionStatus,\n          '',\n          'Сравни только этот раздел. Не делай выводы по другим разделам.',\n          'Не фантазируй. Если подтверждения нет в переданном тексте, так и напиши.',\n          'Считай раздел найденным только если найден точный заголовок раздела.',\n          'Связанный фрагмент по ключевым словам — это только контекст, не доказательство наличия раздела.',\n          'Если точный раздел есть только в новом документе, укажи: \"новый раздел\".',\n          'Если точный раздел есть только в старом документе, укажи: \"не найдено в новой версии\".',\n          'Верни строгий markdown с полями:',\n          '- sectionTitle',\n          '- keyChanges',\n          '- added',\n          '- changed',\n          '- removedOrNotFound',\n          '- risksForProject',\n          '- actions',\n          '',\n          'СТАРЫЙ ТОЧНЫЙ РАЗДЕЛ:',\n          oldExactText || '[точный раздел не найден в старом документе]',\n          '',\n          'СТАРЫЙ СВЯЗАННЫЙ ФРАГМЕНТ:',\n          oldRelatedText || '[связанный фрагмент не найден или не нужен]',\n          '',\n          'НОВЫЙ ТОЧНЫЙ РАЗДЕЛ:',\n          newExactText || '[точный раздел не найден в новом документе]',\n          '',\n          'НОВЫЙ СВЯЗАННЫЙ ФРАГМЕНТ:',\n          newRelatedText || '[связанный фрагмент не найден или не нужен]',\n        ].join('\\n'),\n      },\n    };\n  });\n}\n\nconst useKnownPageMap =\n  oldId === '4014' &&\n  newId === '4013' &&\n  hasClassicPageMarkers(oldContent) &&\n  hasVisionPageMarkers(newContent);\n\nreturn useKnownPageMap ? buildKnownPageMapChunks() : buildHeadingSectionChunks();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        -144
+      ],
+      "id": "3b0830b1-bf79-4e25-b6b4-5b3daa512837",
+      "name": "Build Document Compare Chunks"
+    },
+    {
+      "parameters": {
+        "jsCode": "function readNodeItems(name) {\n  try {\n    return $items(name).map((item) => item.json);\n  } catch (e) {\n    return [];\n  }\n}\n\nconst chunks = readNodeItems('Build Document Compare Chunks');\nconst inputResults = $input.all().map((item) => item.json);\nconst xaiResults = inputResults.length ? inputResults : readNodeItems('xAI Compare Document Chunk');\nconst firstChunk = chunks[0] || {};\n\nif (firstChunk.status === 'missing' || firstChunk.shouldCallXai === false) {\n  return [\n    {\n      json: {\n        status: 'missing',\n        shouldCallXai: false,\n        isDocumentCompareAggregate: false,\n        number: firstChunk.number,\n        text: firstChunk.errorText || firstChunk.text || 'Не удалось подготовить сравнение документов.',\n        errorText: firstChunk.errorText || firstChunk.text || 'Не удалось подготовить сравнение документов.',\n        old_id: firstChunk.old_id,\n        new_id: firstChunk.new_id,\n        old_file_name: firstChunk.old_file_name,\n        new_file_name: firstChunk.new_file_name,\n      },\n    },\n  ];\n}\n\nconst resultsByIndex = xaiResults.map((result) => {\n  return String(result.choices?.[0]?.message?.content || result.result || '').trim();\n});\n\nconst aggregatedSections = chunks.map((chunk, index) => {\n  const result = resultsByIndex[index] || 'xAI не вернул результат по этому разделу.';\n  return [\n    `## ${chunk.sectionTitle}`,\n    `sectionKey: ${chunk.sectionKey}`,\n    `chunkMethod: ${chunk.chunkMethod || 'unknown'}`,\n    `oldChunkMethod: ${chunk.oldChunkMethod || 'unknown'}`,\n    `newChunkMethod: ${chunk.newChunkMethod || 'unknown'}`,\n    `sectionMappingNote: ${chunk.sectionMappingNote || ''}`,\n    `oldFound: ${chunk.oldFound}`,\n    `newFound: ${chunk.newFound}`,\n    `oldPages: ${JSON.stringify(chunk.oldPages || [])}`,\n    `newPages: ${JSON.stringify(chunk.newPages || [])}`,\n    `oldMissingPages: ${JSON.stringify(chunk.oldMissingPages || [])}`,\n    `newMissingPages: ${JSON.stringify(chunk.newMissingPages || [])}`,\n    `oldIsExactSection: ${chunk.oldIsExactSection}`,\n    `newIsExactSection: ${chunk.newIsExactSection}`,\n    `oldIsRelatedFragment: ${chunk.oldIsRelatedFragment}`,\n    `newIsRelatedFragment: ${chunk.newIsRelatedFragment}`,\n    '',\n    result,\n  ].join('\\n');\n});\n\nconst aggregatedChunkResults = aggregatedSections.join('\\n\\n---\\n\\n');\n\nconst finalSummaryPrompt = [\n  `Старый документ: ID ${firstChunk.old_id}, файл ${firstChunk.old_file_name}`,\n  `Новый документ: ID ${firstChunk.new_id}, файл ${firstChunk.new_file_name}`,\n  '',\n  'Ниже результаты сравнения документов по разделам. Составь финальный отчёт только на основании этих результатов.',\n  'Не выдумывай. Не добавляй выводы, которых нет в результатах по разделам.',\n  '',\n  'Критически важно по статусам:',\n  '- Для chunkMethod=known_page_map oldFound/newFound означают, что релевантные страницы раздела переданы по известной карте страниц.',\n  '- Не считай раздел неподтверждённым только потому, что он найден по known_page_map, а не по regex-заголовку.',\n  '- Если oldMissingPages/newMissingPages пустые, считай указанные oldPages/newPages переданными в анализ.',\n  '- RelatedFragment — это только дополнительный контекст по ключевым словам, не доказательство существования отдельного раздела.',\n  '- Если sectionMappingNote указывает old section X → new section Y, считай это перенумерацией/структурным переносом, а не удалением.',\n  '- Если содержание найдено под другим номером раздела, пиши “перенумеровано” или “перенесено”, а не “удалено”.',\n  '- Если страница содержит начало следующего раздела, учитывай только часть, относящуюся к текущему разделу.',\n  '',\n  'Особенно проверь, что учтены:',\n  '- раздел 5 ООС: новая версия должна включать страницы 15–17, включая пункты 5.17–5.26;',\n  '- блок “Вахтовый поселок (лагерь)”: новая версия должна учитывать страницу 15;',\n  '- раздел согласования: старый раздел 9 соответствует новому разделу 11;',\n  '- разделы нового документа 6–12: пожарная безопасность, санитарно-эпидемиологические требования, отчётность, ответственность, штрафы, согласование и приложения.',\n  '',\n  'Не пиши следующие выводы, если результаты по разделам показывают, что страницы переданы:',\n  '- “пункты 5.17–5.26 отсутствуют”;',\n  '- “вахтовый посёлок удалён”;',\n  '- “пункты 9.1 и 9.2 удалены”.',\n  '',\n  'Формат финального отчёта:',\n  '1) Краткий вывод',\n  '2) Главное, что появилось нового',\n  '3) Новые обязанности подрядчика',\n  '4) Новые требования по ОТ/ПБ/РБ',\n  '5) Новые требования по ООС',\n  '6) Новые требования по пожарной безопасности',\n  '7) Санитарно-эпидемиологические требования',\n  '8) Изменения по отчётности',\n  '9) Изменения по ответственности и штрафам',\n  '10) Изменения по приложениям и формам',\n  '11) Красные флаги / ошибки в тексте нового регламента',\n  '12) Что нужно сделать проектной команде',\n  '',\n  'РЕЗУЛЬТАТЫ ПО РАЗДЕЛАМ:',\n  aggregatedChunkResults,\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      status: 'ok',\n      shouldCallXai: true,\n      isDocumentCompareAggregate: true,\n      number: firstChunk.number,\n      old_id: firstChunk.old_id,\n      new_id: firstChunk.new_id,\n      old_file_name: firstChunk.old_file_name,\n      new_file_name: firstChunk.new_file_name,\n      aggregatedChunkResults,\n      finalSummaryPrompt,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1744,
+        -192
+      ],
+      "id": "f25caed2-bb15-430d-a793-c133c7fbdf54",
+      "name": "Aggregate Document Chunk Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item) => {\n  const json = item.json || {};\n\n  return {\n    json: {\n      ...json,\n      number: String(json.number || $('Router Алихан').item.json.number || ''),\n      text: String(\n        json.text ||\n        json.finalText ||\n        json.answer ||\n        json.choices?.[0]?.message?.content ||\n        'Ошибка: текст ответа не сформирован.'\n      ),\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        -192
+      ],
+      "id": "211018cd-cde3-4a24-82f2-63bf476a8efd",
+      "name": "Ensure WhatsApp Text"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1984,
+        -112
+      ],
+      "id": "811aab00-8153-4a16-ab81-079a6851819a",
+      "name": "Loop Compare Chunks"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты сравниваешь один раздел двух версий строительного документа. Отвечай только по переданному тексту раздела, без догадок. Не делай выводы по другим разделам.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.chunkInstruction || \"Ошибка: chunkInstruction пустой.\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1728,
+        80
+      ],
+      "id": "3799419e-5d98-4f95-8e9b-6cd6d86f41d8",
+      "name": "xAI Compare Document Chunk",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1984,
+        80
+      ],
+      "id": "6df0a902-17db-4ae9-9319-2229e7241d76",
+      "name": "Wait Between Chunk Compares",
+      "webhookId": "45075b09-dad7-4c92-ae10-d941e3eb88f5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.x.ai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xai-2fqqdVTm7TC4poT1NQGPqC9iduPvyIN7e3CnRVi136Vf2s4zJxYGrxBdt9qqXsEqrNl9gZu1FqG0pFu5"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: \"grok-4.20\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"Ты готовишь финальный отчёт по сравнению двух версий строительного регламента на основании уже сделанных сравнений по разделам. Не добавляй факты, которых нет в результатах по разделам.\"\n    },\n    {\n      role: \"user\",\n      content: String($json.finalSummaryPrompt || \"Ошибка: finalSummaryPrompt пустой.\")\n    }\n  ],\n  temperature: 0.1\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1536,
+        -192
+      ],
+      "id": "ec290899-7713-4df2-9999-acc3b8d7337a",
+      "name": "xAI Final Document Compare Summary",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook3": {
+      "main": [
+        [
+          {
+            "node": "Guard Photo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guard Алихан",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guard Document",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Participant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields Memory": {
+      "main": [
+        [
+          {
+            "node": "Search Long Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Long Facts": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request к xAI-1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Long Memory": {
+      "main": [
+        [
+          {
+            "node": "Build Long Facts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Memory Status": {
+      "main": [
+        [
+          {
+            "node": "Build Memory Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Memory Status": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard Алихан": {
+      "main": [
+        [
+          {
+            "node": "Router Алихан",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Router Алихан": {
+      "main": [
+        [
+          {
+            "node": "Switch Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Command": {
+      "main": [
+        [
+          {
+            "node": "Алихан",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Postgres Memory Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Кто ты?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Quoted Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Group Participants",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Participant Activity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Period Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Fact In Memory",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Memory By ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "xAI Extract Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Current DateTime",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Documents For Compare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Алихан": {
+      "main": [
+        []
+      ]
+    },
+    "Guard Photo": {
+      "main": [
+        [
+          {
+            "node": "Get Photo Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Photo Base64": {
+      "main": [
+        [
+          {
+            "node": "Build Image Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Image Memory": {
+      "main": [
+        [
+          {
+            "node": "xAI Vision Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Vision Photo": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Save Photo Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard Document": {
+      "main": [
+        [
+          {
+            "node": "Get Document Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Document Base64": {
+      "main": [
+        [
+          {
+            "node": "Extract Document Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Document Text": {
+      "main": [
+        [
+          {
+            "node": "Save Document Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Quoted Document": {
+      "main": [
+        [
+          {
+            "node": "Build Quoted Document Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request к xAI-1": {
+      "main": [
+        [
+          {
+            "node": "Redis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quoted Document Prompt": {
+      "main": [
+        [
+          {
+            "node": "Wait Before xAI Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Quoted Document Summary": {
+      "main": [
+        [
+          {
+            "node": "Build Quoted Document Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quoted Document Reply": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Participant": {
+      "main": [
+        [
+          {
+            "node": "Save Participant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Group Participants": {
+      "main": [
+        [
+          {
+            "node": "Build Participants Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Participants Reply": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Participant Activity": {
+      "main": [
+        [
+          {
+            "node": "Build Participant Activity Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Participant Activity Reply": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Period Data": {
+      "main": [
+        [
+          {
+            "node": "Build Period Summary Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Period Summary Prompt": {
+      "main": [
+        [
+          {
+            "node": "xAI Period Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Period Summary": {
+      "main": [
+        [
+          {
+            "node": "Build Period Summary Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Period Summary Reply": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Fact In Memory": {
+      "main": [
+        [
+          {
+            "node": "Build Fact Lookup Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Fact Lookup Prompt": {
+      "main": [
+        [
+          {
+            "node": "xAI Fact Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Fact Lookup": {
+      "main": [
+        [
+          {
+            "node": "Build Fact Lookup Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Fact Lookup Reply": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Memory By ID": {
+      "main": [
+        [
+          {
+            "node": "Build ID Lookup Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build ID Lookup Reply": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Extract Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Parse Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Save Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Build Calendar Create Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Build Calendar List Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calendar Create Reply": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Calendar Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calendar List Reply": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Calendar Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Build Calendar Delete Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Calendar Delete Reply": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Calendar Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current DateTime": {
+      "main": [
+        [
+          {
+            "node": "Build Current DateTime Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Current DateTime Reply": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Calendar Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before xAI Summary": {
+      "main": [
+        [
+          {
+            "node": "xAI Quoted Document Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Documents For Compare": {
+      "main": [
+        [
+          {
+            "node": "Build Document Compare Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Documents Found": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Build Document Compare Prompt": {
+      "main": [
+        []
+      ]
+    },
+    "Build Document Compare Reply": {
+      "main": [
+        [
+          {
+            "node": "Ensure WhatsApp Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Compare Documents": {
+      "main": [
+        []
+      ]
+    },
+    "Build Document Compare Chunks": {
+      "main": [
+        [
+          {
+            "node": "Loop Compare Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Document Chunk Results": {
+      "main": [
+        [
+          {
+            "node": "xAI Final Document Compare Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure WhatsApp Text": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Reply Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Compare Chunks": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Document Chunk Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "xAI Compare Document Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Compare Document Chunk": {
+      "main": [
+        [
+          {
+            "node": "Wait Between Chunk Compares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Between Chunk Compares": {
+      "main": [
+        [
+          {
+            "node": "Loop Compare Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "xAI Final Document Compare Summary": {
+      "main": [
+        [
+          {
+            "node": "Build Document Compare Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "triggerCount": 1,
+  "createdAt": "2026-04-27 15:55:34.127",
+  "updatedAt": "2026-05-16 10:22:37.380",
+  "description": null
+}
