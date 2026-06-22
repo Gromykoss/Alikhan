@@ -173,7 +173,7 @@ def _fact_rows(chat_id, query, lookup_id=""):
 def handle_only_name(group, sender, payload):
     send_msg(
         group,
-        "Да, я на связи. Могу найти информацию в памяти, показать календарь, сделать сводку, поднять документ по ID или ответить на вопрос.",
+        "Я на связи.",
     )
 
 
@@ -266,8 +266,10 @@ def handle_document_compare(group, sender, payload):
 
 
 def handle_current_datetime(group, sender, payload):
-    now = datetime.now()
-    send_msg(group, f"Сейчас: {now.strftime('%Y-%m-%d %H:%M:%S')}.")
+    from datetime import timezone, timedelta
+    msk = timezone(timedelta(hours=3))
+    now = datetime.now(msk)
+    send_msg(group, f"Сейчас: {now.strftime('%Y-%m-%d %H:%M:%S')} (МСК).")
 
 
 def handle_fact_lookup(group, sender, payload):
