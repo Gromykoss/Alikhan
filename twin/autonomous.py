@@ -7,7 +7,7 @@ import time, subprocess as sp, os, sys
 # Use existing vault path or accept as argument
 VAULT_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/hermes-vault")
 COMMANDS_FILE = "30_Logs/twin-commands.md"
-POLL_S = 15
+POLL_S = 5
 
 def git_pull():
     return sp.run(["git", "pull"], cwd=VAULT_PATH, capture_output=True, text=True)
