@@ -31,14 +31,42 @@ MONTHS_RU = {
 
 
 def parse_date_ru(value):
+    # dd.mm.yyyy (4-digit year)
     m1 = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", value)
     if m1:
         return f"{m1.group(3)}-{m1.group(2)}-{m1.group(1)}"
-
+    
+    # dd.mm.yy (2-digit year) → 20yy
+    m1s = re.search(r"(\d{2})\.(\d{2})\.(\d{2})(?!\d)", value)
+    if m1s:
+        yy = int(m1s.group(3))
+        full = 2000 + yy if yy < 70 else 1900 + yy
+        return f"{full}-{m1s.group(2)}-{m1s.group(1)}"
+    
+    # yyyy-mm-dd
     m2 = re.search(r"(\d{4})-(\d{2})-(\d{2})", value)
     if m2:
         return f"{m2.group(1)}-{m2.group(2)}-{m2.group(3)}"
-
+    
+    # dd month_name yyyy or dd month_name yy (Russian)
+    m3 = re.search(
+        r"(\d{1,2})\s+(январ[ья]|феврал[ья]|марта?|апрел[ья]|ма[йя]|июн[ья]|июл[ья]|августа?|сентябр[ья]|октябр[ья]|ноябр[ья]|декабр[ья])\s*(\d{4}|\d{2})?(?:\s*г)?",
+        value, re.IGNORECASE
+    )
+    if m3:
+        day = int(m3.group(1))
+        month_str = m3.group(2).lower()
+        month = MONTHS_RU.get(month_str, 0)
+        year_str = m3.group(3)
+        if year_str and len(year_str) == 2:
+            year = 2000 + int(year_str) if int(year_str) < 70 else 1900 + int(year_str)
+        elif year_str:
+            year = int(year_str)
+        else:
+            year = datetime.now(timezone.utc).year
+        if month and 1 <= day <= 31:
+            return f"{year}-{month:02d}-{day:02d}"
+    
     return None
 
 

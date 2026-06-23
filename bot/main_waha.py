@@ -40,6 +40,38 @@ while True:
                 seen.add(mid)
                 text = m.get("body", "") or m.get("text", "")
                 sender = m.get("from", "?")
+                has_media = m.get("hasMedia", False)
+                
+                # Detect media type for document/photo messages
+                if has_media:
+                    media_obj = m.get("media", {})
+                    msg_data = m.get("_data", {}).get("message", {})
+                    # Check for document or photo
+                    has_doc = "document" in str(msg_data.keys()).lower()
+                    has_img = "image" in str(msg_data.keys()).lower()
+                    
+                    if has_doc or media_obj.get("mimetype","").startswith("application/"):
+                        result = route(text, gid, sender, mid)
+                        result["command"] = "document"
+                        result["fileName"] = media_obj.get("filename", "document")
+                        result["messageId"] = mid
+                        result["mimetype"] = media_obj.get("mimetype", "")
+                        print(f"[{sender}] 📄 {media_obj.get('filename','doc')[:40]}", flush=True)
+                        handler = HANDLERS.get("document")
+                        if handler:
+                            handler(gid, sender, result)
+                        continue
+                    elif has_img or media_obj.get("mimetype","").startswith("image/"):
+                        result = route(text, gid, sender, mid)
+                        result["command"] = "photo"
+                        result["messageId"] = mid
+                        result["mimetype"] = media_obj.get("mimetype", "image/jpeg")
+                        print(f"[{sender}] 📷 photo", flush=True)
+                        handler = HANDLERS.get("photo")
+                        if handler:
+                            handler(gid, sender, result)
+                        continue
+                
                 if "алихан" not in text.lower():
                     continue
                 print(f"[{sender}] {text[:60]}", flush=True)
@@ -48,7 +80,7 @@ while True:
                 query = result.get("query", text)
                 print(f"  -> {handler_name}", flush=True)
                 handler = HANDLERS.get(handler_name, HANDLERS["ai"])
-                handler(gid, sender, payload)
+                handler(gid, sender, result)
         time.sleep(3)
     except Exception as e:
         print(f"ERR: {e}", flush=True)

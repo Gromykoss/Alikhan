@@ -10,7 +10,7 @@ import db
 
 # WAHA API
 WAHA_URL = "http://127.0.0.1:3000"
-WAHA_KEY = "alikhan-secret-key-2026"
+WAHA_KEY = "waha123"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 
 
@@ -74,11 +74,17 @@ def _extract_json(raw):
 
 
 def send_msg(group, text):
-    requests.post(
-        f"{WAHA_URL}/api/sendText",
-        headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
-        json={"chatId": group, "text": str(text or "")[:4000]},
-    )
+    try:
+        r = requests.post(
+            f"{WAHA_URL}/api/sendText",
+            headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
+            json={"session": "alikhan", "chatId": group, "text": str(text or "")[:4000]},
+            timeout=10,
+        )
+        return r.status_code in (200, 201)
+    except Exception as e:
+        print(f"[send_msg ERR] {e}", flush=True)
+        return False
 
 
 def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg"):
@@ -111,21 +117,16 @@ def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="i
 
 
 def _download_media_base64(message_id):
-    response = requests.post(
-        f"{EVO_URL}/chat/getBase64FromMediaMessage/alikhan",
-        headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
-        json={"message": {"key": {"id": message_id}}},
+    # WAHA media download
+    response = requests.get(
+        f"{WAHA_URL}/api/alikhan/messages/{message_id}/download",
+        headers={"X-Api-Key": WAHA_KEY},
+        timeout=30,
     )
-    if response.status_code != 200:
-        return ""
-    data = response.json()
-    return (
-        data.get("base64")
-        or data.get("data", {}).get("base64")
-        or data.get("media")
-        or data.get("result", {}).get("base64")
-        or ""
-    )
+    if response.status_code == 200 and response.content:
+        import base64 as b64
+        return b64.b64encode(response.content).decode()
+    return ""
 
 
 def _fact_rows(chat_id, query, lookup_id=""):

@@ -2,10 +2,10 @@ import psycopg2, psycopg2.extras
 from datetime import datetime
 
 DB_CONFIG = {
-    "host": "172.18.0.4",
+    "host": "172.22.0.3",
     "port": 5432,
     "user": "evolution",
-    "password": "SuperSecretGrok2026",
+    "password": "pass123",
     "dbname": "evolution_db"
 }
 
