@@ -7,6 +7,7 @@ import time, subprocess as sp, os, sys
 # Use existing vault path or accept as argument
 VAULT_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/hermes-vault")
 COMMANDS_FILE = "30_Logs/twin-commands.md"
+RESPONSES_FILE = "30_Logs/twin-responses.md"
 POLL_S = 5
 
 def git_pull():
@@ -35,10 +36,10 @@ def execute_and_respond(command):
         result = f"unknown-command: {command[:50]}"
     
     if result:
-        path = os.path.join(VAULT_PATH, COMMANDS_FILE)
+        path = os.path.join(VAULT_PATH, RESPONSES_FILE)
         with open(path, "a") as f:
             f.write(f"\n{result}")
-        sp.run(["git", "add", COMMANDS_FILE], cwd=VAULT_PATH, capture_output=True)
+        sp.run(["git", "add", RESPONSES_FILE], cwd=VAULT_PATH, capture_output=True)
         sp.run(["git", "commit", "-m", f"bridge: {result[:50]}"], cwd=VAULT_PATH, capture_output=True)
         sp.run(["git", "push"], cwd=VAULT_PATH, capture_output=True, timeout=30)
         print(f"  ✅ {result[:80]}")
