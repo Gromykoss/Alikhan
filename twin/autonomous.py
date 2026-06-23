@@ -52,7 +52,13 @@ def main():
         try:
             git_pull()
             for cmd in read_commands():
-                if cmd and not cmd in processed and not cmd.startswith("pong:") and not cmd.startswith("echo:"):
+                if not cmd:
+                    continue
+                # Skip responses (our own output)
+                if any(cmd.startswith(p) for p in ["pong:", "browser-task:", "browser-result:", "browser-error:", "unknown-command:", "echo:", "browser-task", "unknown-command"]):
+                    continue
+            
+                if cmd not in processed:
                     processed.add(cmd)
                     print(f"New command: {cmd[:60]}")
                     execute_and_respond(cmd)
