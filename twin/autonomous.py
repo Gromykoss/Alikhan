@@ -16,7 +16,7 @@ def get_latest_commit():
     r = requests.get(
         f"https://api.github.com/repos/{GITHUB_REPO}/commits",
         params={"path": COMMANDS_FILE, "per_page": 1},
-        timeout=10
+        timeout=30, verify=False
     )
     if r.ok and r.json():
         return r.json()[0]["sha"]
