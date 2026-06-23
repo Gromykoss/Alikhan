@@ -27,12 +27,9 @@ def execute_and_respond(command):
         result = "pong: " + command.split(":", 1)[1].strip()
     
     elif command.startswith("browser:"):
-        # Extract URL from: "browser: open URL | action: screenshot"
-        parts = command.split("|")
-        url_part = parts[0].replace("browser:", "").replace("open", "").strip()
+        url_part = command.split("|")[0].replace("browser:", "").replace("open", "").strip()
         print(f"  🌐 Opening: {url_part}")
-        r = sp.run(["hermes", "browser", "open", url_part], capture_output=True, text=True, timeout=30)
-        result = f"browser-result: {r.stdout[:200]}" if r.returncode == 0 else f"browser-error: {r.stderr[:200]}"
+        result = f"browser-task: open {url_part} — ready for Hermes session"
     
     else:
         result = f"unknown-command: {command[:50]}"
