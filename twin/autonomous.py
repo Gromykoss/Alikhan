@@ -1,29 +1,16 @@
 """
-Autonomous Twin listener — polls GitHub for commands, executes, responds.
-No human needed. VPS writes to twin-commands.md, Twin detects and responds.
+Autonomous Twin listener — uses local git (no API calls).
+Polls git pull every N seconds, checks twin-commands.md.
 """
-import time, subprocess as sp, requests, os
+import time, subprocess as sp, os, sys
 
-VAULT_PATH = os.path.expanduser("~/hermes-vault")
+# Use existing vault path or accept as argument
+VAULT_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/hermes-vault")
 COMMANDS_FILE = "30_Logs/twin-commands.md"
-GITHUB_REPO = "Gromykoss/hermes-vault"
 POLL_S = 15
 
-last_sha = None
-
-def get_latest_commit():
-    """Get SHA of latest commit touching commands file."""
-    r = requests.get(
-        f"https://api.github.com/repos/{GITHUB_REPO}/commits",
-        params={"path": COMMANDS_FILE, "per_page": 1},
-        timeout=30, verify=False
-    )
-    if r.ok and r.json():
-        return r.json()[0]["sha"]
-    return None
-
 def git_pull():
-    sp.run(["git", "pull"], cwd=VAULT_PATH, capture_output=True)
+    return sp.run(["git", "pull"], cwd=VAULT_PATH, capture_output=True, text=True)
 
 def read_commands():
     path = os.path.join(VAULT_PATH, COMMANDS_FILE)
@@ -33,37 +20,36 @@ def read_commands():
         return [line.strip() for line in f if line.strip()]
 
 def execute_and_respond(command):
-    """Execute command and write result."""
+    """Execute ping and write response."""
     if command.startswith("ping:"):
-        result = "pong: " + command.split(":")[1].strip()
+        result = "pong: " + command.split(":", 1)[1].strip()
     else:
-        result = f"unknown: {command[:50]}"
+        result = f"echo: {command[:50]}"
     
     path = os.path.join(VAULT_PATH, COMMANDS_FILE)
     with open(path, "a") as f:
         f.write(f"\n{result}")
     
-    sp.run(["git", "add", COMMANDS_FILE], cwd=VAULT_PATH)
-    sp.run(["git", "commit", "-m", f"bridge: {result[:50]}"], cwd=VAULT_PATH)
-    sp.run(["git", "push"], cwd=VAULT_PATH)
-    print(f"  Responded: {result}")
+    sp.run(["git", "add", COMMANDS_FILE], cwd=VAULT_PATH, capture_output=True)
+    sp.run(["git", "commit", "-m", f"bridge: {result[:50]}"], cwd=VAULT_PATH, capture_output=True)
+    sp.run(["git", "push"], cwd=VAULT_PATH, capture_output=True, timeout=30)
+    print(f"  ✅ {result}")
 
 def main():
-    global last_sha
-    print("Twin Autonomous Worker — GitHub polling")
+    print(f"Twin Worker — vault: {VAULT_PATH}")
+    
+    processed = set()
     
     while True:
         try:
-            sha = get_latest_commit()
-            if sha and sha != last_sha:
-                last_sha = sha
-                print(f"New command detected: {sha[:8]}")
-                git_pull()
-                for cmd in read_commands():
-                    if cmd and not cmd.startswith("pong:"):
-                        execute_and_respond(cmd)
+            git_pull()
+            for cmd in read_commands():
+                if cmd and not cmd in processed and not cmd.startswith("pong:") and not cmd.startswith("echo:"):
+                    processed.add(cmd)
+                    print(f"New command: {cmd[:60]}")
+                    execute_and_respond(cmd)
         except Exception as e:
-            print(f"Poll error: {e}")
+            print(f"🚫 {e}")
         
         time.sleep(POLL_S)
 
