@@ -10,9 +10,11 @@ from router import route, extract_text
 from handlers import HANDLERS
 import db
 
-EVO_URL = "http://127.0.0.1:8080"
+# WAHA polling
+WAHA_URL = "http://127.0.0.1:3000"
+WAHA_KEY = "alikhan-secret-key-2026"
 GROUPS = ["120363179621030401@g.us", "120363400682390076@g.us"]
-HEADERS = {"apikey": EVO_KEY, "Content-Type": "application/json"}
+HEADERS = {"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"}
 seen = set()
 COOLDOWN = {}
 
@@ -23,7 +25,7 @@ print(f"Watching: {GROUPS}", flush=True)
 while True:
     try:
         for group in GROUPS:
-            resp = requests.post(f"{EVO_URL}/chat/findMessages/alikhan",
+            resp = requests.post(f"{WAHA_URL}/api/sessions/alikhan/chats",
                 headers=HEADERS,
                 json={"where": {"key": {"remoteJid": group}}, "page": 1, "limit": 3}, timeout=10)
             

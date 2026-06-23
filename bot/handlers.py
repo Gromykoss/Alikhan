@@ -8,7 +8,9 @@ import requests
 
 import db
 
-EVO_URL = "http://127.0.0.1:8080"
+# WAHA API
+WAHA_URL = "http://127.0.0.1:3000"
+WAHA_KEY = "alikhan-secret-key-2026"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 
 
@@ -73,9 +75,9 @@ def _extract_json(raw):
 
 def send_msg(group, text):
     requests.post(
-        f"{EVO_URL}/message/sendText/alikhan",
-        headers={"apikey": EVO_KEY, "Content-Type": "application/json"},
-        json={"number": group, "text": str(text or "")[:4000]},
+        f"{WAHA_URL}/api/sendText",
+        headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
+        json={"chatId": group, "text": str(text or "")[:4000]},
     )
 
 
@@ -111,7 +113,7 @@ def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="i
 def _download_media_base64(message_id):
     response = requests.post(
         f"{EVO_URL}/chat/getBase64FromMediaMessage/alikhan",
-        headers={"apikey": EVO_KEY, "Content-Type": "application/json"},
+        headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
         json={"message": {"key": {"id": message_id}}},
     )
     if response.status_code != 200:
