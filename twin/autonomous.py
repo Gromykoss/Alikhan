@@ -20,20 +20,31 @@ def read_commands():
         return [line.strip() for line in f if line.strip()]
 
 def execute_and_respond(command):
-    """Execute ping and write response."""
+    """Execute command and respond via git."""
+    result = None
+    
     if command.startswith("ping:"):
         result = "pong: " + command.split(":", 1)[1].strip()
+    
+    elif command.startswith("browser:"):
+        # Extract URL from: "browser: open URL | action: screenshot"
+        parts = command.split("|")
+        url_part = parts[0].replace("browser:", "").replace("open", "").strip()
+        print(f"  🌐 Opening: {url_part}")
+        r = sp.run(["hermes", "browser", "open", url_part], capture_output=True, text=True, timeout=30)
+        result = f"browser-result: {r.stdout[:200]}" if r.returncode == 0 else f"browser-error: {r.stderr[:200]}"
+    
     else:
-        result = f"echo: {command[:50]}"
+        result = f"unknown-command: {command[:50]}"
     
-    path = os.path.join(VAULT_PATH, COMMANDS_FILE)
-    with open(path, "a") as f:
-        f.write(f"\n{result}")
-    
-    sp.run(["git", "add", COMMANDS_FILE], cwd=VAULT_PATH, capture_output=True)
-    sp.run(["git", "commit", "-m", f"bridge: {result[:50]}"], cwd=VAULT_PATH, capture_output=True)
-    sp.run(["git", "push"], cwd=VAULT_PATH, capture_output=True, timeout=30)
-    print(f"  ✅ {result}")
+    if result:
+        path = os.path.join(VAULT_PATH, COMMANDS_FILE)
+        with open(path, "a") as f:
+            f.write(f"\n{result}")
+        sp.run(["git", "add", COMMANDS_FILE], cwd=VAULT_PATH, capture_output=True)
+        sp.run(["git", "commit", "-m", f"bridge: {result[:50]}"], cwd=VAULT_PATH, capture_output=True)
+        sp.run(["git", "push"], cwd=VAULT_PATH, capture_output=True, timeout=30)
+        print(f"  ✅ {result[:80]}")
 
 def main():
     print(f"Twin Worker — vault: {VAULT_PATH}")
