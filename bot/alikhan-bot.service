@@ -1,0 +1,22 @@
+[Unit]
+Description=Alikhan WhatsApp Bot (Evolution API poller)
+After=network.target docker.service
+Requires=docker.service
+Wants=evolution-api.service
+
+[Service]
+Type=simple
+User=hermes-user
+WorkingDirectory=/home/hermes-workspace/Alikhan-migration/bot
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3 /home/hermes-workspace/Alikhan-migration/bot/main_waha.py
+Restart=always
+RestartSec=15
+StandardOutput=append:/home/hermes-workspace/Alikhan-migration/bot/bot.log
+StandardError=append:/home/hermes-workspace/Alikhan-migration/bot/bot.log
+
+# Environment: secrets from .env file
+EnvironmentFile=/home/hermes-workspace/.hermes/secrets.env
+
+[Install]
+WantedBy=multi-user.target
