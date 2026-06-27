@@ -1,4 +1,5 @@
-import base64
+import db, json, re, requests, os, sys
+import db_memory
 import json
 import re
 from datetime import datetime
@@ -14,28 +15,37 @@ WAHA_KEY = "waha123"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 
 
-def _load_evo_key():
-    with open("/tmp/evo_key.txt") as f:
-        return f.read().strip()
-
-
-def _load_xai_key():
+def _load_keys():
+    """Load evo_key and XAI_KEY from secrets.env, fallback to n8n workflow"""
+    secrets = {}
     try:
-        with open("/home/hermes-workspace/Alikhan-migration/n8n-workflows/Алихан_AI-whatsApp_agent.json") as f:
-            workflow = json.load(f)
-    except FileNotFoundError:
-        return ""
+        with open('/home/hermes-workspace/.hermes/secrets.env') as f:
+            for line in f:
+                if '=' in line and not line.startswith('#'):
+                    k, v = line.strip().split('=', 1)
+                    secrets[k] = v
+    except:
+        pass
+    evo = secrets.get('EVO_KEY', '')
+    xai = secrets.get('XAI_API_KEY', secrets.get('XAI_KEY', ''))
+    if not xai:
+        try:
+            with open('/home/hermes-workspace/Alikhan-migration/n8n-workflows/Алихан_AI-whatsApp_agent.json') as f:
+                workflow = json.load(f)
+            for node in workflow.get("nodes", []):
+                headers = node.get("parameters", {}).get("headerParameters", {}).get("parameters", [])
+                for header in headers:
+                    if header.get("name") == "Authorization":
+                        xai = str(header.get("value", "")).replace("Bearer ", "").strip()
+                        if xai:
+                            break
+                if xai:
+                    break
+        except:
+            pass
+    return evo, xai
 
-    for node in workflow.get("nodes", []):
-        headers = node.get("parameters", {}).get("headerParameters", {}).get("parameters", [])
-        for header in headers:
-            if header.get("name") == "Authorization":
-                return str(header.get("value", "")).replace("Bearer ", "").strip()
-    return ""
-
-
-EVO_KEY = _load_evo_key()
-XAI_KEY = _load_xai_key()
+evo_key, XAI_KEY = _load_keys()
 
 
 def _ctx(group, sender, payload):
@@ -46,6 +56,9 @@ def _ctx(group, sender, payload):
     data.setdefault("chatId", group)
     data.setdefault("number", group)
     data.setdefault("sender", sender)
+    data.setdefault("quotedDocumentFileName", payload.get("quotedDocumentFileName", ""))
+    data.setdefault("quotedDocumentMimeType", payload.get("quotedDocumentMimeType", ""))
+    data.setdefault("quotedDocumentMessageId", payload.get("quotedDocumentMessageId", ""))
     data.setdefault("userMessage", data.get("text", ""))
     return data
 
@@ -75,13 +88,20 @@ def _extract_json(raw):
 
 def send_msg(group, text):
     try:
-        r = requests.post(
-            f"{WAHA_URL}/api/sendText",
-            headers={"X-Api-Key": WAHA_KEY, "Content-Type": "application/json"},
-            json={"session": "alikhan", "chatId": group, "text": str(text or "")[:4000]},
-            timeout=10,
-        )
-        return r.status_code in (200, 201)
+        import urllib.request, json
+        with open('/home/hermes-workspace/.hermes/secrets.env') as f:
+            secrets = {}
+            for line in f:
+                if '=' in line and not line.startswith('#'):
+                    k, v = line.strip().split('=', 1)
+                    secrets[k] = v
+        key = secrets['EVO_KEY']
+        body = json.dumps({"number": group, "text": str(text or "")[:4000]}).encode()
+        req = urllib.request.Request('http://127.0.0.1:8080/message/sendText/alikhan', data=body, method='POST')
+        req.add_header('apikey', key)
+        req.add_header('Content-Type', 'application/json')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 201)
     except Exception as e:
         print(f"[send_msg ERR] {e}", flush=True)
         return False
@@ -126,6 +146,44 @@ def _download_media_base64(message_id):
     if response.status_code == 200 and response.content:
         import base64 as b64
         return b64.b64encode(response.content).decode()
+    return ""
+
+def _get_base64_evolution(quoted_message_id):
+    """Fetch base64 using Evolution API for a message by its ID"""
+    import urllib.request, json
+    import os
+    # Load EVO config
+    secrets = {}
+    try:
+        with open(os.path.expanduser('~/.hermes/secrets.env')) as f:
+            for line in f:
+                if '=' in line and not line.startswith('#'):
+                    k, v = line.strip().split('=', 1)
+                    secrets[k] = v
+    except:
+        pass
+    evo_key = secrets.get('EVO_KEY', '')
+    evo_base = 'http://127.0.0.1:8080'
+    try:
+        # First find the full message
+        body = json.dumps({"where": {"key": {"id": quoted_message_id}}, "page": 1, "limit": 1}).encode()
+        req = urllib.request.Request(f"{evo_base}/chat/findMessages/alikhan", data=body, method='POST')
+        req.add_header('apikey', evo_key)
+        req.add_header('Content-Type', 'application/json')
+        with urllib.request.urlopen(req, timeout=10) as r:
+            records = json.loads(r.read()).get('messages', {}).get('records', [])
+        if not records:
+            return ""
+        # Now get base64
+        body2 = json.dumps({"message": records[0]}).encode()
+        req2 = urllib.request.Request(f"{evo_base}/chat/getBase64FromMediaMessage/alikhan", data=body2, method='POST')
+        req2.add_header('apikey', evo_key)
+        req2.add_header('Content-Type', 'application/json')
+        with urllib.request.urlopen(req2, timeout=30) as r2:
+            data = json.loads(r2.read())
+            return data.get("base64", "")
+    except Exception as e:
+        print("Evolution base64 error:", e)
     return ""
 
 
@@ -277,6 +335,24 @@ def handle_current_datetime(group, sender, payload):
 
 def handle_fact_lookup(group, sender, payload):
     ctx = _ctx(group, sender, payload)
+    text = ctx.get("userMessage", "").lower()
+    
+    # Try structured facts first for building/category queries
+    if any(w in text for w in ["абк", "общежит", "бетон", "монтаж", "за неделю", "за месяц"]):
+        try:
+            building = "АБК" if "абк" in text else ("Общежитие" if "общежит" in text else None)
+            from datetime import datetime, timedelta
+            start = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d") if "недел" in text else None
+            facts = db_memory.fact_lookup(group, building=building, start_date=start)
+            if facts:
+                lines = [f"{f['building'] or 'Общее'} | {f['category']} | {f['fact']} | {f['fact_date']}" for f in facts[:10]]
+                prompt = f"Вопрос: {ctx.get('userMessage')}\nФакты:\n" + "\n".join(lines) + "\n\nОтветь кратко на основе фактов."
+                send_msg(group, ask_grok(prompt, max_tokens=800))
+                return
+        except:
+            pass
+    
+    # Fallback: raw message search
     rows = _fact_rows(group, ctx.get("userMessage", ""), ctx.get("lookupId", ""))
     if not rows:
         send_msg(group, "В памяти не нашёл подходящих фактов.")
@@ -444,16 +520,64 @@ def handle_period_summary(group, sender, payload):
 
 def handle_quoted_document_summary(group, sender, payload):
     ctx = _ctx(group, sender, payload)
-    msg_id = ctx.get("quotedDocumentMessageId") or ctx.get("lookupId")
-    if not msg_id:
+    doc = ctx.get("document") or {"filename": ctx.get("quotedDocumentFileName", "неизвестный документ")}
+    
+    if not doc or not doc.get("filename"):
+        # Try most recent document in DB
+        try:
+            rows = db.search_messages(group, "", limit=1)
+            if rows and rows[0].get('content'):
+                doc = {"filename": "последний документ в чате"}
+                content = rows[0].get('content','')[:5000]
+                prompt = f"Вопрос пользователя: {ctx.get('text','')}\\n\\nСодержание:{content}\\n\\nОтветь кратко по содержанию."
+                send_msg(group, ask_grok(prompt, max_tokens=700))
+                return
+        except:
+            pass
         send_msg(group, "Не вижу процитированный документ.")
         return
-    row = db.get_message_by_id(msg_id) if str(msg_id).isdigit() else None
-    if not row:
-        send_msg(group, "Не нашёл процитированный документ в памяти. Можно прислать его ID.")
+    
+    filename = doc.get("filename", "")
+    # For images: re-fetch from Evolution API and use vision
+    if ctx.get("quotedDocumentMimeType", "").startswith("image/"):
+        msg_id = ctx.get("quotedDocumentMessageId", "")
+        b64 = _get_base64_evolution(msg_id) if msg_id else ""
+        if b64:
+            desc = ask_grok(
+                "Ты — прораб на площадке ТЗРК Джеруй (Кыргызстан, 2700м). "
+                "Опиши фото: этап работ, техника, люди, материалы. "
+                "Нарушения ТБ/ООС/пожарки если есть. "
+                "Здание НЕ угадывай — пиши «здание не определено». "
+                "Пиши как прораб — коротко, по делу.",
+                image_base64=b64, mimetype=ctx.get("quotedDocumentMimeType", "image/jpeg"), max_tokens=400
+            )
+            send_msg(group, desc)
+            return
+    # Search DB: try filename first, then caption as fallback
+    search_terms = [
+        filename.replace('.pdf','').replace('.PDF','')[:30],
+        filename[:30],
+        doc.get("caption", "")[:30],
+        ctx.get("quotedDocumentMessageId", "")[:20]
+    ]
+    rows = []
+    for q in search_terms:
+        if q:
+            try:
+                rows = db.search_messages(group, q, limit=1)
+                if rows and rows[0].get('content'):
+                    break
+            except:
+                pass
+    
+    if rows and rows[0].get('content'):
+        content = rows[0].get('content','')[:5000]
+        prompt = f"Вопрос пользователя: {ctx.get('text','')}\\n\\nСодержание документа: {content}\\n\\nОтветь кратко."
+        send_msg(group, ask_grok(prompt, max_tokens=700))
         return
-    prompt = f"Кратко перескажи документ, выдели назначение, ключевые требования и риски.\n\n{str(row.get('content') or '')[:70000]}"
-    send_msg(group, ask_grok(prompt, max_tokens=1000))
+    
+    prompt = f"Пользователь просит прочитать документ: {filename}. Содержимое не найдено в памяти."
+    send_msg(group, ask_grok(prompt, max_tokens=500))
 
 
 def handle_who_are_you(group, sender, payload):
@@ -466,6 +590,29 @@ def handle_who_are_you(group, sender, payload):
 def handle_ai(group, sender, payload):
     ctx = _ctx(group, sender, payload)
     send_msg(group, ask_grok(ctx.get("userMessage") or ctx.get("text") or ""))
+
+def handle_daily_snapshot(group, sender, payload):
+    import subprocess
+    try:
+        subprocess.run(["python3", "/home/hermes-workspace/Alikhan-migration/bot/daily_snapshot.py"], timeout=60)
+    except Exception as e:
+        send_msg(group, f"Ошибка снимка: {e}")
+
+def handle_weather(group, sender, payload):
+    import urllib.request, re
+    try:
+        req = urllib.request.Request("https://wttr.in/42.2,72.5?format=%C+%t+%w+%h+%P&lang=ru")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            weather = r.read().decode().strip()
+        # Convert hPa to mmHg: 1 hPa = 0.75006 mmHg
+        m = re.search(r'(\d+)\s*(?:hPa|гПа)', weather)
+        if m:
+            hpa = int(m.group(1))
+            mmhg = round(hpa * 0.75006)
+            weather = re.sub(r'\d+\s*(?:hPa|гПа)', f'{mmhg} мм рт.ст.', weather)
+        send_msg(group, f"🌤 ТЗРК Джеруй: {weather}")
+    except Exception as e:
+        send_msg(group, f"Не смог получить погоду: {e}")
 
 
 def handle_photo(group, sender, payload):
@@ -524,6 +671,8 @@ HANDLERS = {
     "period_summary": handle_period_summary,
     "quoted_document_summary": handle_quoted_document_summary,
     "who_are_you": handle_who_are_you,
+    "daily_snapshot": handle_daily_snapshot,
+    "weather": handle_weather,
     "ai": handle_ai,
     "photo": handle_photo,
     "document": handle_document,
