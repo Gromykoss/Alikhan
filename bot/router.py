@@ -128,6 +128,7 @@ def quoted_document(data):
         _get(context, ["quotedMessage", "documentMessage"])
         or _get(context, ["quotedMessage", "documentWithCaptionMessage", "message", "documentMessage"])
         or _get(context, ["quotedMessage", "documentWithCaptionMessage", "documentMessage"])
+        or _get(context, ["quotedMessage", "imageMessage"])
     )
 
 
@@ -351,7 +352,7 @@ def route(text_or_data, chat_id="", sender="", message_id=""):
                         summary_start_date = single_date
                         summary_end_date = single_date
     elif quote and (
-        "документ" in lower or "содержание" in lower or "кратко" in lower or "что в" in lower
+        "документ" in lower or "док" in lower or "файл" in lower or "pdf" in lower or "содержание" in lower or "кратко" in lower or "что в" in lower or "прочти" in lower or "прочитай" in lower or "письм" in lower or "список из" in lower or "что это" in lower or "о чём" in lower or "суть" in lower or "опиши" in lower or "перескажи" in lower or "фото" in lower or "фотк" in lower or "снимок" in lower or "картинк" in lower or "изображени" in lower or "image" in lower or "picture" in lower or "погода" in lower
     ):
         command = "quoted_document_summary"
     elif (
@@ -365,6 +366,10 @@ def route(text_or_data, chat_id="", sender="", message_id=""):
         or "переписку" in lower
     ):
         command = "fact_lookup"
+    elif "снимок дня" in lower or "сводка" in lower:
+        command = "daily_snapshot"
+    elif "погода" in lower:
+        command = "weather"
     elif "кто ты" in lower or "ты кто" in lower:
         command = "who_are_you"
 
@@ -381,7 +386,7 @@ def route(text_or_data, chat_id="", sender="", message_id=""):
         "messageTimestamp": timestamp,
         "fromMe": from_me,
         "quotedDocumentMessageId": str(_get(data, ["contextInfo", "stanzaId"], "") or ""),
-        "quotedDocumentFileName": str((quote or {}).get("fileName") or (quote or {}).get("title") or ""),
+        "quotedDocumentFileName": str((quote or {}).get("fileName") or (quote or {}).get("title") or (quote or {}).get("caption") or ""),
         "quotedDocumentMimeType": str((quote or {}).get("mimetype") or ""),
         "summaryStartDate": summary_start_date,
         "summaryEndDate": summary_end_date,

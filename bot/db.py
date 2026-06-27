@@ -1,23 +1,32 @@
 import psycopg2, psycopg2.extras
 from datetime import datetime
 
+import os
+DB_PASS = "pass123"
+try:
+    with open('/home/hermes-workspace/.hermes/secrets.env') as f:
+        for line in f:
+            if line.startswith('EVO_DB_PASS=') or line.startswith('DB_PASS='):
+                DB_PASS = line.strip().split('=', 1)[1]
+except:
+    pass
 DB_CONFIG = {
-    "host": "172.22.0.3",
+    "host": "172.22.0.4",
     "port": 5432,
     "user": "evolution",
-    "password": "pass123",
+    "password": DB_PASS,
     "dbname": "evolution_db"
 }
 
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
 
-def save_message(chat_id, sender, role, content, message_type="text"):
+def save_message(chat_id, sender, role, content, message_type="text", file_name=None):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, message_time)
-        VALUES (%s, %s, %s, %s, %s, %s)""",
-        (chat_id, sender, role, message_type, content, datetime.utcnow()))
+    cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, file_name, message_time)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+        (chat_id, sender, role, message_type, content, file_name, datetime.utcnow()))
     conn.commit(); cur.close(); conn.close()
 
 def get_upcoming_events(chat_id, limit=5):
