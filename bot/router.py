@@ -55,20 +55,11 @@ def route(text, chat_id, sender=""):
         ).strip()
         action = "GROK"
 
-    # Self-check
+    # Verification (Claude Code pattern: verify > write, 2-3x quality)
     try:
-        check = ask_grok(
-            f"Оцени ответ одним словом: GOOD или BAD. "
-            f"Отвечает ли он на вопрос? Нет ли выдумки? "
-            f"Ответ: {reply[:300]}\nВопрос: {text[:200]}",
-            max_tokens=10
-        )
-        if "BAD" in check.upper():
-            reply = f"⚠️ {reply}"
-            print(f"[SELF-CHECK] BAD — flagged", flush=True)
-        else:
-            print(f"[SELF-CHECK] OK", flush=True)
+        from verify import verify_reply
+        reply, score, issues = verify_reply(reply, text, db_reply)
     except Exception as e:
-        print(f"[SELF-CHECK ERR] {e}", flush=True)
+        print(f"[VERIFY ERR] {e}", flush=True)
 
     return action, reply, voice
