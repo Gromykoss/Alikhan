@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """fill_ejo.py — ЕЖО: погода + QA-факты → 4 листа"""
-import sys, os, re, requests
+import sys, os, re, requests, json, urllib.request, base64
 from datetime import datetime, timedelta
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter as _gcl
 from openpyxl.cell.cell import MergedCell
 from openpyxl.styles import Alignment
 
+EVO = "http://127.0.0.1:8080"
+KEY = "SuperSecretKey_Grok2026_!@#"
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
 def get_code_source():
@@ -72,13 +75,26 @@ def staff(date):
     r = {}
     for x in f:
         t = (x['fact'] or '').lower()
+        # Combined format: "Атантай ИТР 1, рабочих 6"
         m1 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*итр[,\s]*(\d+)\s*рабоч', t)
         m2 = re.search(r'(атантай|майкадам|наватек)\s*итр\s*(\d+)[,\s]*рабоч\w*\s*(\d+)', t, re.I)
         m3 = re.search(r'итр\s*(\d+)[,\s]*рабоч\w*\s*(\d+)\s*\(?(\w+)', t, re.I)
         if m1: nm, i, wk = mp[m1.group(1)], int(m1.group(2)), int(m1.group(3))
         elif m2: nm, i, wk = mp[m2.group(1)], int(m2.group(2)), int(m2.group(3))
         elif m3: nm, i, wk = mp.get(m3.group(3).lower(), ''), int(m3.group(1)), int(m3.group(2))
-        else: continue
+        else:
+            # Split format: "Атантай ИТР 1" or "Атантай 6 рабочих"
+            m4 = re.search(r'(атантай|майкадам|наватек)\s+итр\s+(\d+)', t)
+            m5 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*рабоч', t)
+            if m4:
+                nm = mp[m4.group(1)]
+                if nm not in r: r[nm] = {'t':0,'i':0,'w':0}
+                r[nm]['i'] += int(m4.group(2)); r[nm]['t'] += int(m4.group(2))
+            if m5:
+                nm = mp[m5.group(1)]
+                if nm not in r: r[nm] = {'t':0,'i':0,'w':0}
+                wk = int(m5.group(2)); r[nm]['w'] += wk; r[nm]['t'] += wk
+            continue
         if nm: r[nm] = {'t': i+wk, 'i': i, 'w': wk}
     for n in ['Атантай','Майкадам','Наватек','Алтын-Тас']:
         if n not in r: r[n] = {'t':0,'i':0,'w':0}
@@ -86,7 +102,8 @@ def staff(date):
 
 def volumes(date):
     """{code: vol}. Supports 3- and 4-part codes. Comma decimals. Bare = done."""
-    f = qa(date, 'бетонирование'); dn, pn = {}, {}
+    f = qa(date, 'бетонирование') + qa(date, 'монтаж') + qa(date, 'земляные работы')
+    dn, pn = {}, {}
     for x in f:
         txt = (x.get('fact','') or '').replace(',', '.')
         # Match 3-part (2.3.1) or 4-part (2.2.3.1) codes
@@ -135,8 +152,19 @@ def sw(ws, r, c, v, center=False):
     if isinstance(cell, MergedCell):
         for mr in ws.merged_cells.ranges:
             if cell.coordinate in mr: cell = ws.cell(row=mr.min_row, column=mr.min_col); break
+    was_yellow = yellow(cell)
     cell.value = v
     if center: cell.alignment = Alignment(horizontal='center', vertical='center')
+    # Clear yellow fill after writing (user wants white, not yellow leftovers)
+    if was_yellow and v is not None:
+        from openpyxl.styles import PatternFill
+        cell.fill = PatternFill(fill_type=None)
+
+def set_fill(ws, r, c, theme, tint=0.0):
+    """Set cell fill using theme color + tint. theme=3 (blue), theme=4 (yellow)."""
+    from openpyxl.styles import PatternFill, Color
+    cell = ws.cell(row=r, column=c)
+    cell.fill = PatternFill(patternType='solid', start_color=Color(theme=theme, tint=tint))
 
 def fill(date):
     wb = load_workbook(TEMPLATE)
@@ -245,14 +273,31 @@ def fill(date):
                 if k_plan and prev_s+v > 0:
                     try: sw(ws, r, 21, round(float(k_plan)-prev_s-v, 1), True)
                     except: pass
-            # Clear yellow fill from section headers (L55 = row 55, col 12)
-            from openpyxl.styles import PatternFill
-            no_fill = PatternFill(fill_type=None)
+            # Style section header rows: light blue (theme=3, tint=0.8) instead of yellow
+            for r in range(22, ws.max_row+1):
+                cell_a = ws.cell(r, 1)
+                if yellow(cell_a) and cell_a.value and 'ЭТАП' in str(cell_a.value).upper():
+                    for c in range(1, 22):
+                        set_fill(ws, r, c, 3, 0.8)
+            # Row 20 subheader: bold, 14pt, solid fill
+            from openpyxl.styles import Font as _Font
+            for c in range(1, 22):
+                cell = ws.cell(20, c)
+                cell.font = _Font(bold=True, size=14)
+            # "Количество" → "Кол-во"
+            if ws.cell(20, 11).value and 'Количество' in str(ws.cell(20, 11).value):
+                sw(ws, 20, 11, 'Кол-во', True)
+            # Remove yellow "—" cells → None
             for r in range(24, ws.max_row+1):
-                for c in [12]:  # column L
+                for c in [12, 13, 14]:
                     cell = ws.cell(r, c)
-                    if yellow(cell) and str(cell.value).strip() in ['—', 'None', '']:
-                        cell.fill = no_fill
+                    if str(cell.value).strip() == '—':
+                        cell.value = None
+            # Delete empty rows at bottom
+            while ws.max_row > 24:
+                has_content = any(ws.cell(ws.max_row, c).value is not None for c in range(1, 22))
+                if has_content: break
+                ws.delete_rows(ws.max_row)
         if name == "Фототчет":
             sw(ws, 1, 1, df, True)
             # Clear ALL existing images from sheet
@@ -264,15 +309,27 @@ def fill(date):
             rs = {b:0 for b in cm}
             for p in c.fetchall():
                 bld = p['b'] or 'Общий план'
-                if bld == 'без тега': bld = 'Общий план'
+                if bld in ('без тег', 'без тега'): bld = 'Общий план'
                 col = cm.get(bld, 4); rs[bld] += 1; row = 2 + rs[bld]
                 if row > 5: continue
-                fp = p.get('fp','')
-                if fp and os.path.exists(fp):
-                    from openpyxl.drawing.image import Image as XI
-                    img = XI(fp); img.width = 355; img.height = 267
-                    ws.add_image(img, f"{chr(64+col)}{row}")
-                    sw(ws, row, col, '')
+                msg_id = p.get('fp','')
+                if msg_id:
+                    try:
+                        # Download photo from Evolution API
+                        req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
+                            data=json.dumps({"message": {"key": {"id": msg_id}}}).encode(),
+                            headers={"apikey": KEY, "Content-Type": "application/json"})
+                        resp = urllib.request.urlopen(req, timeout=30)
+                        b64 = json.loads(resp.read().decode()).get("base64", "")
+                        if b64:
+                            import io, base64 as _b64
+                            img_data = _b64.b64decode(b64)
+                            from openpyxl.drawing.image import Image as XI
+                            img = XI(io.BytesIO(img_data)); img.width = 355; img.height = 267
+                            ws.add_image(img, f"{chr(64+col)}{row}")
+                            sw(ws, row, col, '')
+                    except Exception as ex:
+                        print(f"Photo err: {ex}")
             c.close()
         if name == "Персонал и техника":
             sw(ws, 4, 1, df, True)
@@ -291,8 +348,12 @@ def fill(date):
                     else: v = '0'
                     sw(ws, rw, 2, v, True)
             et = ' '.join(x.get('fact','') for x in qa(date, 'техника')).lower()
-            for r, en in {38:'Самосвал',39:'Экскаватор',40:'Фронтальный погрузчик',41:'Каток',42:'Бетононасос'}.items():
-                sw(ws, r, 2, '0' if 'нет' in et else str(max(et.count(en.lower()[:5]),0)), True)  # col 2 only, names in col 1 from template
+            sw(ws, 35, 1, 'Статистика по технике', True)
+            sw(ws, 36, 1, 'Наименование', True); sw(ws, 36, 2, 'Кол-во', True)
+            equip = {37:'Самосвал',38:'Экскаватор',39:'Фронтальный погрузчик',40:'Каток',41:'Бетононасос'}
+            for r, en in equip.items():
+                sw(ws, r, 1, en, True)
+                sw(ws, r, 2, '0' if 'нет' in et else str(max(et.count(en.lower()[:5]),0)), True)
         if name == "Материалы и планы":
             sw(ws, 4, 1, df, True)
             # Materials: clear old template values, fill only if QA has new data
