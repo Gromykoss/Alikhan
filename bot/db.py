@@ -327,3 +327,146 @@ def get_calendar_events(chat_id, range='all'):
     """, (chat_id, range))
     rows = cur.fetchall(); cur.close(); conn.close()
     return rows
+
+def ensure_schedule_table():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS bot_schedule_phases (
+            id SERIAL PRIMARY KEY,
+            building TEXT,
+            phase_num INTEGER,
+            phase_name TEXT,
+            description TEXT,
+            start_date DATE,
+            end_date DATE,
+            duration_days INTEGER,
+            status TEXT DEFAULT 'planned',
+            parent_phase_id INTEGER REFERENCES bot_schedule_phases(id),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    """)
+    # Add parent_phase_id if table already exists without it (migration)
+    cur.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'bot_schedule_phases' AND column_name = 'parent_phase_id'
+            ) THEN
+                ALTER TABLE bot_schedule_phases ADD COLUMN parent_phase_id INTEGER REFERENCES bot_schedule_phases(id);
+            END IF;
+        END $$;
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def seed_schedule():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM bot_schedule_phases")
+    if cur.fetchone()[0] > 0:
+        cur.close()
+        conn.close()
+        return
+    # Insert phases first, capture their IDs for milestone linking
+    phases = [
+        ('общая', 1, 'ПСД, подготовка', 'Этап 1: ПСД, подготовка', '2025-04-30', '2026-06-26', 423, 'completed'),
+        ('общая', 2, 'Фундаменты, металлоконструкции', 'Этап 2: Фундаменты, металлоконструкции', '2026-01-05', '2026-06-30', 177, 'active'),
+        ('общая', 3, 'Этап 3', '', '2026-05-23', '2026-07-31', 70, 'active'),
+        ('общая', 4, 'Этап 4', '', '2026-06-15', '2026-10-30', 138, 'active'),
+    ]
+    phase_ids = {}
+    for row in phases:
+        cur.execute("""
+            INSERT INTO bot_schedule_phases (building, phase_num, phase_name, description, start_date, end_date, duration_days, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, row)
+        phase_ids[row[1]] = cur.fetchone()[0]
+
+    # Milestones linked to phase 2 (Фундаменты, металлоконструкции)
+    milestones = [
+        ('общая', None, 'Устройство фундаментов', 'milestone', '2026-04-23', '2026-06-01', 40, 'completed', phase_ids[2]),
+        ('общая', None, 'Изготовление металлоконструкций', 'milestone', '2026-01-05', '2026-02-20', 47, 'completed', phase_ids[2]),
+        ('общая', None, 'Монтаж металлоконструкций', 'milestone', '2026-02-22', '2026-05-05', 73, 'completed', phase_ids[2]),
+    ]
+    for row in milestones:
+        cur.execute("""
+            INSERT INTO bot_schedule_phases (building, phase_num, phase_name, description, start_date, end_date, duration_days, status, parent_phase_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, row)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def get_schedule(building=None, status=None):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    where = []
+    params = []
+    if building:
+        where.append("building=%s")
+        params.append(building)
+    if status:
+        where.append("status=%s")
+        params.append(status)
+    sql = "SELECT * FROM bot_schedule_phases"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY start_date"
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+def get_active_phases(today=None):
+    from datetime import date
+    if today is None:
+        today = date.today()
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT * FROM bot_schedule_phases
+        WHERE start_date <= %s AND end_date >= %s AND status != 'completed'
+        ORDER BY start_date
+    """, (today, today))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+def get_upcoming_phases(today=None, days=30):
+    from datetime import date, timedelta
+    if today is None:
+        today = date.today()
+    end = today + timedelta(days=days)
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT * FROM bot_schedule_phases
+        WHERE start_date BETWEEN %s AND %s AND status != 'completed'
+        ORDER BY start_date
+    """, (today, end))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+def check_delays(today=None):
+    from datetime import date
+    if today is None:
+        today = date.today()
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT * FROM bot_schedule_phases
+        WHERE end_date < %s AND status != 'completed'
+        ORDER BY end_date
+    """, (today,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows

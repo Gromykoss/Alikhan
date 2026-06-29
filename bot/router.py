@@ -5,16 +5,20 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
-SANDBOX = "120363179621030401@g.us"
+# Simulation mode: set to None for production, or "2026-06-27" for testing
+SIM_DATE = "2026-06-28"
 
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""
     from handlers import ask_grok
 
-    # 1. QA
+    # 1. QA — skip if question words present (STT output may contain data words)
     from qa import is_qa, parse_qa
-    if is_qa(text):
-        count = parse_qa(chat_id, text)
+    question_words = ["сколько", "какой", "какая", "какое", "какие", "что", "как",
+                       "где", "когда", "почему", "зачем", "чей", "чья", "скока", "чё"]
+    is_question = any(w in text.lower() for w in question_words)
+    if is_qa(text) and not is_question:
+        count = parse_qa(chat_id, text, date_str=SIM_DATE)
         if count > 0:
             return "QA", f"✅ Принято: {count} фактов", False
 
@@ -24,6 +28,12 @@ def route(text, chat_id, sender=""):
 
     # 3. Voice trigger
     voice = any(w in text.lower() for w in VOICE_TRIGGERS)
+
+    # 3.5 Schedule lookup
+    from db_lookup import lookup_schedule
+    schedule_reply = lookup_schedule(chat_id, text)
+    if schedule_reply:
+        return "SCHEDULE", schedule_reply, voice
 
     # 4. Weather / DB
     from db_lookup import lookup_facts
@@ -56,10 +66,13 @@ def route(text, chat_id, sender=""):
         action = "GROK"
 
     # Verification (Claude Code pattern: verify > write, 2-3x quality)
-    try:
-        from verify import verify_reply
-        reply, score, issues = verify_reply(reply, text, db_reply)
-    except Exception as e:
-        print(f"[VERIFY ERR] {e}", flush=True)
+    # Skip for trusted sources: WEATHER (API), SCHEDULE (DB static)
+    if action not in ("WEATHER", "SCHEDULE"):
+        try:
+            from verify import verify_reply
+            reply, score, issues = verify_reply(reply, text, db_reply,
+                                                db_facts_available=(db_reply is not None))
+        except Exception as e:
+            print(f"[VERIFY ERR] {e}", flush=True)
 
     return action, reply, voice
