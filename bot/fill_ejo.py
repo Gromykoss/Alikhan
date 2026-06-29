@@ -11,6 +11,84 @@ EVO = "http://127.0.0.1:8080"
 KEY = "SuperSecretKey_Grok2026_!@#"
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
+def get_aibikon_headcount(date=None):
+    """Extract АйБиКон headcount from latest timesheet, grouped by profession.
+    Returns dict: {'total': N, 'by_prof': {'профессия': кол-во, ...}}"""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from db import get_conn
+        import psycopg2.extras
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT id, tags FROM bot_memory_messages WHERE message_type='document' AND content ILIKE '%табель%' ORDER BY created_at DESC LIMIT 1")
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if not row or not row.get('tags'):
+            return {'total': 5, 'by_prof': {}}
+        tags = row['tags'] if isinstance(row['tags'], dict) else {}
+        msg_id = tags.get('msg_id', '')
+        if not msg_id:
+            return {'total': 5, 'by_prof': {}}
+        payload = json.dumps({"message": {"key": {"id": msg_id}}}).encode()
+        req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
+            data=payload, headers={"apikey": KEY, "Content-Type": "application/json"})
+        resp = urllib.request.urlopen(req, timeout=30)
+        b64 = json.loads(resp.read().decode()).get("base64", "")
+        if not b64:
+            return {'total': 5, 'by_prof': {}}
+        import tempfile, base64 as _b64
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tf:
+            tf.write(_b64.b64decode(b64))
+            tf.flush()
+            wb = load_workbook(tf.name, data_only=True)
+        os.unlink(tf.name)
+        
+        # Find day-of-month column: column 5 = day 1
+        if date:
+            day = date.day
+        else:
+            day = datetime.now().day
+        day_col = 5 + day - 1  # column 5 = day 1
+        
+        # Map табель professions → template professions
+        PROF_MAP = {
+            'рук.проекта': 'Руководителя строительства',
+            'зам.рук.проекта': 'Руководителя строительства',
+            'геодезист': 'Инженер геодезист',
+            'тб': 'Инженер ТБ и ОТ',
+            'пто': 'Инженер ПТО',
+            'электрик': 'Электрик',
+        }
+        
+        by_prof = {}
+        for sn in wb.sheetnames:
+            # Skip unrelated sheets
+            if not any(w in sn.lower() for w in ['жер', 'итр', 'айбикон', 'джеруй']):
+                continue
+            ws = wb[sn]
+            for r in range(1, ws.max_row + 1):
+                num = ws.cell(r, 1).value
+                name = ws.cell(r, 2).value
+                prof_raw = ws.cell(r, 3).value  # Должность (column C)
+                if name and str(name).strip() and not any(w in str(name).lower() for w in ['фио', 'директор', 'руководител', 'согласовано']):
+                    try:
+                        n = int(str(num).replace('№', '').strip())
+                        if n >= 1:
+                            val = ws.cell(r, day_col).value
+                            # 8 = worked, anything else = absent
+                            if val == 8 or str(val).strip() == '8':
+                                prof = str(prof_raw).strip().lower() if prof_raw else ''
+                                prof_name = PROF_MAP.get(prof, prof)
+                                by_prof[prof_name] = by_prof.get(prof_name, 0) + 1
+                    except:
+                        pass
+        wb.close()
+        total = sum(by_prof.values())
+        return {'total': max(total, 1), 'by_prof': by_prof}
+    except Exception as e:
+        print(f"[TABEL ERR] {e}", flush=True)
+        return {'total': 5, 'by_prof': {}}
+
 def get_code_source():
     """Use latest report to find all work codes (user may add sub-items)."""
     import glob
@@ -167,17 +245,11 @@ def set_fill(ws, r, c, theme, tint=0.0):
     cell.fill = PatternFill(patternType='solid', start_color=Color(theme=theme, tint=tint))
 
 def fill(date):
-    wb = load_workbook(TEMPLATE)
+    wb = load_workbook(TEMPLATE, data_only=True)  # preserve cached values, drop formulas
     w = weather(date); inc = incidents(date); stf = staff(date); vols = volumes(date)
+    aibikon = get_aibikon_headcount(date)  # from timesheet for report date
     df = date.strftime('%d.%m.%Y')
     src_wb, src_ws = get_code_source()
-    # Add logo to merged cell J1-U8
-    logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                             'hermes-vault/Alikhan/assets/logo_ibcon.jpg')
-    if os.path.exists(logo_path):
-        from openpyxl.drawing.image import Image as XI
-        img = XI(logo_path); img.width = 809; img.height = 205
-        wb[wb.sheetnames[0]].add_image(img, 'J1')
     for name in wb.sheetnames:
         ws = wb[name]
         if name == "Ежедневный отчет":
@@ -195,21 +267,19 @@ def fill(date):
                 'G4': w.get('t'), 'G5': w.get('w'), 'D6': df,
                 'G6': w.get('h'), 'G7': w.get('v'), 'G8': w.get('p'),
                 'E11': inc, 'F11': inc, 'G11': inc,
-                'M11': '5', 'N11': staff_val('Атантай','t'),
+                'M11': str(aibikon['total']), 'N11': staff_val('Атантай','t'),
                 'O11': staff_val('Майкадам','t'), 'P11': staff_val('Наватек','t'),
-                'M12': '40', 'N12': staff_val('Атантай','th'),
+                'M12': str(aibikon['total'] * 8), 'N12': staff_val('Атантай','th'),
                 'O12': staff_val('Майкадам','th'), 'P12': staff_val('Наватек','th'),
-                'M17': '40', 'N17': staff_val('Атантай','th'),
+                'M17': str(aibikon['total'] * 8), 'N17': staff_val('Атантай','th'),
                 'O17': staff_val('Майкадам','th'), 'P17': staff_val('Наватек','th'),
                 'Q11': staff_val('Алтын-Тас','t'), 'Q12': staff_val('Алтын-Тас','th'),
                 'Q17': staff_val('Алтын-Тас','th'), 'Q18': staff_val('Алтын-Тас','ih'),
-                'M18': '40', 'N18': staff_val('Атантай','ih'),
+                'M18': str(aibikon['total'] * 8), 'N18': staff_val('Атантай','ih'),
                 'O18': staff_val('Майкадам','ih'), 'P18': staff_val('Наватек','ih'),
             }
             def get_val(spec):
                 if isinstance(spec, str): return spec
-                if spec[0] == '5': return '5'  # АйБикон
-                if spec[0] == '40': return '40'  # АйБикон чч/ИТР
                 if isinstance(spec[0], dict):  # {stf, name, key}
                     d = spec
                     cname = spec[1]
@@ -233,6 +303,11 @@ def fill(date):
                     if not yellow(cell) or not cell.value: continue
                     ins = str(cell.value).lower() if cell.value else ''; val = None
                     if val: sw(ws, cell.row, cell.column, val, True)
+            # Clear daily values from template (they're from previous day)
+            for r in range(24, ws.max_row+1):
+                if ws.cell(r,3).value:
+                    for c in [12, 13, 14]:
+                        sw(ws, r, c, None)
             for r in range(24, ws.max_row+1):
                 cd = ws.cell(r,3).value
                 if not cd or str(cd) not in vols: continue
@@ -247,8 +322,15 @@ def fill(date):
                 prev_p = parse_val(ws.cell(r,16).value)
                 # Use yesterday's file for clean cumulative data
                 yp, ys = yesterday_cum(date, cs)
-                prev_p = yp
-                prev_s = ys
+                # If code has work today, use yesterday's cumulative (template may
+                # already include today's data after user correction — avoid double-count)
+                if v > 0:
+                    prev_p = yp
+                    prev_s = ys
+                else:
+                    # No work today — keep template value (or yesterday's if larger)
+                    prev_p = max(prev_p, yp)
+                    prev_s = max(parse_val(ws.cell(r,19).value), ys)
 
                 # Daily values
                 sw(ws, r, 12, v, True)
@@ -333,6 +415,19 @@ def fill(date):
             c.close()
         if name == "Персонал и техника":
             sw(ws, 4, 1, df, True)
+            # Fill АйБиКон professions from timesheet (by_prof)
+            prof_rows = {
+                'Руководителя строительства': 9,
+                'Инженер геодезист': 10,
+                'Инженер ТБ и ОТ': 11,
+                'Инженер ПТО': 12,
+                'Электрик': 13,
+            }
+            by_prof = aibikon.get('by_prof', {})
+            for prof_name, row_num in prof_rows.items():
+                sw(ws, row_num, 2, str(by_prof.get(prof_name, 0)), True)
+            # Update total row (row 8) for АйБиКон
+            sw(ws, 8, 2, str(aibikon['total']), True)
             for nm, tr, ps in [
                 ('Атантай',14,[(15,'i'),(16,'w'),(17,None),(18,None),(19,None)]),
                 ('Майкадам',20,[(21,'i'),(22,'w')]),
@@ -426,15 +521,6 @@ def fill(date):
     while os.path.exists(f"/tmp/ЕЖО_{ds}_v{v}.xlsx"): v += 1
     op = f"/tmp/ЕЖО_{ds}_v{v}.xlsx"
     wb.save(op)
-    # Add logo after save (openpyxl drops images on complex saves)
-    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'hermes-vault', 'Alikhan', 'assets', 'logo_ibcon.jpg')
-    if os.path.exists(logo_path):
-        wb2 = load_workbook(op)
-        from openpyxl.drawing.image import Image as XI
-        img = XI(logo_path); img.width = 809; img.height = 205
-        wb2[wb2.sheetnames[0]].add_image(img, 'J1')
-        wb2.save(op)
-        wb2.close()
     print(f"✅ {op} (v{v})")
     return op
 
