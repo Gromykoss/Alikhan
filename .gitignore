@@ -1,1 +1,4 @@
 __pycache__/
+bot/bot.log
+bot/seen_ids.json
+bot/__pycache__/
