@@ -5,7 +5,8 @@ Returns (verified_text, score, issues_list).
 import sys, os
 from typing import Optional
 
-def verify_reply(reply: str, question: str, db_facts: Optional[str] = None) -> tuple:
+def verify_reply(reply: str, question: str, db_facts: Optional[str] = None,
+                 db_facts_available: bool = False) -> tuple:
     """Verify agent reply and flag issues. Returns (reply, score_0_100, issues).
     
     Score interpretation:
@@ -13,13 +14,19 @@ def verify_reply(reply: str, question: str, db_facts: Optional[str] = None) -> t
       70-89:  MINOR — small issues, still usable
       40-69:  FLAG — needs review, possible hallucination
       0-39:   REJECT — hallucination or completely wrong
+    
+    db_facts_available: if False, 'уточни в БД' is acceptable.
     """
     from handlers import ask_grok
     
     facts_context = f"\nФакты из БД:\n{db_facts}" if db_facts else "\n(фактов из БД нет)"
     
+    leniency_note = ""
+    if not db_facts and not db_facts_available:
+        leniency_note = "\nВ БД НЕТ фактов по этому запросу — ответ 'уточни в БД' или 'данных нет' считается ПОЛНЫМ и корректным."
+    
     prompt = f"""Проверь ответ агента-прораба. Оцени по трём критериям и дай оценку 0-100.
-
+{leniency_note}
 {facts_context}
 
 Вопрос прораба: {question[:500]}
