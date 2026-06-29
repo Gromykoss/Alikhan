@@ -1,7 +1,10 @@
+import ipaddress
+import os
+import subprocess
+
 import psycopg2, psycopg2.extras
 from datetime import datetime
 
-import os
 DB_PASS = "pass123"
 try:
     with open('/home/hermes-workspace/.hermes/secrets.env') as f:
@@ -10,8 +13,42 @@ try:
                 DB_PASS = line.strip().split('=', 1)[1]
 except:
     pass
+
+def _valid_ip(value):
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
+
+def _docker_container_ip(container_name="evolution-postgres"):
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "-f",
+                "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+                container_name,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except Exception:
+        return None
+    ip = result.stdout.strip()
+    return ip if _valid_ip(ip) else None
+
+def resolve_db_host():
+    env_host = os.environ.get("DB_HOST") or os.environ.get("EVO_DB_HOST")
+    if env_host:
+        return env_host
+    return _docker_container_ip() or "172.22.0.4"
+
 DB_CONFIG = {
-    "host": "172.22.0.4",
+    "host": resolve_db_host(),
     "port": 5432,
     "user": "evolution",
     "password": DB_PASS,
@@ -19,6 +56,7 @@ DB_CONFIG = {
 }
 
 def get_conn():
+    DB_CONFIG["host"] = resolve_db_host()
     return psycopg2.connect(**DB_CONFIG)
 
 def save_message(chat_id, sender, role, content, message_type="text", file_name=None):

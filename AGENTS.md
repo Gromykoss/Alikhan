@@ -32,7 +32,7 @@ docker restart evolution-api
 
 ## Память проекта (PostgreSQL)
 
-Хост: 172.22.0.4:5432, база: evolution_db, пользователь: evolution.
+Хост: `DB_HOST`/`EVO_DB_HOST` при наличии; иначе авто-обнаружение IP контейнера `evolution-postgres` через `docker inspect`, порт 5432. База: evolution_db, пользователь: evolution.
 Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases.
 
 ## ЕЖО
