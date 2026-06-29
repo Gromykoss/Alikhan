@@ -12,6 +12,7 @@ print("Алихан v5 (Evolution polling) starting...", flush=True)
 
 from router import route, extract_text
 from handlers import HANDLERS, ask_grok
+from secret_config import get_evo_key, get_secret
 import db
 
 # Evolution API config
@@ -20,18 +21,7 @@ EVO_INSTANCE = "alikhan"
 GROUPS = ["120363179621030401@g.us", "120363400682390076@g.us"]
 ALLOWED_GROUPS = set(GROUPS)
 
-# Load EVO_KEY
-def load_evo_key():
-    try:
-        with open(os.path.expanduser("~/.hermes/secrets.env")) as f:
-            for line in f:
-                if line.startswith("EVO_KEY="):
-                    return line.split("=", 1)[1].strip()
-    except:
-        pass
-    return "SuperSecretKey_Grok2026_!@#"
-
-EVO_KEY = load_evo_key()
+EVO_KEY = get_evo_key(required=True)
 HEADERS = {"apikey": EVO_KEY, "Content-Type": "application/json"}
 
 COOLDOWN = {}
@@ -47,18 +37,8 @@ import base64
 import os
 os.makedirs("/tmp/alikhan_docs", exist_ok=True)
 
-def load_evo_db_pass():
-    try:
-        with open(os.path.expanduser("~/.hermes/secrets.env")) as f:
-            for line in f:
-                if line.startswith("EVO_DB_PASS="):
-                    return line.split("=", 1)[1].strip()
-    except:
-        pass
-    return "pass123"
-
 # Update DB config dynamically if needed (db.py uses hardcoded, but we note EVO_DB_PASS)
-EVO_DB_PASS = load_evo_db_pass()
+EVO_DB_PASS = get_secret("EVO_DB_PASS", "DB_PASS", default="pass123")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():

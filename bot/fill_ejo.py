@@ -6,9 +6,10 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter as _gcl
 from openpyxl.cell.cell import MergedCell
 from openpyxl.styles import Alignment
+from secret_config import get_evo_key
 
 EVO = "http://127.0.0.1:8080"
-KEY = "SuperSecretKey_Grok2026_!@#"
+KEY = get_evo_key(required=True)
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
 def get_aibikon_headcount(date=None):

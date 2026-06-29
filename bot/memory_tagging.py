@@ -5,20 +5,11 @@ Batch tagger for old records in bot_memory_messages (evolution_db only)
 import psycopg2
 import psycopg2.extras
 import json
-import os
 import time
 from datetime import datetime
 
-DB_CONFIG = {
-    "host": "172.22.0.4",
-    "port": 5432,
-    "user": "evolution",
-    "password": os.environ.get("EVO_DB_PASS", "pass123"),
-    "dbname": "evolution_db"
-}
+from db import get_conn
 
-def get_conn():
-    return psycopg2.connect(**DB_CONFIG)
 
 def ensure_tags_column():
     conn = get_conn()

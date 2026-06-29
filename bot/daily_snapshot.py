@@ -7,11 +7,12 @@ Generates structured report with weather + recent messages
 
 import os
 import json
-import psycopg2
 import psycopg2.extras
 import requests
 from datetime import datetime, timedelta
 import urllib.request
+
+from db import get_conn
 
 # Load secrets
 def _load_secrets():
@@ -31,10 +32,6 @@ EVO_KEY = SECRETS.get('EVO_KEY', '')
 EVO_DB_PASS = SECRETS.get('DB_PASS', 'pass123')
 
 EVOLUTION_URL = "http://127.0.0.1:8080"
-DB_HOST = "172.22.0.4"
-DB_PORT = 5432
-DB_NAME = "evolution_db"
-DB_USER = "evolution"
 SANDBOX_GROUP = "120363179621030401@g.us"
 
 def get_weather():
@@ -68,10 +65,7 @@ def get_weather():
 
 def get_recent_messages(hours=8):
     """Query DB for ALL messages from last 8 hours"""
-    conn = psycopg2.connect(
-        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-        user=DB_USER, password=EVO_DB_PASS
-    )
+    conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     since = datetime.utcnow() - timedelta(hours=hours)
     cur.execute("""
@@ -89,7 +83,7 @@ def get_recent_messages(hours=8):
 def get_schedule_facts():
     """Get schedule/plan facts from bot_memory_facts"""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT building, fact FROM bot_memory_facts WHERE category='документация' AND (fact LIKE '%График%' OR fact LIKE '%Этап%' OR fact LIKE '%дней%') ORDER BY id DESC LIMIT 15")
         rows = cur.fetchall()

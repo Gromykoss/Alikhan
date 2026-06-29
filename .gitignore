@@ -1,4 +1,5 @@
 __pycache__/
+*.py[cod]
 bot/bot.log
 bot/seen_ids.json
 bot/__pycache__/

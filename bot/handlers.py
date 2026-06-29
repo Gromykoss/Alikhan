@@ -8,10 +8,11 @@ import psycopg2.extras
 import requests
 
 import db
+from secret_config import get_secret
 
 # WAHA API
 WAHA_URL = "http://127.0.0.1:3000"
-WAHA_KEY = "waha123"
+WAHA_KEY = get_secret("WAHA_KEY", "WAHA_API_KEY", default="waha123")
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 
 

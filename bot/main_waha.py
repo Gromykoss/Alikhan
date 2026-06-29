@@ -2,9 +2,10 @@
 import time, requests, json, sys, os, base64, tempfile, subprocess, urllib.request
 from datetime import datetime
 import re
+from secret_config import get_evo_key
 
 EVO = "http://127.0.0.1:8080"
-KEY = "SuperSecretKey_Grok2026_!@#"
+KEY = get_evo_key(required=True)
 SANDBOX = "120363179621030401@g.us"
 
 sys.stdout.reconfigure(line_buffering=True)

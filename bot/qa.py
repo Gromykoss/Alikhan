@@ -1,9 +1,10 @@
 """QA module: is_qa(text) → bool, parse_qa(chat_id, text) → count"""
 import sys, os, re
 from datetime import datetime
+from secret_config import get_evo_key
 
 EVO = "http://127.0.0.1:8080"
-KEY = "SuperSecretKey_Grok2026_!@#"
+KEY = get_evo_key(required=True)
 SANDBOX = "120363179621030401@g.us"
 
 sys.stdout.reconfigure(line_buffering=True)
