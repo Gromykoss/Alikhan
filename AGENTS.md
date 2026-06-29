@@ -4,6 +4,10 @@
 Бот: Python v5, Evolution API + xAI/Grok.
 Путь: /home/hermes-workspace/Alikhan-migration/bot/
 
+## Принцип
+
+**Надёжность и работоспособность всей системы — приоритет №1.** Фиксы и костыли переписываются в надёжный код. Каждое изменение тестируется в песочнице до боевой группы.
+
 ## Архитектура
 
 WhatsApp → Evolution API :8080 → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply
