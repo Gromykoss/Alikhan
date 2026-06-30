@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
 # Simulation mode: set to None for production, or "2026-06-27" for testing
-SIM_DATE = "2026-06-28"
+SIM_DATE = "2026-06-29"
 
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""

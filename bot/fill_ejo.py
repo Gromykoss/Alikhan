@@ -254,6 +254,7 @@ def fill(date):
     for name in wb.sheetnames:
         ws = wb[name]
         if name == "Ежедневный отчет":
+            sw(ws, 6, 4, df, True)
             # Fill yellow cells by position (instruction matching unreliable on filled templates)
             # Staff data for direct cell filling
             def staff_val(contractor, key):
@@ -298,6 +299,19 @@ def fill(date):
                     val = get_val(spec)
                     if val is not None:
                         sw(ws, row_n, col_l, val, True)
+            # Personnel header cells must always come from current data. The
+            # template may contain user-corrected, non-yellow values from the
+            # previous report.
+            for ref in [
+                'M11', 'N11', 'O11', 'P11', 'Q11',
+                'M12', 'N12', 'O12', 'P12', 'Q12',
+                'M17', 'N17', 'O17', 'P17', 'Q17',
+                'M18', 'N18', 'O18', 'P18', 'Q18',
+            ]:
+                col_l, row_n = ord(ref[0]) - ord('A') + 1, int(ref[1:])
+                val = get_val(swaps[ref])
+                if val is not None:
+                    sw(ws, row_n, col_l, val, True)
             # Also fill yellow instruction cells (for any missed)
             for row in ws.iter_rows():
                 for cell in row:
