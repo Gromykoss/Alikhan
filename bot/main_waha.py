@@ -12,7 +12,7 @@ sys.stdout.reconfigure(line_buffering=True)
 print("Alikhan EVO v5 — sandbox", flush=True)
 
 # Simulation date (set to None for production)
-SIM_DATE = "2026-06-28"
+SIM_DATE = "2026-06-29"
 
 # ── Send message ──
 def send_msg(chat_id, text):
@@ -319,7 +319,7 @@ while True:
                 conn3.commit(); cur3.close(); conn3.close()
                 send_msg(SANDBOX, "✅ Опрос закрыт. Формирую ЕЖО...")
                 # Immediately trigger EJO
-                subprocess.run(["python3", "fill_ejo.py", today_str],
+                subprocess.run([sys.executable, "fill_ejo.py", today_str],
                     cwd=os.path.dirname(os.path.abspath(__file__)))
                 files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
                 if files:
@@ -335,7 +335,7 @@ while True:
 
             # Survey trigger
             if any(w in text.lower() for w in ["начать опрос", "запустить опрос"]):
-                subprocess.run(["python3", "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
+                subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
                     cwd=os.path.dirname(os.path.abspath(__file__)),
                     env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
                 continue
@@ -343,17 +343,17 @@ while True:
             # Fill EJO trigger
             if any(w in text.lower() for w in ["заполни ежо", "сформируй ежо", "формируй ежо", "сделай ежо"]):
                 import glob as _glob
-                check = subprocess.run(["python3", "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX, "--check-only"],
+                check = subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX, "--check-only"],
                     capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)),
                     env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
                 if "missing" in check.stdout.lower() or "не хватает" in check.stdout.lower():
                     send_msg(SANDBOX, "📋 Не все данные собраны. Запускаю опрос...")
-                    subprocess.run(["python3", "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
+                    subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
                         cwd=os.path.dirname(os.path.abspath(__file__)),
                         env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
                     continue
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                subprocess.run(["python3", "fill_ejo.py", today_str],
+                subprocess.run([sys.executable, "fill_ejo.py", today_str],
                     cwd=os.path.dirname(os.path.abspath(__file__)))
                 files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
                 if files:
