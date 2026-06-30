@@ -1,0 +1,15 @@
+[Unit]
+Description=Alikhan Local Document Extractor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/hermes-workspace/Alikhan-migration/bot
+ExecStart=/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3 /home/hermes-workspace/Alikhan-migration/bot/document_extractor.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/tmp/alikhan-document-extractor.log
+StandardError=append:/tmp/alikhan-document-extractor.log
+
+[Install]
+WantedBy=default.target
