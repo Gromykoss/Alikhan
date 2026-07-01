@@ -12,7 +12,7 @@ sys.stdout.reconfigure(line_buffering=True)
 print("Alikhan EVO v5 — sandbox", flush=True)
 
 # Simulation date (set to None for production)
-SIM_DATE = "2026-06-29"
+SIM_DATE = None  # was "2026-06-30" — closed
 
 # ── Send message ──
 def send_msg(chat_id, text):
@@ -144,14 +144,15 @@ if os.path.exists(SEEN_FILE):
     except:
         pass
 
-# ── Seed ──
+# ── Seed (skip own messages, don't seed others' — let main loop handle them) ──
 try:
     r = requests.post(f"{EVO}/chat/findMessages/alikhan",
-        json={"where": {"key": {"remoteJid": SANDBOX}}, "page": 1, "limit": 10},
+        json={"where": {"key": {"remoteJid": SANDBOX}}, "page": 1, "limit": 50},
         headers={"apikey": KEY}, timeout=15)
     for m in r.json().get("messages", {}).get("records", []):
-        seen.add(m["key"]["id"])
-    print(f"Seeded {len(seen)} IDs", flush=True)
+        if m["key"].get("fromMe"):
+            seen.add(m["key"]["id"])
+    print(f"Seeded {len(seen)} IDs (own messages only)", flush=True)
     with open(SEEN_FILE, "w") as f:
         json.dump(list(seen), f)
 except Exception as e:
@@ -182,16 +183,16 @@ while True:
             mid = m["key"]["id"]
             if mid in seen:
                 continue
-            # Skip messages older than 10 minutes
+            # Skip messages older than 5 minutes (prevents flood on restart)
             msg_ts = m.get("messageTimestamp", 0)
             now_ts = int(time.time())
-            if now_ts - msg_ts > 600:
+            if now_ts - msg_ts > 300:
                 seen.add(mid)
                 continue
             seen.add(mid)
             with open(SEEN_FILE, "w") as f:
                 json.dump(list(seen), f)
-            print(f"[MSG] {mid[:12]}... {int(now_ts - msg_ts)}s ago", flush=True)
+            print(f"[MSG] {mid[:12]}...", flush=True)
 
             msg = m.get("message", {})
             text = msg.get("conversation", "") or msg.get("extendedTextMessage", {}).get("text", "")
@@ -210,12 +211,16 @@ while True:
                     from db import get_conn as _getconn
                     conn = _getconn()
                     cur = conn.cursor()
-                    cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                        (SANDBOX, "user", "user", "image", mid,
-                         _json.dumps({"building": building or "без тег", "msg_id": mid}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
-                    conn.commit(); cur.close(); conn.close()
-                    print(f"[PHOTO] Saved: {building or 'без тег'} — {caption[:40]}", flush=True)
+                    cur.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
+                    if not cur.fetchone():
+                        cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                            (SANDBOX, "user", "user", "image", mid,
+                             _json.dumps({"building": building or "без тег", "msg_id": mid}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                        conn.commit()
+                        print(f"[PHOTO] Saved: {building or 'без тег'} — {caption[:40]}", flush=True)
+                    else:
+                        print(f"[PHOTO] Skip duplicate: {mid[:12]}...", flush=True)
                 except Exception as e:
                     print(f"[PHOTO ERR] {e}", flush=True)
                 continue
@@ -334,7 +339,7 @@ while True:
                 continue
 
             # Survey trigger
-            if any(w in text.lower() for w in ["начать опрос", "запустить опрос"]):
+            if any(w in text.lower() for w in ["начать опрос", "запустить опрос", "запускай опрос"]):
                 subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
                     cwd=os.path.dirname(os.path.abspath(__file__)),
                     env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
@@ -371,7 +376,7 @@ while True:
             sender = m.get("key",{}).get("remoteJid","?").split("@")[0] if "@" in m.get("key",{}).get("remoteJid","") else "?"
             print(f"[{sender}] {text[:60]}", flush=True)
             action, reply, voice = route(text, SANDBOX, sender)
-            if action == "IGNORE":
+            if action in ("IGNORE", "CMD"):
                 continue
             if voice:
                 send_voice(SANDBOX, reply)

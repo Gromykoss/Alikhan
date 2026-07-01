@@ -4,6 +4,61 @@
 Бот: Python v5, Evolution API + xAI/Grok.
 Путь: /home/hermes-workspace/Alikhan-migration/bot/
 
+## Start here
+
+Сначала читай этот файл, затем `/home/hermes-workspace/Alikhan-migration/INDEX.md`
+если нужна карта проекта. Для кода бота начинай с
+`/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`, затем переходи в
+`/home/hermes-workspace/Alikhan-migration/bot/router.py`.
+
+## Canonical files
+
+- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
+- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
+- EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
+- Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
+- Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
+- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
+- Extractor endpoint: `127.0.0.1:8099`
+- Runtime log: `/tmp/alikhan.log` for the current user-systemd service; `bot/bot.log` may be stale.
+
+## Active workflows
+
+- Bot behavior: edit/read `bot/main_waha.py`, `bot/router.py`, and related
+  helpers in `bot/`.
+- EJO work: use `bot/fill_ejo.py` and `bot/templates/ЕЖО_шаблон.xlsx`.
+- Document extraction: use `bot/document_extractor.py`; verify against local
+  service `127.0.0.1:8099`.
+- WhatsApp validation: use sandbox group `120363179621030401@g.us`.
+- Production WhatsApp group `120363400682390076@g.us`: never send here without
+  explicit approval.
+
+## Archive / do not use by default
+
+- Avoid old/deprecated WAHA and n8n paths unless historical context is
+  explicitly requested.
+- Treat `/home/hermes-workspace/Alikhan-migration/n8n-workflows/` as historical
+  unless the task says otherwise.
+
+## Do not touch without explicit approval
+
+- Do not restart `alikhan.service`, `alikhan-document-extractor.service`, or
+  Evolution API unless explicitly approved.
+- Do not send to the production WhatsApp group
+  `120363400682390076@g.us` without explicit approval.
+- Do not change secrets, credentials, database connection settings, or
+  production service units without explicit approval.
+
+## Verification commands
+
+```bash
+cd /home/hermes-workspace/Alikhan-migration/bot
+python3 -m py_compile main_waha.py router.py fill_ejo.py document_extractor.py
+python3 -m pytest test_ejo_simulation.py -q
+curl -fsS http://127.0.0.1:8099/health
+tail -30 /tmp/alikhan.log
+```
+
 ## Принцип
 
 **Надёжность и работоспособность всей системы — приоритет №1.** Фиксы и костыли переписываются в надёжный код. Каждое изменение тестируется в песочнице до боевой группы.
@@ -19,14 +74,18 @@ WhatsApp → Evolution API :8080 → main_waha.py (poll 3s) → Guard → Router
 docker ps --filter "name=evolution"
 
 # Логи бота
-tail -30 /home/hermes-workspace/Alikhan-migration/bot/bot.log
+tail -30 /tmp/alikhan.log
 
-# Перезапуск бота (после правок кода)
-pkill -f "main_waha.py"
-cd /home/hermes-workspace/Alikhan-migration/bot
-python3 main_waha.py >> bot.log 2>&1 &
+# Перезапуск бота (только после явного approval)
+systemctl --user restart alikhan.service
+systemctl --user status alikhan.service --no-pager
+pgrep -af 'python3 .*main_waha.py'
 
-# Рестарт Evolution API
+# Рестарт document extractor (только после явного approval)
+systemctl --user restart alikhan-document-extractor.service
+curl -fsS http://127.0.0.1:8099/health
+
+# Рестарт Evolution API (только после явного approval)
 docker restart evolution-api
 ```
 
