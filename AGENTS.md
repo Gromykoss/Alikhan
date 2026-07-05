@@ -6,10 +6,9 @@
 
 ## Start here
 
-Сначала читай этот файл, затем `/home/hermes-workspace/Alikhan-migration/INDEX.md`
-если нужна карта проекта. Для кода бота начинай с
-`/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`, затем переходи в
-`/home/hermes-workspace/Alikhan-migration/bot/router.py`.
+1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
+2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md` — полный арсенал
+3. Затем этот файл, потом `/home/hermes-workspace/Alikhan-migration/INDEX.md`
 
 ## Canonical files
 
