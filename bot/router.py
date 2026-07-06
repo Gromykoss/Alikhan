@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
 # Simulation mode: set to None for production, or "2026-06-27" for testing
-SIM_DATE = "2026-06-30"
+SIM_DATE = None  # closed 2026-07-01
 
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""
@@ -29,7 +29,11 @@ def route(text, chat_id, sender=""):
     # 2.5 Command detection — skip Grok/verify for known commands
     cmd_words = ["запускай опрос", "начать опрос", "заполни ежо", "сформируй ежо",
                  "формируй ежо", "сделай ежо", "закрыть опрос", "завершить опрос",
-                 "закончить опрос", "стоп опрос"]
+                 "закончить опрос", "стоп опрос", "формируй отчет", "сформируй отчет",
+                 "сделай отчет", "заполни отчет",
+                 "статус опроса", "что собрано", "сводка опроса", "опрос статус",
+                 "опрос стоп", "опрос закрыть", "опрос завершить", "опрос закончить",
+                 "опрос окончен", "опрос завершен"]
     if any(w in text.lower() for w in cmd_words):
         return "CMD", "", False
 
