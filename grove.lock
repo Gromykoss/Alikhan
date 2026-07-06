@@ -1,0 +1,20 @@
+{
+  "grammars": [
+    {
+      "name": "bash",
+      "version": "0.25.1",
+      "wasm": "sha256:8292919c88a0f7d3fb31d0cd0253ca5a9531bc1ede82b0537f2c63dd8abe6a7a"
+    },
+    {
+      "name": "json",
+      "version": "0.24.8",
+      "wasm": "sha256:d2119fb98d5912719b13f9458574f8608d2d29dfbe45f6be1f860ea1fe2a2405"
+    },
+    {
+      "name": "python",
+      "version": "0.25.0",
+      "wasm": "sha256:16108b50df4ee9a30168794252ab55e7c93bfc5765d7fa0aa3e335752c515f47"
+    }
+  ],
+  "version": 1
+}
