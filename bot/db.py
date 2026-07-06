@@ -571,3 +571,59 @@ def check_delays(today=None):
     cur.close()
     conn.close()
     return rows
+
+
+def get_due_reminders():
+    """Get calendar reminders that are due (remind_at <= NOW, not yet sent)."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT id, chat_id, title, description, location, timezone,
+               event_start, remind_at, remind_minutes_before
+        FROM bot_calendar_events
+        WHERE status = 'active'
+          AND reminder_sent = FALSE
+          AND remind_at <= NOW()
+        ORDER BY remind_at
+        LIMIT 10
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def mark_reminder_sent(event_id):
+    """Mark a calendar reminder as sent."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE bot_calendar_events
+        SET reminder_sent = TRUE, updated_at = NOW()
+        WHERE id = %s
+    """, (event_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def create_calendar_event(chat_id, title, event_start, remind_minutes_before=30,
+                          description=None, timezone='Asia/Bishkek'):
+    """Create a new calendar event with reminder."""
+    from datetime import timedelta
+    remind_at = event_start - timedelta(minutes=remind_minutes_before)
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        INSERT INTO bot_calendar_events
+            (chat_id, title, description, event_start, remind_at,
+             remind_minutes_before, timezone, status, reminder_sent)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', FALSE)
+        RETURNING id, title, event_start, remind_at
+    """, (chat_id, title, description, event_start, remind_at,
+          remind_minutes_before, timezone))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return row
