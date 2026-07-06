@@ -1,5 +1,5 @@
 """Alikhan EVO v5 — thin orchestrator (modules: stt, qa, router, db_lookup)"""
-import time, requests, json, sys, os, base64, tempfile, subprocess, urllib.request
+import time, requests, json, sys, os, base64, tempfile, subprocess, urllib.request, threading
 from datetime import datetime
 import re
 from secret_config import get_evo_key
@@ -160,6 +160,31 @@ except Exception as e:
 
 print(f"Watching: {SANDBOX}", flush=True)
 
+# ── Calendar reminder thread ──
+def calendar_reminder_loop():
+    """Background thread: check for due reminders every 60 seconds."""
+    print("[CALENDAR] Reminder thread started", flush=True)
+    while True:
+        try:
+            from db import get_due_reminders, mark_reminder_sent
+            due = get_due_reminders()
+            for ev in due:
+                # Build reminder message
+                tz = ev.get('timezone', 'Asia/Bishkek')
+                start_str = ev['event_start'].strftime('%d.%m.%Y %H:%M') if ev.get('event_start') else '?'
+                desc = f"\n{ev['description']}" if ev.get('description') else ''
+                loc = f"\n📍 {ev['location']}" if ev.get('location') else ''
+                mins = ev.get('remind_minutes_before', 0)
+                msg = f"⏰ Напоминание{' за ' + str(mins) + ' мин' if mins else ''}\n📌 {ev['title']}{desc}{loc}\n🕐 {start_str} ({tz})"
+                send_msg(ev['chat_id'], msg)
+                mark_reminder_sent(ev['id'])
+                print(f"[CALENDAR] Reminder sent: {ev['title']}", flush=True)
+        except Exception as e:
+            print(f"[CALENDAR ERR] {e}", flush=True)
+        time.sleep(60)
+
+threading.Thread(target=calendar_reminder_loop, daemon=True).start()
+
 # ── Main loop ──
 while True:
     try:
@@ -303,6 +328,57 @@ while True:
                     continue
 
             if not text.strip():
+                continue
+
+            # ── CALENDAR: Create reminder (Алихан напомни ...) ──
+            remind_match = re.search(r'напомни\s+(.+?)\s+(\d{1,2}[.]\d{1,2}(?:[.]\d{2,4})?)\s+(\d{1,2}[:]\d{2})', text.lower())
+            if remind_match:
+                try:
+                    from db import create_calendar_event
+                    title = remind_match.group(1).strip()
+                    date_str = remind_match.group(2)
+                    time_str = remind_match.group(3)
+                    # Parse date
+                    parts = date_str.split('.')
+                    if len(parts) == 2:
+                        # DD.MM — assume current year
+                        d, m = int(parts[0]), int(parts[1])
+                        y = datetime.now().year
+                    else:
+                        d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+                        if y < 100:
+                            y += 2000
+                    h, mi = int(time_str.split(':')[0]), int(time_str.split(':')[1])
+                    from datetime import timezone, timedelta
+                    bishkek_tz = timezone(timedelta(hours=6))
+                    event_start = datetime(y, m, d, h, mi, tzinfo=bishkek_tz)
+                    ev = create_calendar_event(SANDBOX, title, event_start)
+                    if ev:
+                        send_msg(SANDBOX,
+                            f"✅ Напоминание создано\n📌 {ev['title']}\n🕐 {ev['event_start'].strftime('%d.%m.%Y %H:%M')} (Бишкек)\n🔔 За 30 мин")
+                    else:
+                        send_msg(SANDBOX, "❌ Не удалось создать напоминание")
+                except Exception as e:
+                    print(f"[CALENDAR CREATE ERR] {e}", flush=True)
+                    send_msg(SANDBOX, f"❌ Ошибка: {e}")
+                continue
+
+            # ── CALENDAR: List events (Алихан календарь / события) ──
+            if any(w in text.lower() for w in ["календарь", "события", "ивенты"]):
+                try:
+                    from db import get_calendar_events
+                    events = get_calendar_events(SANDBOX, range='week')
+                    if events:
+                        lines = ["📅 Ближайшие события:"]
+                        for ev in events[:8]:
+                            start = ev['event_start'].strftime('%d.%m %H:%M') if ev.get('event_start') else '?'
+                            sent = '🔔' if not ev.get('reminder_sent') else '✅'
+                            lines.append(f"{sent} {start} — {ev['title']}")
+                        send_msg(SANDBOX, '\n'.join(lines))
+                    else:
+                        send_msg(SANDBOX, "📅 Нет событий на ближайшую неделю")
+                except Exception as e:
+                    print(f"[CALENDAR LIST ERR] {e}", flush=True)
                 continue
 
             # ── POLL: Close survey + force EJO ──
