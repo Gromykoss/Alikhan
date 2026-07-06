@@ -64,22 +64,32 @@ def get_aibikon_headcount(date=None):
         by_prof = {}
         for sn in wb.sheetnames:
             # Skip unrelated sheets
-            if not any(w in sn.lower() for w in ['жер', 'итр', 'айбикон', 'джеруй']):
+            if not any(w in sn.lower() for w in ['жер', 'итр', 'айбикон', 'джеруй', 'табель']):
                 continue
             ws = wb[sn]
             for r in range(1, ws.max_row + 1):
                 num = ws.cell(r, 1).value
                 name = ws.cell(r, 2).value
                 prof_raw = ws.cell(r, 3).value  # Должность (column C)
-                if name and str(name).strip() and not any(w in str(name).lower() for w in ['фио', 'директор', 'руководител', 'согласовано']):
+                if name and str(name).strip() and not any(w in str(name).lower() for w in ['фио', 'директор', 'руководител', 'согласовано', 'и.о.рук']):
                     try:
                         n = int(str(num).replace('№', '').strip())
                         if n >= 1:
-                            val = ws.cell(r, day_col).value
-                            # 8 = worked, anything else = absent
-                            if val == 8 or str(val).strip() == '8':
+                            cell = ws.cell(r, day_col)
+                            val = cell.value
+                            # Skip explicit non-work values (отпуск, etc.)
+                            if val is not None and str(val).strip().lower() in ('отпуск', 'отп', 'больничный'):
+                                continue
+                            # Check cell fill color: solid fill with non-white theme = worked 8h
+                            fill = cell.fill
+                            if fill.patternType == 'solid' and fill.fgColor.theme is not None and fill.fgColor.theme != 0:
                                 prof = str(prof_raw).strip().lower() if prof_raw else ''
-                                prof_name = PROF_MAP.get(prof, prof)
+                                # Try exact lowercase match first, then original case
+                                prof_name = PROF_MAP.get(prof)
+                                if prof_name is None:
+                                    prof_name = PROF_MAP.get(str(prof_raw).strip().lower())
+                                if prof_name is None:
+                                    prof_name = prof  # keep original if not mapped
                                 by_prof[prof_name] = by_prof.get(prof_name, 0) + 1
                     except:
                         pass
@@ -129,7 +139,7 @@ def weather(date):
             ws, wd = dl['wind_speed_10m_max'][0], dl['wind_direction_10m_dominant'][0]
             dirs = ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ']
             w['t'] = f"{round((mx+mn)/2)}°C"
-            w['w'] = f"{dirs[round(wd/45)%8]} {ws} км/ч" if wd is not None else f"{ws} км/ч"
+            w['w'] = f"{dirs[round(wd/45)%8]} {str(ws).replace('.', ',')} км/ч" if wd is not None else f"{str(ws).replace('.', ',')} км/ч"
         if cr:
             hum = cr.get('relative_humidity_2m', 50)
             w['h'] = f"{hum}%"
@@ -226,7 +236,7 @@ def yellow(cell):
     try: return any(c in str(cell.fill.start_color.rgb).upper() for c in ['FFFF00','FFEB9C','FFD700','FFC000','FFCC00'])
     except: return False
 
-def sw(ws, r, c, v, center=False):
+def sw(ws, r, c, v, center=False, keep_fill=False):
     cell = ws.cell(row=r, column=c)
     if isinstance(cell, MergedCell):
         for mr in ws.merged_cells.ranges:
@@ -235,7 +245,7 @@ def sw(ws, r, c, v, center=False):
     cell.value = v
     if center: cell.alignment = Alignment(horizontal='center', vertical='center')
     # Clear yellow fill after writing (user wants white, not yellow leftovers)
-    if was_yellow and v is not None:
+    if was_yellow and v is not None and not keep_fill:
         from openpyxl.styles import PatternFill
         cell.fill = PatternFill(fill_type=None)
 
@@ -269,6 +279,7 @@ def fill(date):
                 'G4': w.get('t'), 'G5': w.get('w'), 'D6': df,
                 'G6': w.get('h'), 'G7': w.get('v'), 'G8': w.get('p'),
                 'E11': inc, 'F11': inc, 'G11': inc,
+                'E12': inc, 'F12': inc, 'G12': inc,
                 'M11': str(aibikon['total']), 'N11': staff_val('Атантай','t'),
                 'O11': staff_val('Майкадам','t'), 'P11': staff_val('Наватек','t'),
                 'M12': str(aibikon['total'] * 8), 'N12': staff_val('Атантай','th'),
@@ -292,13 +303,14 @@ def fill(date):
                     elif key == 'w': return str(s['w'])
                     else: return str(s['t'] * 8)  # human-hours
                 return None
+            weather_cells = {'G4', 'G5', 'G6', 'G7', 'G8'}
             for ref, spec in swaps.items():
                 col_l, row_n = ord(ref[0]) - ord('A') + 1, int(ref[1:])
                 cell = ws.cell(row=row_n, column=col_l)
                 if yellow(cell):
                     val = get_val(spec)
                     if val is not None:
-                        sw(ws, row_n, col_l, val, True)
+                        sw(ws, row_n, col_l, val, True, keep_fill=(ref in weather_cells))
             # Personnel header cells must always come from current data. The
             # template may contain user-corrected, non-yellow values from the
             # previous report.
@@ -312,6 +324,12 @@ def fill(date):
                 val = get_val(swaps[ref])
                 if val is not None:
                     sw(ws, row_n, col_l, val, True)
+            # Weather cells must always be current (keep yellow fill)
+            for ref in ['G4', 'G5', 'G6', 'G7', 'G8']:
+                col_l, row_n = ord(ref[0]) - ord('A') + 1, int(ref[1:])
+                val = swaps.get(ref)
+                if val is not None:
+                    sw(ws, row_n, col_l, val, True, keep_fill=True)
             # Also fill yellow instruction cells (for any missed)
             for row in ws.iter_rows():
                 for cell in row:
@@ -321,8 +339,15 @@ def fill(date):
             # Clear daily values from template (they're from previous day)
             for r in range(24, ws.max_row+1):
                 if ws.cell(r,3).value:
-                    for c in [12, 13, 14]:
+                    for c in [12, 13, 14, 16, 19, 21]:
                         sw(ws, r, c, None)
+            # Clear ALL yellow from data rows (will re-add for active rows)
+            from openpyxl.styles import PatternFill, Color
+            for r in range(24, ws.max_row+1):
+                for c in range(1, 22):
+                    cell = ws.cell(r, c)
+                    if yellow(cell):
+                        cell.fill = PatternFill(fill_type=None)
             for r in range(24, ws.max_row+1):
                 cd = ws.cell(r,3).value
                 if not cd or str(cd) not in vols: continue
@@ -370,6 +395,10 @@ def fill(date):
                 if k_plan and prev_s+v > 0:
                     try: sw(ws, r, 21, round(float(k_plan)-prev_s-v, 1), True)
                     except: pass
+                # Highlight entire row A-U yellow for active work items
+                yellow_fill = PatternFill(start_color=Color(rgb='FFFF00'), end_color=Color(rgb='FFFF00'), fill_type='solid')
+                for c in range(1, 22):
+                    ws.cell(r, c).fill = yellow_fill
             # Style section header rows: light blue (theme=3, tint=0.8) instead of yellow
             for r in range(22, ws.max_row+1):
                 cell_a = ws.cell(r, 1)
@@ -484,10 +513,10 @@ def fill(date):
                 # Keep label text, replace date
                 if 'Всего' in old_v or 'Остаток' in old_v:
                     import re as _re
-                    # Replace existing date pattern (DD.MM.YYYYг. or DD.MM.YYYY)
+                    # Replace ALL date patterns with current date
                     new_label = _re.sub(r'\d{2}\.\d{2}\.\d{4}г?\.?', f'{df}г.', old_v)
-                    if old_v == new_label:
-                        # No date found — append
+                    # If no date was found, append; otherwise replacement sufficed
+                    if not _re.search(r'\d{2}\.\d{2}\.\d{4}', new_label):
                         new_label = f'{old_v.strip()} на {df}г.'
                     sw(ws, rn, ci, new_label, True)
                 elif yellow(cell):
@@ -500,7 +529,7 @@ def fill(date):
                 nm = ws1.cell(r,4).value; un = ws1.cell(r,10).value
                 if cd and bd: code_info[str(cd)] = (str(bd), str(nm)[:80] if nm else '', str(un) if un else '')
             bld_plans = {'Общежитие': [], 'АБК': [], 'Галерея': []}
-            pf = [x['fact'] for x in qa(date, 'бетонирование') if 'план' in (x.get('fact','') or '').lower()]
+            pf = [x['fact'] for x in qa(date) if 'план' in (x.get('fact','') or '').lower()]
             for p in pf:
                 txt = p.replace(',', '.')
                 m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
@@ -512,15 +541,20 @@ def fill(date):
                             bld_plans[bld] = [(c,n,u,q) for (c,n,u,q) in bld_plans[bld] if c!=code]
                             nm = code_info[code][1]; un = code_info[code][2]
                             bld_plans[bld].append((code, nm, un, qty))
-            bld_rows = {'Общежитие': 16, 'АБК': 19, 'Галерея': 22}
-            for bld, start_row in bld_rows.items():
+            bld_rows = [('АБК', 16), ('Общежитие', 19), ('Галерея', 22)]
+            seq = 1
+            for bld, start_row in bld_rows:
+                # Building header row: seq number + building name
+                sw(ws, start_row - 1, 1, str(seq), True)
+                sw(ws, start_row - 1, 2, bld, True)
+                seq += 1
                 items = bld_plans.get(bld, [])
                 for i in range(2):
                     row = start_row + i
                     if i < len(items):
                         code, nm, un, qty = items[i]
                         sw(ws, row, 1, code, True)
-                        sw(ws, row, 2, nm, True)  # full name, user prefers no truncation
+                        sw(ws, row, 2, nm, True)
                         sw(ws, row, 3, un, True)
                         sw(ws, row, 4, qty, True)
                         for r in range(24, ws1.max_row+1):
