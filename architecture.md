@@ -7,91 +7,73 @@
 │                         WhatsApp                                 │
 │                  Группа: 120363400682390076@g.us                 │
 └──────────────────────────┬──────────────────────────────────────┘
-                           │ Webhook
+                           │ Poll 3s
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      evolution-api                              │
-│                 http://72.60.16.105:8080                         │
-│                                                                 │
-│  /message/sendText/bot1  ←  n8n отправляет ответы              │
-│  /webhook/whatsapp       →  n8n получает сообщения              │
+│                     main_waha.py (EVO v5)                        │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  Guard       │→→│  QA Parser   │→→│  Poll Module         │  │
+│  │  (fromMe,    │  │  (qa.py)     │  │  (poll.py)           │  │
+│  │   age filter)│  │  save facts  │  │  start/close/parse   │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│                         │                      │                │
+│                         ▼                      ▼                │
+│                  ┌──────────────┐  ┌──────────────────────┐  │
+│                  │  Name Filter │  │  Command Detection   │  │
+│                  │  [ао]л[еи]   │  │  cmd_words → CMD     │  │
+│                  └──────────────┘  └──────────────────────┘  │
+│                         │                                      │
+│                         ▼                                      │
+│                  ┌──────────────────┐                          │
+│                  │   Router         │                          │
+│                  │  (router.py)     │                          │
+│                  │                  │                          │
+│                  │  Schedule→DB    │                          │
+│                  │  /Weather→Grok  │                          │
+│                  │  → Verify       │                          │
+│                  └──────────────────┘                          │
+│                         │                                      │
+│                         ▼                                      │
+│                  ┌──────────────────┐                          │
+│                  │   Reply          │                          │
+│                  │ sendText/Media   │                          │
+│                  └──────────────────┘                          │
 └──────┬────────────────────────────────────────────┬─────────────┘
        │                                            │
        ▼                                            ▼
 ┌──────────────┐                          ┌──────────────────┐
-│ evo-postgres │                          │   evo-redis      │
-│ PostgreSQL   │                          │   Redis          │
-│ :5432        │                          │   :6379           │
-└──────────────┘                          └──────────────────┘
-
-                           │
-                           │ Webhook POST
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         n8n (основной)                           │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │         Алихан AI-whatsApp agent                         │  │
-│  │                                                          │  │
-│  │  Webhook → Guard → Router ─┬─→ only_name                 │  │
-│  │                            ├─→ memory_status              │  │
-│  │                            ├─→ search (Long Memory)      │  │
-│  │                            └─→ default (AI chat)         │  │
-│  │                                    │                      │  │
-│  │            ┌───────────────────────┘                      │  │
-│  │            ▼                                              │  │
-│  │  [Redis GET] → [Build Context] → [xAI API] → [Reply]    │  │
-│  │       │              ▲                                   │  │
-│  │       ▼              │                                   │  │
-│  │  [Postgres]    [Long Memory Search]                      │  │
-│  │  (save msg)    (semantic SQL)                            │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │         Алихан Calendar Reminders                        │  │
-│  │                                                          │  │
-│  │  Schedule (1 min) → Get Due Events → Format → Send       │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└──────────────┬──────────────────────────────────────┬───────────┘
-               │                                      │
-               ▼                                      ▼
-┌──────────────────────┐                ┌──────────────────────────┐
-│   Redis (n8n)        │                │   PostgreSQL (n8n)       │
-│   short memory       │                │                          │
-│   key: memory:{id}   │                │ bot_memory_messages      │
-│   TTL: persistent    │                │ bot_memory_summaries     │
-└──────────────────────┘                │ bot_calendar_events      │
-                                        └──────────────────────────┘
-
-                           │
-                           │ API call
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       xAI API (Grok)                             │
-│                  model: grok-2 (или новее)                       │
-└─────────────────────────────────────────────────────────────────┘
+│ evo-postgres │                          │   evolution-api  │
+│ :5432        │                          │   :8080          │
+│ ─ bot_memory_│                          └──────────────────┘
+│   messages   │
+│ ─ bot_memory_│
+│   facts      │
+│ ─ bot_poll_  │
+│   state      │
+│ ─ bot_poll_  │
+│   residuals  │
+└──────────────┘
 ```
 
 ## Поток сообщения
 
 ### Входящее сообщение
 
-1. WhatsApp → evolution-api (webhook)
-2. evolution-api → n8n Webhook `/whatsapp`
-3. **Guard Алихан:** проверка группы, не fromMe, содержит «алихан»
-4. **Router Алихан:** определение команды
-   - `only_name` → простое приветствие
-   - `memory_status` → статистика БД
-   - Документ/файл → анализ содержимого
-   - Default → AI-диалог
-5. **Redis GET:** загрузка краткой памяти (последние N сообщений)
-6. **Postgres SELECT:** загрузка долгой памяти (summary)
-7. **Search Long Memory:** семантический поиск по `bot_memory_messages`
-8. **Build Context:** сборка полного контекста
-9. **xAI API:** запрос к Grok с контекстом
-10. **HTTP Request:** отправка ответа через evolution-api
-11. **Redis SET:** сохранение в краткую память
-12. **Postgres INSERT:** сохранение в `bot_memory_messages`
+1. WhatsApp → evolution-api (poller 3s)
+2. main_waha.py демон — Evolution API `/chat/findMessages` (poll 3s)
+3. **Guard:** skip fromMe, skip age > 5min
+4. **QA Parser:** если есть данные (персонал, техника, VOR-коды) → save to `bot_memory_facts`
+5. **Name check:** если нет «алихан» → IGNORE
+6. **Command detection:** если CMD → skip Grok
+7. **Poll handlers (до Grok):**
+   - `начать опрос` → start_poll() → опрос с остатками работ
+   - `закончить опрос` → close_poll() → ЕЖО
+   - `статус опроса` → get_poll_status() → сводка
+   - VOR-коды в тексте → parse_poll_reply() → update residuals
+8. **Router:** Schedule → Weather/DB → Grok
+9. **Verification:** verify.py (REJECT <40 / FLAG <70 / OK 90+)
+10. **Reply:** sendText / sendMedia (document, audio)
 
 ### Напоминание календаря
 
