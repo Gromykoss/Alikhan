@@ -10,16 +10,18 @@
 2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md` — полный арсенал
 3. Затем этот файл, потом `/home/hermes-workspace/Alikhan-migration/INDEX.md`
 
-## Canonical files
+|## Canonical files
 
-- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
-- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
-- EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
-- Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
-- Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
-- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
-- Extractor endpoint: `127.0.0.1:8099`
-- Runtime log: `/tmp/alikhan.log` for the current user-systemd service; `bot/bot.log` may be stale.
+|- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
+|- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
+|- Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
+|- QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
+|- EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
+|- Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
+|- Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
+|- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
+|- Extractor endpoint: `127.0.0.1:8099`
+|- Runtime log: `/tmp/alikhan.log` for the current user-systemd service; `bot/bot.log` may be stale.
 
 ## Active workflows
 
@@ -91,7 +93,7 @@ docker restart evolution-api
 ## Память проекта (PostgreSQL)
 
 Хост: `DB_HOST`/`EVO_DB_HOST` при наличии; иначе авто-обнаружение IP контейнера `evolution-postgres` через `docker inspect`, порт 5432. База: evolution_db, пользователь: evolution.
-Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases.
+Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases, bot_poll_state, bot_poll_residuals.
 
 ## ЕЖО
 
@@ -140,6 +142,7 @@ docker restart evolution-api
 - Diff в `_update_template_from_correction()` проверяет только 3 колонки (16, 19, 21) — заливку/фото/планы НЕ сравнивает
 - Удаление через WhatsApp API не работает в группах (bug #885)
 - .mpp файлы не читаются (нужен JDK + MPXJ) — пользователь присылает PDF версию графика
+- **Poll**: smart_evening_check.py всё ещё существует как резервный скрипт, но poll.py — основной модуль
 
 ### БД
 - PostgreSQL в Docker: `evolution-postgres` (172.22.0.3:5432)
