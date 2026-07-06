@@ -93,6 +93,12 @@ def _get_work_items_from_template():
         name = ws.cell(row=row, column=4).value
         unit = ws.cell(row=row, column=5).value
         ostatok = _safe_float(ws.cell(row=row, column=21).value)
+        # Fallback: calculate residual from cumulative plan - fact if col 21 is empty
+        if ostatok <= 0:
+            plan_cum = _safe_float(ws.cell(row=row, column=18).value)
+            fact_cum = _safe_float(ws.cell(row=row, column=19).value)
+            if plan_cum > 0:
+                ostatok = plan_cum - fact_cum
 
         if not code or not building:
             continue
