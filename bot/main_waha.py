@@ -437,6 +437,40 @@ while True:
                     send_msg(SANDBOX, report)
                     continue
 
+            # Fill EJO FORCE — принудительно, без проверок
+            if any(w in text.lower() for w in ["заполни ежо принудительно", "сформируй ежо принудительно",
+                                                "ежо принудительно", "ежо все равно", "ежо несмотря",
+                                                "отчет принудительно", "отчет все равно"]):
+                import glob as _glob
+                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                from poll import get_poll_status as _get_poll_st4, close_poll as _close_poll2
+                p_status4 = _get_poll_st4(SANDBOX, today_str)
+                if p_status4 and p_status4['poll']['status'] == 'active':
+                    send_msg(SANDBOX, "⚡ Принудительное формирование ЕЖО...")
+                    p_id4, ejo_path4 = _close_poll2(SANDBOX, today_str)
+                    if ejo_path4:
+                        with open(ejo_path4, "rb") as f:
+                            b64_enc = base64.b64encode(f.read()).decode()
+                        requests.post(f"{EVO}/message/sendMedia/alikhan",
+                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
+                                  "fileName": f"ЕЖО_{today_str}.xlsx"},
+                            headers={"apikey": KEY}, timeout=30)
+                        send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен (принудительно)")
+                else:
+                    subprocess.run([sys.executable, "fill_ejo.py", today_str],
+                        cwd=os.path.dirname(os.path.abspath(__file__)))
+                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                    if files:
+                        path = files[-1]
+                        with open(path, "rb") as f:
+                            b64_enc = base64.b64encode(f.read()).decode()
+                        requests.post(f"{EVO}/message/sendMedia/alikhan",
+                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
+                                  "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"},
+                            headers={"apikey": KEY}, timeout=30)
+                        send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                continue
+
             # Fill EJO trigger
             if any(w in text.lower() for w in ["заполни ежо", "сформируй ежо", "формируй ежо", "сделай ежо",
                                                 "формируй отчет", "сформируй отчет", "сделай отчет", "заполни отчет"]):
