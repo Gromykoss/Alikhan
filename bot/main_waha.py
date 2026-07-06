@@ -305,71 +305,104 @@ while True:
             if not text.strip():
                 continue
 
-            # Close survey + force EJO (MUST be before survey trigger)
-            if any(w in text.lower() for w in ["закрыть опрос", "завершить опрос", "закончить опрос", "стоп опрос", "опрос стоп", "опрос закрыть", "опрос завершить", "опрос закончить", "готово", "хватит"]):
-                import glob as _glob
-                # Auto-fill missing data
-                import psycopg2
-                from db import get_conn as _gc3
-                conn3 = _gc3(); cur3 = conn3.cursor()
+            # ── POLL: Close survey + force EJO ──
+            if any(w in text.lower() for w in ["закрыть опрос", "завершить опрос", "закончить опрос", "стоп опрос",
+                                                "опрос стоп", "опрос закрыть", "опрос завершить", "опрос закончить",
+                                                "опрос окончен", "опрос завершен"]):
+                from poll import close_poll, build_poll_summary, get_poll_status
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                cats = {'бетонирование': 'Бетонирование не выполнялось',
-                        'монтаж': 'Монтаж не выполнялся',
-                        'земляные работы': 'Земляные работы не выполнялись'}
-                for cat, fact_text in cats.items():
-                    cur3.execute("SELECT count(*) FROM bot_memory_facts WHERE fact_date=%s AND category=%s", (today_str, cat))
-                    if cur3.fetchone()[0] == 0:
-                        cur3.execute("INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s,%s,'общая',%s,%s,'auto')",
-                                     (SANDBOX, today_str, cat, fact_text))
-                conn3.commit(); cur3.close(); conn3.close()
+                status = get_poll_status(SANDBOX, today_str)
+                if status:
+                    summary = build_poll_summary(status)
+                    send_msg(SANDBOX, summary)
                 send_msg(SANDBOX, "✅ Опрос закрыт. Формирую ЕЖО...")
-                # Immediately trigger EJO
-                subprocess.run([sys.executable, "fill_ejo.py", today_str],
-                    cwd=os.path.dirname(os.path.abspath(__file__)))
-                files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
-                if files:
-                    path = files[-1]
-                    b64 = base64.b64encode(open(path, "rb").read()).decode()
-                    payload = json.dumps({"number": SANDBOX, "mediatype": "document", "media": b64,
-                                          "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"})
+                p_id, ejo_path = close_poll(SANDBOX, today_str)
+                if ejo_path:
+                    with open(ejo_path, "rb") as f:
+                        b64_enc = base64.b64encode(f.read()).decode()
+                    fname = os.path.basename(ejo_path)
+                    payload = json.dumps({"number": SANDBOX, "mediatype": "document", "media": b64_enc,
+                                          "fileName": fname})
                     req = urllib.request.Request(f"{EVO}/message/sendMedia/alikhan", data=payload.encode(),
                         headers={"apikey": KEY, "Content-Type": "application/json"})
                     urllib.request.urlopen(req, timeout=20)
                     send_msg(SANDBOX, f"📄 ЕЖО за {today_str}")
                 continue
 
-            # Survey trigger
+            # ── POLL: Start poll (начать опрос) ──
             if any(w in text.lower() for w in ["начать опрос", "запустить опрос", "запускай опрос"]):
-                subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
-                    cwd=os.path.dirname(os.path.abspath(__file__)),
-                    env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
+                from poll import start_poll as _start_poll, build_poll_message as _build_poll_msg
+                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                p_id, work_items, qa_status = _start_poll(SANDBOX, today_str)
+                poll_msg = _build_poll_msg(work_items, qa_status)
+                send_msg(SANDBOX, poll_msg)
                 continue
 
-            # Fill EJO trigger
-            if any(w in text.lower() for w in ["заполни ежо", "сформируй ежо", "формируй ежо", "сделай ежо"]):
-                import glob as _glob
-                check = subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX, "--check-only"],
-                    capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__)),
-                    env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
-                if "missing" in check.stdout.lower() or "не хватает" in check.stdout.lower():
-                    send_msg(SANDBOX, "📋 Не все данные собраны. Запускаю опрос...")
-                    subprocess.run([sys.executable, "/home/hermes-workspace/.hermes/scripts/smart_evening_check.py", SANDBOX],
-                        cwd=os.path.dirname(os.path.abspath(__file__)),
-                        env={**os.environ, "EJO_DATE": SIM_DATE} if SIM_DATE else None)
-                    continue
+            # ── POLL: Status check ──
+            if any(w in text.lower() for w in ["статус опроса", "что собрано", "сводка опроса", "опрос статус"]):
+                from poll import get_poll_status as _get_poll_st, build_poll_summary as _build_poll_sum
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                subprocess.run([sys.executable, "fill_ejo.py", today_str],
-                    cwd=os.path.dirname(os.path.abspath(__file__)))
-                files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
-                if files:
-                    path = files[-1]
-                    with open(path, "rb") as f:
-                        b64 = base64.b64encode(f.read()).decode()
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64,
-                              "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
-                    send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                p_status = _get_poll_st(SANDBOX, today_str)
+                if p_status:
+                    send_msg(SANDBOX, _build_poll_sum(p_status))
+                else:
+                    send_msg(SANDBOX, "📋 Нет активного опроса. Напишите «Алихан начать опрос»")
+                continue
+
+            # ── POLL: Auto-detect foreman reply with VOR codes (while poll active) ──
+            has_vor_codes = bool(re.search(r'\d+\.\d+\.\d+(?:\s*[=—–\-:\s]\s*\d+)', text))
+            if has_vor_codes:
+                from poll import parse_poll_reply, get_poll_status as _get_poll_st2, build_poll_summary as _build_poll_sum2
+                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                vor_result = parse_poll_reply(text, SANDBOX, today_str)
+                if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0:
+                    p_status2 = _get_poll_st2(SANDBOX, today_str)
+                    report = _build_poll_sum2(p_status2) if p_status2 else "✅ Данные приняты."
+                    send_msg(SANDBOX, report)
+                    continue
+
+            # Fill EJO trigger
+            if any(w in text.lower() for w in ["заполни ежо", "сформируй ежо", "формируй ежо", "сделай ежо",
+                                                "формируй отчет", "сформируй отчет", "сделай отчет", "заполни отчет"]):
+                import glob as _glob
+                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                # Check if poll is active
+                from poll import get_poll_status as _get_poll_st3, build_poll_summary as _build_poll_sum3, close_poll as _close_poll
+                p_status3 = _get_poll_st3(SANDBOX, today_str)
+                if p_status3 and p_status3['poll']['status'] == 'active':
+                    # Not all data may be collected, show summary
+                    send_msg(SANDBOX, _build_poll_sum3(p_status3))
+                    # Check if ready for EJO
+                    qa = p_status3['qa_status']
+                    residuals_ok = len([r for r in p_status3['residuals'] if r.get('actual_today') is not None]) > 0
+                    if qa.get('персонал', 0) == 0 or qa.get('техника', 0) == 0 or not residuals_ok:
+                        send_msg(SANDBOX, "⚠️ Не все данные собраны. Сначала дособерите, потом «Алихан закончить опрос»")
+                        continue
+                    # Ready — close and generate
+                    send_msg(SANDBOX, "📊 Все данные есть. Формирую ЕЖО...")
+                    p_id3, ejo_path3 = _close_poll(SANDBOX, today_str)
+                    if ejo_path3:
+                        with open(ejo_path3, "rb") as f:
+                            b64_enc = base64.b64encode(f.read()).decode()
+                        requests.post(f"{EVO}/message/sendMedia/alikhan",
+                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
+                                  "fileName": f"ЕЖО_{today_str}.xlsx"},
+                            headers={"apikey": KEY}, timeout=30)
+                        send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен")
+                else:
+                    # Direct EJO generation without poll
+                    subprocess.run([sys.executable, "fill_ejo.py", today_str],
+                        cwd=os.path.dirname(os.path.abspath(__file__)))
+                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                    if files:
+                        path = files[-1]
+                        with open(path, "rb") as f:
+                            b64_enc = base64.b64encode(f.read()).decode()
+                        requests.post(f"{EVO}/message/sendMedia/alikhan",
+                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
+                                  "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"},
+                            headers={"apikey": KEY}, timeout=30)
+                        send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
                 continue
 
             # Route
