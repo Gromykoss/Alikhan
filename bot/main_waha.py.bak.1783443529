@@ -75,11 +75,12 @@ def _update_template_from_correction(b64_data, fname):
             code = ws.cell(r, 3).value
             if not code: continue
             code = str(code).strip()
-            vals = {'row': r}
-            # Capture ALL columns (1 to max_column) for full comparison
-            for c in range(1, ws.max_column + 1):
-                vals[c] = ws.cell(r, c).value
-            cmap[code] = vals
+            cmap[code] = {
+                'row': r,
+                16: ws.cell(r, 16).value,   # мес.факт
+                19: ws.cell(r, 19).value,   # общ.факт
+                21: ws.cell(r, 21).value,   # остаток
+            }
         return cmap
 
     cmap_c = build_code_map(ws_c)
@@ -90,15 +91,14 @@ def _update_template_from_correction(b64_data, fname):
     for code in sorted(all_codes):
         vc = cmap_c.get(code, {})
         va = cmap_a.get(code, {})
-        # Compare ALL numeric columns
-        for c in range(1, max(ws_c.max_column, ws_a.max_column) + 1):
+        for col, name in [(16, 'мес.факт'), (19, 'общ.факт'), (21, 'остаток')]:
             try:
-                vc_f = float(vc.get(c, 0)) if vc.get(c) is not None else None
-                va_f = float(va.get(c, 0)) if va.get(c) is not None else None
-            except (ValueError, TypeError):
+                vc_f = float(vc.get(col, 0)) if vc.get(col) is not None else 0
+                va_f = float(va.get(col, 0)) if va.get(col) is not None else 0
+            except:
                 continue
-            if vc_f is not None and va_f is not None and abs(vc_f - va_f) > 0.01:
-                diffs.append(f"  {code} col{c}: авто={va_f} → правка={vc_f}")
+            if abs(vc_f - va_f) > 0.01:
+                diffs.append(f"  {code} {name}: авто={va_f} → правка={vc_f}")
 
     wb_corr.close(); wb_auto.close()
 
@@ -112,17 +112,12 @@ def _update_template_from_correction(b64_data, fname):
     # Replace template with corrected version
     import shutil, re as _re
     shutil.copy(corrected_path, TEMPLATE)
-    # Extract date from filename (e.g., "27.06.2026" or "06.07.26") or fall back to today
+    # Extract date from filename (e.g., "27.06.2026") or fall back to today
     m = _re.search(r'(\d{2})\.(\d{2})\.(\d{4})', fname)
-    if not m:
-        m = _re.search(r'(\d{2})\.(\d{2})\.(\d{2})\b', fname)
-        if m:
-            # 2-digit year → assume 20xx
-            date_str = f"20{m.group(3)}-{m.group(2)}-{m.group(1)}"
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-    else:
+    if m:
         date_str = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    else:
+        date_str = datetime.now().strftime("%Y-%m-%d")
     dated_path = f"/tmp/ЕЖО_template_{date_str}.xlsx"
     shutil.copy(corrected_path, dated_path)
     # Save as dated ЕЖО so yesterday_cum() finds correct cumulative values (overwrite)
@@ -390,22 +385,8 @@ while True:
             if any(w in text.lower() for w in ["закрыть опрос", "завершить опрос", "закончить опрос", "стоп опрос",
                                                 "опрос стоп", "опрос закрыть", "опрос завершить", "опрос закончить",
                                                 "опрос окончен", "опрос завершен"]):
-                import glob as _glob
                 from poll import close_poll, build_poll_summary, get_poll_status
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
-                if existing:
-                    path = existing[-1]
-                    with open(path, "rb") as f:
-                        b64_enc = base64.b64encode(f.read()).decode()
-                    ver = len(existing)
-                    send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                              "fileName": f"ЕЖО_{today_str}_v{ver}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
-                    continue
                 status = get_poll_status(SANDBOX, today_str)
                 if status:
                     summary = build_poll_summary(status)
@@ -462,19 +443,6 @@ while True:
                                                 "отчет принудительно", "отчет все равно"]):
                 import glob as _glob
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
-                if existing:
-                    path = existing[-1]
-                    with open(path, "rb") as f:
-                        b64_enc = base64.b64encode(f.read()).decode()
-                    ver = len(existing)
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                              "fileName": f"ЕЖО_{today_str}_v{ver}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
-                    send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    continue
                 from poll import get_poll_status as _get_poll_st4, close_poll as _close_poll2
                 p_status4 = _get_poll_st4(SANDBOX, today_str)
                 if p_status4 and p_status4['poll']['status'] == 'active':
@@ -550,20 +518,7 @@ while True:
             # Route
             sender = m.get("key",{}).get("remoteJid","?").split("@")[0] if "@" in m.get("key",{}).get("remoteJid","") else "?"
             print(f"[{sender}] {text[:60]}", flush=True)
-            # Log ALL messages to DB (passive — фиксируем всё, отвечаем только по имени)
-            from db import save_message as _log_msg
-            _log_msg(SANDBOX, sender, "user", text)
             action, reply, voice = route(text, SANDBOX, sender)
-            if action == "RESIDUAL":
-                from poll import parse_poll_reply
-                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                result = parse_poll_reply(text, SANDBOX, today_str)
-                if result.get('codes_updated'):
-                    reply = f"✅ Принято: {len(result['codes_updated'])} кодов"
-                    for c in result['codes_updated']:
-                        reply += f"\n  • `{c['code']}`: {c['actual_today']}"
-                    send_msg(SANDBOX, reply)
-                continue
             if action in ("IGNORE", "CMD"):
                 continue
             if voice:

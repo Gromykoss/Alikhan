@@ -85,7 +85,7 @@ def _get_work_items_from_template():
     ws = wb['Ежедневный отчет']
     items = []
 
-    ACTIVE_SECTIONS = {"2.1", "2.2", "2.3", "2.4", "3.1", "3.2", "3.3"}
+    ACTIVE_SECTIONS = {"2.1", "2.2", "2.3", "2.4", "3.2", "3.3"}
 
     for row in range(22, ws.max_row + 1):
         building = ws.cell(row=row, column=1).value
@@ -277,7 +277,7 @@ def build_poll_message(work_items, qa_status):
                 continue
             lines.append(f"_{bld}:_")
             for item in by_bld[bld]:
-                o = f"{item['ostatok']:.0f}" if item['ostatok'] and item['ostatok'] == int(item['ostatok']) else f"{item['ostatok']:.1f}" if item['ostatok'] else '0'
+                o = f"{item['ostatok']:.0f}" if item['ostatok'] == int(item['ostatok']) else f"{item['ostatok']:.1f}"
                 lines.append(f"• `{item['code']}` — {item['name'][:60]} — остаток: {o} {item['unit']}")
 
     lines.append("\n✏️ Отвечайте прямо в группу — я соберу данные.")
@@ -467,8 +467,8 @@ def build_poll_summary(status):
     if residuals_updated:
         lines.append(f"\n✅ Обновлены остатки: {len(residuals_updated)}/{total_residuals} кодов")
         for r in residuals_updated:
-            o = f"{r['residual_volume']:.0f}" if r['residual_volume'] is not None and r['residual_volume'] == int(r['residual_volume']) else f"{r['residual_volume']:.1f}" if r['residual_volume'] is not None else '0'
-            a = f"{r['actual_today']:.0f}" if r['actual_today'] is not None and r['actual_today'] == int(r['actual_today']) else f"{r['actual_today']:.1f}" if r['actual_today'] is not None else '0'
+            o = f"{r['residual_volume']:.0f}" if r['residual_volume'] == int(r['residual_volume']) else f"{r['residual_volume']:.1f}"
+            a = f"{r['actual_today']:.0f}" if r['actual_today'] == int(r['actual_today']) else f"{r['actual_today']:.1f}"
             lines.append(f"  • `{r['code']}`: сделано {a} (остаток был {o})")
     else:
         lines.append(f"\n❌ Остатки работ: 0/{total_residuals} кодов")
