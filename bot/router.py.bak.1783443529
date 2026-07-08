@@ -22,10 +22,6 @@ def route(text, chat_id, sender=""):
         if count > 0:
             return "QA", f"✅ Принято: {count} фактов", False
 
-    # 2. Work-code bypass — if text contains "code = value" pattern, skip name check
-    if re.search(r'\d+\.\d+\.\d+(?:\.\d+)?\s*[=—–\-:\s]+\s*\d+', text):
-        return "RESIDUAL", "", False
-
     # 2. Name check
     if not re.search(r'[ао]л[еи][хгк]', text.lower()):
         return "IGNORE", "", False

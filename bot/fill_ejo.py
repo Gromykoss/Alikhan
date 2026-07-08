@@ -336,9 +336,10 @@ def fill(date):
                     if not yellow(cell) or not cell.value: continue
                     ins = str(cell.value).lower() if cell.value else ''; val = None
                     if val: sw(ws, cell.row, cell.column, val, True)
-            # Clear daily values from template (they're from previous day)
+            # Clear daily values ONLY for rows that have work today (user-corrected rows preserved)
             for r in range(24, ws.max_row+1):
-                if ws.cell(r,3).value:
+                cd_val = ws.cell(r, 3).value
+                if cd_val and str(cd_val) in vols:
                     for c in [12, 13, 14, 16, 19, 21]:
                         sw(ws, r, c, None)
             # Clear ALL yellow from data rows (will re-add for active rows)
