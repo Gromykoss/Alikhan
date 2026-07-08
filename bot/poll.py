@@ -548,6 +548,13 @@ def close_poll(chat_id, poll_date_str=None):
 
     print(f"[POLL] Closed poll #{poll_id} for {today}", flush=True)
 
+    # Guard: skip if EJO already exists for today (prevents duplicate)
+    import glob as _g
+    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
+    if existing:
+        print(f"[POLL] EJO already exists for {today} (v{len(existing)}). Skipping generation.", flush=True)
+        return poll_id, existing[-1]
+
     # Generate EJO via fill_ejo.py
     import subprocess
     bot_dir = os.path.dirname(os.path.abspath(__file__))

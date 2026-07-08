@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """fill_ejo.py — ЕЖО: погода + QA-факты → 4 листа"""
-import sys, os, re, requests, json, urllib.request, base64
+import sys, os, re, requests, json, urllib.request, base64, glob
 from datetime import datetime, timedelta
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter as _gcl
@@ -576,4 +576,10 @@ def fill(date):
 
 if __name__ == "__main__":
     d = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else datetime.now()
+    ds = d.strftime("%Y-%m-%d")
+    # Guard: skip if EJO already exists for this date
+    existing = sorted(glob.glob(f"/tmp/ЕЖО_{ds}_v*.xlsx"))
+    if existing:
+        print(f"⚠️ ЕЖО за {ds} уже существует (v{len(existing)}). Пропускаю.", file=sys.stderr)
+        sys.exit(0)
     fill(d)
