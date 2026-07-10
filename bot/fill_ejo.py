@@ -707,8 +707,14 @@ def fill(date):
             # HARDCODE: Руководителя строительства всегда 1 (row 9)
             # Even if timesheet has 0 or 2+, the руководитель is always exactly 1 person.
             sw(ws, 9, 2, "1", True)
-            # Update total row (row 8) for АйБиКон
-            sw(ws, 8, 2, str(aibikon['total']), True)
+            # Calculate total from profession rows (not timesheet, which may differ)
+            prof_total = 0
+            for prof_name, row_num in prof_rows.items():
+                val = by_prof.get(prof_name, 0)
+                if prof_name == 'Руководителя строительства':
+                    val = 1  # hardcoded override
+                prof_total += int(val) if val else 0
+            sw(ws, 8, 2, str(prof_total), True)
             for nm, tr, ps in [
                 ('Атантай',14,[(15,'i'),(16,'w'),(17,None),(18,None),(19,None)]),
                 ('Майкадам',20,[(21,'i'),(22,'w')]),
@@ -785,6 +791,15 @@ def fill(date):
                         sw(ws, row, 2, mat['name'], True)
                         sw(ws, row, 3, mat['unit'], True)
                         sw(ws, row, 4, mat['qty'], True)
+                # Also fill supply status table (rows 8-10) with first 3 materials
+                for i, mat in enumerate(parsed_materials[:3]):
+                    sr = 8 + i  # rows 8, 9, 10
+                    sw(ws, sr, 1, str(i + 1), True)
+                    sw(ws, sr, 2, mat['name'], True)
+                    sw(ws, sr, 3, mat['unit'], True)
+                    sw(ws, sr, 4, mat['qty'], True)
+                    # F = Всего на дату (same as поставка for now)
+                    sw(ws, sr, 6, mat['qty'], True)
                 print(f"[MATERIALS] Parsed {len(parsed_materials)} material items from QA", flush=True)
             else:
                 # No new material data — preserve existing template values
