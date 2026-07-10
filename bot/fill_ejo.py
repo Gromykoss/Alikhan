@@ -275,11 +275,16 @@ def volumes(date):
         m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
         if m:
             cd, vl = m.group(1), float(m.group(2))
-            is_done = 'сделано' in txt.lower()
             is_plan = 'план' in txt.lower()
-            if is_done or (not is_done and not is_plan): dn[cd] = vl
-            elif is_plan and cd not in dn: pn[cd] = vl
-    r = dict(pn); r.update(dn); return r
+            is_done = 'сделано' in txt.lower()
+            if is_plan:
+                # Plan facts go ONLY to plans, never to works
+                if cd not in dn and cd not in pn:
+                    pn[cd] = vl
+            elif is_done or not is_plan:
+                # Done or unspecified (default = work fact)
+                dn[cd] = vl
+    r = dict(pn); r.update(dn); return r, pn  # (all codes, plans-only)
 
 
 def photos(date):
@@ -339,9 +344,13 @@ def set_fill(ws, r, c, theme, tint=0.0):
 
 def fill(date):
     wb = load_workbook(TEMPLATE, data_only=True)  # preserve cached values, drop formulas
-    w = weather(date); inc = incidents(date); stf = staff(date); vols = volumes(date)
-    print(f"[VOLUMES] Found {len(vols)} work codes: {vols}", flush=True)
-    if not vols:
+    w = weather(date); inc = incidents(date); stf = staff(date)
+    vols_all, plans = volumes(date)  # vols_all = work+plan, plans = plan-only codes
+    vols = {k: v for k, v in vols_all.items() if k not in plans}  # works only
+    print(f"[VOLUMES] Works: {len(vols)} codes: {vols}", flush=True)
+    if plans:
+        print(f"[PLANS] {len(plans)} codes: {plans}", flush=True)
+    if not vols_all:
         print(f"[VOLUMES] WARNING: No volume data found for {date}. Check QA facts for work code patterns (e.g. 3.3.2.1 = 2000).", flush=True)
     aibikon = get_aibikon_headcount(date)  # from timesheet for report date
     df = date.strftime('%d.%m.%Y')
@@ -757,17 +766,25 @@ def fill(date):
                             unit = m2.group(2)
                             parsed_materials.append({'name': name or 'Материал', 'qty': qty, 'unit': unit})
                 if parsed_materials:
-                    # Clear ONLY rows that will be filled (avoid leaving stale values in unused rows)
-                    for row in range(13, 23):
-                        for c in [2, 3, 4, 5, 6, 7, 8]:
-                            sw(ws, row, c, None, True)
-                    # Fill parsed materials starting at row 14 (first data row under header)
-                    for i, mat in enumerate(parsed_materials[:10]):  # max 10 materials
-                        row = 14 + i
-                        sw(ws, row, 1, str(i + 1), True)       # №
-                        sw(ws, row, 2, mat['name'], True)      # Наименование
-                        sw(ws, row, 3, mat['unit'], True)      # Ед.изм
-                        sw(ws, row, 4, mat['qty'], True)       # Кол-во
+                    # Find first empty row to append (DON'T clear existing template data)
+                    first_empty = 14
+                    for row in range(14, 30):
+                        has_content = False
+                        for c in [2, 3, 4]:
+                            v = ws.cell(row, c).value
+                            if v is not None and str(v).strip() not in ('', 'None'):
+                                has_content = True
+                                break
+                        if not has_content:
+                            first_empty = row
+                            break
+                    # Fill parsed materials starting at first empty row
+                    for i, mat in enumerate(parsed_materials[:10]):
+                        row = first_empty + i
+                        sw(ws, row, 1, str(i + 1), True)
+                        sw(ws, row, 2, mat['name'], True)
+                        sw(ws, row, 3, mat['unit'], True)
+                        sw(ws, row, 4, mat['qty'], True)
                 print(f"[MATERIALS] Parsed {len(parsed_materials)} material items from QA", flush=True)
             else:
                 # No new material data — preserve existing template values
