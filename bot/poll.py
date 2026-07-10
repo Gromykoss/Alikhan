@@ -424,6 +424,14 @@ def get_poll_status(chat_id, poll_date_str=None):
 
 def build_poll_summary(status):
     """Build a summary message of collected vs missing data."""
+    import glob as _g
+    
+    # Check if EJO already exists for this date — if so, poll is done
+    today = status.get('poll', {}).get('poll_date', datetime.now().strftime("%Y-%m-%d"))
+    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
+    if existing:
+        return f"📊 ЕЖО за {today} уже готов (v{len(existing)}). Правки загружены в шаблон."
+    
     lines = ["📊 **Сводка опроса:**\n"]
 
     qa = status['qa_status']
