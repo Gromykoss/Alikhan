@@ -14,8 +14,6 @@ from secret_config import get_secret
 WAHA_URL = "http://127.0.0.1:3000"
 WAHA_KEY = get_secret("WAHA_KEY", "WAHA_API_KEY", default="waha123")
 XAI_URL = "https://api.x.ai/v1/chat/completions"
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "qwen3:8b"
 
 
 def _load_keys():
@@ -110,29 +108,7 @@ def send_msg(group, text):
         return False
 
 
-def ask_ollama(prompt, system=None, max_tokens=700):
-    """Ask local Ollama model. Falls back to Grok on failure."""
-    try:
-        full_prompt = prompt
-        if system:
-            full_prompt = f"{system}\n\n{prompt}"
-        r = requests.post(OLLAMA_URL, json={
-            "model": OLLAMA_MODEL,
-            "prompt": full_prompt,
-            "stream": False,
-            "options": {"temperature": 0.3, "num_predict": max_tokens}
-        }, timeout=90)
-        if r.status_code == 200:
-            resp = r.json().get("response", "").strip()
-            if resp and len(resp) > 5:
-                return resp
-    except Exception as e:
-        print(f"[OLLAMA ERR] {e}", flush=True)
-    # Fallback to Grok
-    return ask_grok_raw(prompt, system=system, max_tokens=max_tokens)
-
-
-def ask_grok_raw(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg"):
+def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg"):
     user_content = prompt
     if image_base64:
         user_content = [
@@ -159,14 +135,6 @@ def ask_grok_raw(prompt, system=None, max_tokens=700, image_base64=None, mimetyp
     if response.status_code == 200:
         return response.json()["choices"][0]["message"]["content"]
     return "Извини, сейчас не могу получить ответ от AI."
-
-
-def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg", force_grok=False):
-    # Vision always needs Grok
-    if image_base64 or force_grok:
-        return ask_grok_raw(prompt, system=system, max_tokens=max_tokens,
-                           image_base64=image_base64, mimetype=mimetype)
-    return ask_ollama(prompt, system=system, max_tokens=max_tokens)
 
 
 def _download_media_base64(message_id):
@@ -406,7 +374,7 @@ def handle_fact_lookup(group, sender, payload):
             facts,
         ]
     )
-    send_msg(group, ask_grok(prompt, max_tokens=1200, force_grok=True))
+    send_msg(group, ask_grok(prompt, max_tokens=1200))
 
 
 def handle_id_lookup(group, sender, payload):
