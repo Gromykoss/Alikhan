@@ -266,8 +266,8 @@ def staff(date):
 
 def volumes(date):
     """{code: vol}. Supports 3- and 4-part codes. Comma decimals. Bare = done.
-    Queries all known volume categories: бетонирование, монтаж, земляные работы, объём."""
-    f = qa(date, 'бетонирование') + qa(date, 'монтаж') + qa(date, 'земляные работы') + qa(date, 'объём')
+    Queries ALL QA facts (any category) — regex filters for work code patterns."""
+    f = qa(date)  # all categories — regex below filters for work codes
     dn, pn = {}, {}
     for x in f:
         txt = (x.get('fact','') or '').replace(',', '.')
@@ -342,7 +342,7 @@ def fill(date):
     w = weather(date); inc = incidents(date); stf = staff(date); vols = volumes(date)
     print(f"[VOLUMES] Found {len(vols)} work codes: {vols}", flush=True)
     if not vols:
-        print(f"[VOLUMES] WARNING: No volume data found for {date}. Check QA facts with categories: бетонирование, монтаж, земляные работы, объём.", flush=True)
+        print(f"[VOLUMES] WARNING: No volume data found for {date}. Check QA facts for work code patterns (e.g. 3.3.2.1 = 2000).", flush=True)
     aibikon = get_aibikon_headcount(date)  # from timesheet for report date
     df = date.strftime('%d.%m.%Y')
     src_wb, src_ws = get_code_source()
