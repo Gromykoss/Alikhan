@@ -265,9 +265,8 @@ def staff(date):
 
 
 def volumes(date):
-    """{code: vol}. Supports 3- and 4-part codes. Comma decimals. Bare = done.
-    Queries all known volume categories: бетонирование, монтаж, земляные работы, объём."""
-    f = qa(date, 'бетонирование') + qa(date, 'монтаж') + qa(date, 'земляные работы') + qa(date, 'объём')
+    """{code: vol}. Supports 3- and 4-part codes. Comma decimals. Bare = done."""
+    f = qa(date, 'бетонирование') + qa(date, 'монтаж') + qa(date, 'земляные работы')
     dn, pn = {}, {}
     for x in f:
         txt = (x.get('fact','') or '').replace(',', '.')
@@ -340,9 +339,6 @@ def set_fill(ws, r, c, theme, tint=0.0):
 def fill(date):
     wb = load_workbook(TEMPLATE, data_only=True)  # preserve cached values, drop formulas
     w = weather(date); inc = incidents(date); stf = staff(date); vols = volumes(date)
-    print(f"[VOLUMES] Found {len(vols)} work codes: {vols}", flush=True)
-    if not vols:
-        print(f"[VOLUMES] WARNING: No volume data found for {date}. Check QA facts with categories: бетонирование, монтаж, земляные работы, объём.", flush=True)
     aibikon = get_aibikon_headcount(date)  # from timesheet for report date
     df = date.strftime('%d.%m.%Y')
     src_wb, src_ws = get_code_source()
@@ -533,15 +529,6 @@ def fill(date):
                     try: sw(ws, r, 21, round(float(k_plan)-prev_s-v, 1), True)
                     except: pass
             
-            # OVERRIDE: Row 77 (3.3.2.1) — hardcoded cumulative = 5790 (72.5% of 7981.29)
-            # User confirmed: month cumulative fact = 5790, total cumulative = 5790
-            sw(ws, 77, 16, 5790, True)   # P77 month cumulative
-            sw(ws, 77, 19, 5790, True)   # S77 total cumulative
-            sw(ws, 77, 17, 0.725, True)  # Q77 month % (fraction for % format)
-            sw(ws, 77, 20, 0.725, True)  # T77 total % (fraction for % format)
-            try: sw(ws, 77, 21, round(float(ws.cell(77,11).value or 0) - 5790, 1), True)  # U77 remaining
-            except: pass
-            
             # Apply yellow fill: entire rows A-U for work items WITH volumes today
             # Only rows where L (plan) or M (fact) column has a value
             yellow_fill = PatternFill(start_color=Color(rgb='FFFF00'), end_color=Color(rgb='FFFF00'), fill_type='solid')
@@ -695,9 +682,6 @@ def fill(date):
             by_prof = aibikon.get('by_prof', {})
             for prof_name, row_num in prof_rows.items():
                 sw(ws, row_num, 2, str(by_prof.get(prof_name, 0)), True)
-            # HARDCODE: Руководителя строительства всегда 1 (row 9)
-            # Even if timesheet has 0 or 2+, the руководитель is always exactly 1 person.
-            sw(ws, 9, 2, "1", True)
             # Update total row (row 8) for АйБиКон
             sw(ws, 8, 2, str(aibikon['total']), True)
             for nm, tr, ps in [
@@ -723,62 +707,17 @@ def fill(date):
                 sw(ws, r, 2, '0' if 'нет' in et else str(max(et.count(en.lower()[:5]),0)), True)
         if name == "Материалы и планы":
             sw(ws, 4, 1, df, True)
-            # Materials: parse from QA data 'документация' category
-            # Look for facts matching 'материал' or 'материалы'
-            mat_facts = [f['fact'] for f in qa(date, 'документация')]
-            # Also search all categories for material keywords
-            all_qa = qa(date)
-            for fx in all_qa:
-                f_text = (fx.get('fact','') or '').lower()
-                cat = (fx.get('category','') or '').lower()
-                if 'материал' in f_text and fx['fact'] not in mat_facts:
-                    mat_facts.append(fx['fact'])
+            # Materials: clear old template values, fill only if QA has new data
+            mat_facts = [f['fact'] for f in qa(date, 'документация') if 'материал' in (f.get('fact','') or '').lower()]
             if mat_facts and not any('не планируется' in f.lower() or 'нет' in f.lower() for f in mat_facts):
-                # Has new material data — parse and fill rows 13-22
-                # Format example: "Поставка материалов ТСП - 288м2"
-                # Parse material name + quantity from QA facts
-                parsed_materials = []
-                for fact in mat_facts:
-                    # Try to parse: "Материал X - 100м2" or "X 100м2" or "X = 100 м2"
-                    m = re.search(r'(?:материал[:s]*)?(.+?)\s*[-=]\s*(\d+(?:[.,]\d+)?)\s*(м[2³]|м3|т|шт|кг|кв\.м)', fact, re.I)
-                    if m:
-                        name = m.group(1).strip().capitalize()
-                        qty = m.group(2).replace(',', '.')
-                        unit = m.group(3)
-                        parsed_materials.append({'name': name, 'qty': qty, 'unit': unit})
-                    else:
-                        # Fallback: just take the whole text as material name with quantity
-                        m2 = re.search(r'(\d+(?:[.,]\d+)?)\s*(м[2³]|м3|т|шт|кг)', fact, re.I)
-                        if m2:
-                            # Remove numeric part to get name
-                            name = re.sub(r'\s*[-=]\s*\d+(?:[.,]\d+)?.*$', '', fact).strip()
-                            name = re.sub(r'^\d+[.)]\s*', '', name).strip().capitalize()
-                            qty = m2.group(1).replace(',', '.')
-                            unit = m2.group(2)
-                            parsed_materials.append({'name': name or 'Материал', 'qty': qty, 'unit': unit})
-                if parsed_materials:
-                    # Clear ONLY rows that will be filled (avoid leaving stale values in unused rows)
-                    for row in range(13, 23):
-                        for c in [2, 3, 4, 5, 6, 7, 8]:
-                            sw(ws, row, c, None, True)
-                    # Fill parsed materials starting at row 14 (first data row under header)
-                    for i, mat in enumerate(parsed_materials[:10]):  # max 10 materials
-                        row = 14 + i
-                        sw(ws, row, 1, str(i + 1), True)       # №
-                        sw(ws, row, 2, mat['name'], True)      # Наименование
-                        sw(ws, row, 3, mat['unit'], True)      # Ед.изм
-                        sw(ws, row, 4, mat['qty'], True)       # Кол-во
-                print(f"[MATERIALS] Parsed {len(parsed_materials)} material items from QA", flush=True)
-            else:
-                # No new material data — preserve existing template values
-                # Only clear yellow cells (which are old automatically filled values)
-                # Keep non-yellow values (user corrections from previous days)
-                for row in range(13, 23):
-                    for c in [2, 3, 4, 5, 6, 7, 8]:
-                        cell = ws.cell(row=row, column=c)
-                        if yellow(cell):
-                            sw(ws, row, c, None, True)
-                print(f"[MATERIALS] No new material data — preserving template values", flush=True)
+                # Has new material data — parse and fill
+                pass  # TODO: parse material quantities from QA
+            # Clear old template material values — use None (blank), user prefers over '—'
+            for row in range(8, 24):
+                for c in [2, 3, 4, 5, 6, 7, 8]:
+                    cell = ws.cell(row=row, column=c)
+                    if yellow(cell) or (cell.value is not None and str(cell.value).strip() not in ['—', 'None', '']):
+                        sw(ws, row, c, None, True)
             for cr in ['F6','H6','F13']:
                 ci = ord(cr[0])-ord('A')+1; rn = int(cr[1:])
                 cell = ws.cell(row=rn, column=ci)
