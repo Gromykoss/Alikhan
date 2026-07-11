@@ -192,7 +192,7 @@ def qa(date, cat=None):
     import psycopg2, psycopg2.extras
     c = db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     ds = date.strftime("%Y-%m-%d")
-    c.execute("SELECT fact FROM bot_memory_facts WHERE fact_date=%s AND source='qa'" + (f" AND category='{cat}'" if cat else ""), (ds,))
+    c.execute("SELECT fact, category FROM bot_memory_facts WHERE fact_date=%s AND source='qa'" + (f" AND category='{cat}'" if cat else ""), (ds,))
     r = c.fetchall(); c.close(); return r
 
 
@@ -275,7 +275,7 @@ def volumes(date):
         m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
         if m:
             cd, vl = m.group(1), float(m.group(2))
-            is_plan = 'план' in txt.lower()
+            is_plan = 'план' in txt.lower() or x.get('category') == 'план'
             is_done = 'сделано' in txt.lower()
             if is_plan:
                 # Plan facts go ONLY to plans, never to works
