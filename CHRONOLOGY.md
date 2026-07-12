@@ -1,5 +1,47 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 12.07.2026 — Проверка Алихана, fix `messageTimestamp=None`, dedupe документов
+
+### Проверка состояния
+- Проверены `alikhan.service`, `alikhan-document-extractor.service`, Evolution API, PostgreSQL и ЕЖО-шаблон.
+- `alikhan.service`: active, один процесс `main_waha.py`.
+- Document extractor: `/health = {"ok": true}`.
+- Evolution API: HTTP 200, instance `alikhan = open`.
+- Шаблон `bot/templates/ЕЖО_шаблон.xlsx` открывается, 3 листа на месте, дата 11.07.2026.
+- ЕЖО 11.07 содержит ключевые данные: `3.3.2.1 = 2191.3 кг`, план `3.3.2 = 104.3 м3`, ТСП `600/288`, Атантай/Майкадам.
+
+### Найденные проблемы
+- В `/tmp/alikhan.log` были 2 ошибки:
+  - `[LOOP ERR] int() argument must be a string, a bytes-like object or a real number, not 'NoneType'`
+- Причина: у отдельных сообщений `messageTimestamp=None`, а polling loop делал арифметику `now_ts - msg_ts`.
+- В `bot_memory_messages` найдены 2 дубли входящих текстов за 08.07 и 11.07; в `bot_memory_facts` дублей не найдено.
+
+### Исправление
+- В `bot/main_waha.py` добавлен `_safe_message_ts()`:
+  - `None`/битый `messageTimestamp` безопасно превращается в `0`.
+- Production loop и sandbox loop переведены на `_safe_message_ts(m)`.
+- В sandbox document branch добавлена проверка дублей перед `INSERT`:
+  - `tags->>'msg_id' = mid`
+  - или `content IN (mid, fname)`.
+- Создан бэкап: `bot/main_waha.py.bak.0712_0542`.
+
+### Проверка после фикса
+- `python3 -m py_compile main_waha.py router.py fill_ejo.py document_extractor.py` — OK.
+- `alikhan.service` перезапущен по отдельной команде пользователя.
+- После restart:
+  - PID `2913940`;
+  - `main_waha.py` процессов: 1;
+  - zombie-процессов: не найдено;
+  - новых `[LOOP ERR]`, `Traceback`, `Error`, `Exception` после рестарта нет.
+
+### Discord-журнал
+- `#alikhan` setup: `1525718046126116904`.
+- Проверка состояния: `1525738420155060274`.
+- Исправление timestamp/dedupe: `1525739572737081494`.
+- Перезапуск после фикса: `1525740708084842570`.
+
+---
+
 ## 10.07.2026 (вечер) — ЕЖО v8: объёмы, персонал, материалы
 
 ### v4—v8: серия правок fill_ejo.py
@@ -67,3 +109,39 @@
 - **Исправлены 4 бага:** router.py (45 строк заменено), poll.py (Message.ack), main_waha.py (пробелы), fill_ejo.py (int(None) guard, дата YY)
 - **Правило №0:** авто-обновление AGENTS.md и CHRONOLOGY.md после каждого блока работ
 - **startup_context.md:** Алихан добавлен в сводку проектов для авто-загрузки контекста
+
+---
+
+## 11.07.2026 — qa.py + volumes routing + dedup БД
+
+### Исправления
+- `qa.py`: добавлен `_extract_vor_codes()` — regex-извлечение VOR-кодов (3/4-частные) **до** отправки в LLM. Префикс «Планы» → category='план'. Grok больше не получает коды работ → не галлюцинирует.
+- `fill_ejo.py` / volumes(): теперь читает поле `category` из БД. Планы (category='план') отделены от работ. 3.3.2 = 104.3 м³ ушло в планы, 3.3.2.1 = 2191.3 кг остался в работах.
+- Удалено 38 дублей в `bot_memory_facts` (3 параллельных процесса `main_waha.py` убиты).
+
+### Файлы
+- `bot/qa.py`, `bot/fill_ejo.py`
+- Бэкап: `bot/main_waha.py.bak.0712_0542` (позже)
+
+---
+
+## 09–10.07.2026 — EJO v4→v8 итерации + switch на Ollama
+
+### v4–v8 (fill_ejo.py)
+- v4 (`9b4fed5`): D853=«объекта», персонал B9=1, категории объёмов, 3.3.2.1=5790/72.5%
+- v5 (`2a98980`): volumes() запрашивает ВСЕ категории QA (без хардкода), regex-фильтр
+- v6–v7 (`9b0208c`, `3f5ffe7`): планы отделены от работ (префикс «план»), материалы append без очистки шаблона
+- v8 (`33f7a73`): персонал = сумма строк 9-13 (не из табеля), материалы в строке 8 + списке (строка 14)
+
+### Другие изменения
+- Переключение не-регуляторных запросов на Ollama (qwen3:8b) вместо Grok.
+- `bot/templates/ЕЖО_шаблон.xlsx` обновлён под v8.
+
+### Файлы
+- `bot/fill_ejo.py` (строки 267-268, 339, 484-530, 572-584, 672-724)
+- `bot/qa.py`
+- Песочница: `/tmp/ЕЖО_2026-07-10_v8.xlsx`
+
+---
+
+## 08.07.2026 (финал) — Полный захват фото боевой группы + расширение шаблона
