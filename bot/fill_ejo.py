@@ -246,8 +246,8 @@ def staff(date):
         elif m2: nm, i, wk = mp[m2.group(1)], int(m2.group(2)), int(m2.group(3))
         elif m3: nm, i, wk = mp.get(m3.group(3).lower(), ''), int(m3.group(1)), int(m3.group(2))
         else:
-            # Split format: "Атантай ИТР 1" or "Атантай 6 рабочих"
-            m4 = re.search(r'(атантай|майкадам|наватек)\s+итр\s+(\d+)', t)
+            # Split format: "Атантай ИТР 1" or "Атантай 6 рабочих" or "Майкадам 1 ИТР"
+            m4 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*итр', t)
             m5 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*рабоч', t)
             if m4:
                 nm = mp[m4.group(1)]
@@ -800,6 +800,14 @@ def fill(date):
                     sw(ws, sr, 4, mat['qty'], True)
                     # F = Всего на дату (same as поставка for now)
                     sw(ws, sr, 6, mat['qty'], True)
+                # Clear remaining rows that had no material data
+                for si in range(len(parsed_materials), 3):
+                    sr = 8 + si
+                    sw(ws, sr, 1, None, True)
+                    sw(ws, sr, 2, None, True)
+                    sw(ws, sr, 3, None, True)
+                    sw(ws, sr, 4, None, True)
+                    sw(ws, sr, 6, None, True)
                 print(f"[MATERIALS] Parsed {len(parsed_materials)} material items from QA", flush=True)
             else:
                 # No new material data — preserve existing template values

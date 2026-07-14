@@ -7,54 +7,56 @@
 ## Start here
 
 1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
-2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md` — полный арсенал
+2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md`
 3. Затем этот файл, потом `/home/hermes-workspace/Alikhan-migration/INDEX.md`
 
 ## Правила строительства
 
-**Общие правила (все проекты):** `skill_view('build')` — загрузить при старте сессии или рефакторинге.
+**Общие правила (все проекты):** `skill_view('build')`
+
+### ⛔ PRE-PATCH GATE (MANDATORY — все проекты)
+
+Перед любым изменением кода:
+1. `grep -rn "имя" bot/` — все места использования функции/переменной
+2. Показать grep в ответе пользователю
+3. Проследить логику в КАЖДОМ найденном месте
+4. Только потом патч
+
+Если grep не показан — патч не принят. Откат.
 
 ### Alikhan-специфичные
 
-|## Canonical files
+## Canonical files
 
-|- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
-|- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
-|- Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
-|- QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
-|- EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
-|- Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
-|- Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
-|- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
-|- Extractor endpoint: `127.0.0.1:8099`
-|- Runtime log: `/tmp/alikhan.log` for the current user-systemd service; `bot/bot.log` may be stale.
+- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
+- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
+- Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
+- QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
+- EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
+- Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
+- Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
+- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
+- Extractor endpoint: `127.0.0.1:8099`
+- Runtime log: `/tmp/alikhan.log`
 
 ## Active workflows
 
-- Bot behavior: edit/read `bot/main_waha.py`, `bot/router.py`, and related
-  helpers in `bot/`.
-- EJO work: use `bot/fill_ejo.py` and `bot/templates/ЕЖО_шаблон.xlsx`.
-- Document extraction: use `bot/document_extractor.py`; verify against local
-  service `127.0.0.1:8099`.
-- WhatsApp validation: use sandbox group `120363179621030401@g.us`.
-- Production WhatsApp group `120363400682390076@g.us`: never send here without
-  explicit approval.
+- Bot behavior: edit/read `bot/main_waha.py`, `bot/router.py`
+- EJO work: `bot/fill_ejo.py` + `bot/templates/ЕЖО_шаблон.xlsx`
+- Document extraction: `bot/document_extractor.py`; verify `127.0.0.1:8099`
+- WhatsApp validation: sandbox group `120363179621030401@g.us`
+- Production group `120363400682390076@g.us`: never send without explicit approval
 
 ## Archive / do not use by default
 
-- Avoid old/deprecated WAHA and n8n paths unless historical context is
-  explicitly requested.
-- Treat `/home/hermes-workspace/Alikhan-migration/n8n-workflows/` as historical
-  unless the task says otherwise.
+- Old/deprecated WAHA and n8n paths — only if explicitly requested
+- `/home/hermes-workspace/Alikhan-migration/n8n-workflows/` — historical
 
 ## Do not touch without explicit approval
 
-- Do not restart `alikhan.service`, `alikhan-document-extractor.service`, or
-  Evolution API unless explicitly approved.
-- Do not send to the production WhatsApp group
-  `120363400682390076@g.us` without explicit approval.
-- Do not change secrets, credentials, database connection settings, or
-  production service units without explicit approval.
+- Do not restart `alikhan.service`, `alikhan-document-extractor.service`, or Evolution API
+- Do not send to production WhatsApp group `120363400682390076@g.us`
+- Do not change secrets, credentials, DB connection, production service units
 
 ## Verification commands
 
@@ -77,47 +79,38 @@ WhatsApp → Evolution API :8080 → main_waha.py (poll 3s) → Guard → Router
 ## Быстрые команды
 
 ```bash
-# Статус контейнеров
 docker ps --filter "name=evolution"
-
-# Логи бота
 tail -30 /tmp/alikhan.log
-
-# Перезапуск бота (только после явного approval)
+# Перезапуск (только после approval)
 systemctl --user restart alikhan.service
 systemctl --user status alikhan.service --no-pager
 pgrep -af 'python3 .*main_waha.py'
-
-# Рестарт document extractor (только после явного approval)
 systemctl --user restart alikhan-document-extractor.service
 curl -fsS http://127.0.0.1:8099/health
-
-# Рестарт Evolution API (только после явного approval)
 docker restart evolution-api
 ```
 
 ## Память проекта (PostgreSQL)
 
-Хост: `DB_HOST`/`EVO_DB_HOST` при наличии; иначе авто-обнаружение IP контейнера `evolution-postgres` через `docker inspect`, порт 5432. База: evolution_db, пользователь: evolution.
+Хост: `DB_HOST`/`EVO_DB_HOST` или авто-обнаружение `evolution-postgres` (docker inspect), порт 5432. База: evolution_db, пользователь: evolution.
 Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases, bot_poll_state, bot_poll_residuals.
 
 ## ЕЖО
 
 - `fill_ejo.py` — погода (Open-Meteo 42.284,72.765) + QA-факты → Excel 4 листа
-- Шаблон: bot/templates/ЕЖО_шаблон.xlsx
+- Шаблон: `bot/templates/ЕЖО_шаблон.xlsx`
 - SIM_DATE: None в продакшене (симуляция 30.06 закрыта 01.07.2026)
 - **Цикл:** авто-заполнение → ручная правка → diff по кодам → шаблон + `ЕЖО_{date}_v1.xlsx`
-- **Накопленные:** `yesterday_cum()` из v1-файла, защита от удвоения (v>0 → yesterday)
-- **Персонал:** из табеля по профессиям (колонка C), лист «Персонал и техника» строки 9-13
-- **Дата:** извлекается из имени файла (`27.06.2026`), сохраняется как `ЕЖО_{YYYY-MM-DD}_v1.xlsx`
-- **Шаблон:** `data_only=True` при загрузке (формулы → значения, нет потерь)
+- **Накопленные:** `yesterday_cum()` из v1-файла (защита от удвоения)
+- **Персонал:** из табеля (колонка C), лист «Персонал и техника» строки 9-13
+- **Дата:** из имени файла (`27.06.2026`) → `ЕЖО_{YYYY-MM-DD}_v1.xlsx`
+- **Шаблон:** `data_only=True` при загрузке
 
 ## График производства
 
-- Таблица bot_schedule_phases — **8 записей** (8 этапов из ГРАФИК СМР.pdf)
+- Таблица bot_schedule_phases — **8 записей** (из ГРАФИК СМР.pdf)
 - Даты синхронизированы с PDF 01.07.2026
-- lookup_schedule() в db_lookup.py — триггеры: график, этап, отставание, срок
-- check_delays() — проверка просроченных этапов
+- lookup_schedule() / check_delays() в db_lookup.py
 - 827 дней (30.04.2025–04.08.2027)
 
 ### Этапы (актуально на 01.07.2026)
@@ -133,33 +126,31 @@ docker restart evolution-api
 | 7 | Внутриплощадочные сети | 01.07.26 | 01.10.26 | 93 | 🔄 active |
 | 8 | Благоустройство, сдача | 01.07.26 | 31.07.27 | 396 | 🔄 active |
 
-## Последняя сессия (02.07.2026) — контекст восстановления
+## Последняя сессия (02.07.2026) — ключевой контекст
 
-### Что сделано
-- ЕЖО 02.07.2026 (v1): персонал, объёмы, планы, фото — без замечаний
-- **QA parser fix:** убран pre-parse в `qa.py` (дублировал факты: голый код + labelled)
-- **Дубликаты в БД:** 4 записи за 02.07 удалены, больше не появятся
-- **Авто-шаблон:** cron `7adc37a6efc5` ежедневно 8:00 Бишкек (02:00 UTC) — нет правки → v1 → шаблон
-- **Скрипт:** `/home/hermes-workspace/.hermes/scripts/ejo_auto_template.py`
+**Что сделано:**
+- ЕЖО 02.07.2026 (v1): без замечаний
+- QA parser fix: убран pre-parse в `qa.py`
+- Дубликаты в БД: 4 записи за 02.07 удалены
+- Авто-шаблон: cron `7adc37a6efc5` ежедневно 8:00 Бишкек
 - Шаблон обновлён из ЕЖО_2026-07-02_v1.xlsx (backup сохранён)
-- SIM_DATE = None, бот в реальном времени
+- SIM_DATE = None
 
-### Известные баги / ограничения
-- Diff в `_update_template_from_correction()` проверяет только 3 колонки (16, 19, 21) — заливку/фото/планы НЕ сравнивает
+**Известные баги / ограничения:**
+- Diff в `_update_template_from_correction()` проверяет только 3 колонки (16, 19, 21)
 - Удаление через WhatsApp API не работает в группах (bug #885)
-- .mpp файлы не читаются (нужен JDK + MPXJ) — пользователь присылает PDF версию графика
-- **Poll**: smart_evening_check.py всё ещё существует как резервный скрипт, но poll.py — основной модуль
+- .mpp файлы не читаются (нужен JDK + MPXJ) — только PDF
+- Poll: smart_evening_check.py — резервный, poll.py — основной
 
-### БД
-- PostgreSQL в Docker: `evolution-postgres` (172.22.0.3:5432)
+**БД:**
+- PostgreSQL: `evolution-postgres` (172.22.0.3:5432)
 - База: evolution_db, пользователь: evolution, пароль: pass123
-- bot_memory_messages.content — не UNIQUE (слишком длинные значения), защита через SELECT
+- bot_memory_messages.content — не UNIQUE (защита через SELECT)
 
-### Ключевые файлы сессии
-- `/tmp/ЕЖО_2026-06-30_v2.xlsx` — финальный ЕЖО
-- `/tmp/corrected_ЕЖО_30.06.2026 АйБиКон.xlsx` — пользовательская правка
-- `bot/main_waha.py` L214 — защита фото
-- `bot/main_waha.py` L15 — SIM_DATE = None
+**Ключевые файлы сессии:**
+- `/tmp/ЕЖО_2026-06-30_v2.xlsx`
+- `/tmp/corrected_ЕЖО_30.06.2026 АйБиКон.xlsx`
+- `bot/main_waha.py` L214 (защита фото), L15 (SIM_DATE = None)
 
 ## Группы WhatsApp
 

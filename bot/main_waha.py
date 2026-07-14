@@ -39,6 +39,34 @@ def send_voice(chat_id, text):
         print(f"[TTS ERR] {e}", flush=True)
         send_msg(chat_id, text)
 
+def _safe_message_ts(m):
+    try:
+        ts = m.get("messageTimestamp")
+        if ts is None:
+            return int(time.time())
+        return int(ts)
+    except (TypeError, ValueError):
+        return int(time.time())
+
+def _send_document(chat_id, filepath, filename=None):
+    """Send a document via Evolution API with error checking. Returns True if sent."""
+    try:
+        with open(filepath, "rb") as f:
+            b64_enc = base64.b64encode(f.read()).decode()
+        r = requests.post(f"{EVO}/message/sendMedia/alikhan",
+            json={"number": chat_id, "mediatype": "document", "media": b64_enc,
+                  "fileName": filename or os.path.basename(filepath)},
+            headers={"apikey": KEY}, timeout=30)
+        if r.status_code == 200 or r.status_code == 201:
+            print(f"[SEND OK] {filename or filepath} → {chat_id}", flush=True)
+            return True
+        else:
+            print(f"[SEND FAIL] {filename or filepath}: HTTP {r.status_code} — {r.text[:200]}", flush=True)
+            return False
+    except Exception as e:
+        print(f"[SEND ERR] {filename or filepath}: {e}", flush=True)
+        return False
+
 def _update_template_from_correction(b64_data, fname):
     """When user sends a corrected ЕЖО .xlsx, use it as new template."""
     import glob as _glob, base64 as _b64
@@ -359,7 +387,7 @@ def production_listener_loop():
                 if mid in prod_seen or m["key"].get("fromMe"):
                     continue
                 # On first run, skip messages older than 24h; after that, only new
-                msg_ts = m.get("messageTimestamp", 0)
+                msg_ts = _safe_message_ts(m)
                 if first_run and int(time.time()) - msg_ts > 86400:
                     prod_seen.add(mid)
                     continue
@@ -487,7 +515,7 @@ while True:
             if mid in seen:
                 continue
             # Skip messages older than 5 minutes (prevents flood on restart)
-            msg_ts = m.get("messageTimestamp", 0)
+            msg_ts = _safe_message_ts(m)
             now_ts = int(time.time())
             if now_ts - msg_ts > 300:
                 seen.add(mid)
@@ -545,13 +573,20 @@ while True:
                         import json as _json
                         from db import get_conn as _getconn
                         conn = _getconn(); cur = conn.cursor()
-                        cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                            (SANDBOX, "user", "user", "document", fname,
-                             _json.dumps({"msg_id": mid, "file_name": fname}),
-                             datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
-                        conn.commit(); cur.close(); conn.close()
-                        print(f"[DOC] Saved: {fname}", flush=True)
+                        cur.execute(
+                            "SELECT 1 FROM bot_memory_messages WHERE tags->>'msg_id' = %s OR content IN (%s, %s)",
+                            (mid, mid, fname))
+                        if not cur.fetchone():
+                            cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                                (SANDBOX, "user", "user", "document", fname,
+                                 _json.dumps({"msg_id": mid, "file_name": fname}),
+                                 datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                            conn.commit()
+                            print(f"[DOC] Saved: {fname}", flush=True)
+                        else:
+                            print(f"[DOC] Skip duplicate: {mid[:12]}... {fname}", flush=True)
+                        cur.close(); conn.close()
                         # Extract text via document extractor for future AI analysis
                         try:
                             ext_req = urllib.request.Request("http://localhost:8099/extract-document",
@@ -680,10 +715,10 @@ while True:
                         b64_enc = base64.b64encode(f.read()).decode()
                     ver = len(existing)
                     send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                              "fileName": f"ЕЖО_{today_str}_v{ver}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
+                    if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
+                        send_msg(SANDBOX, f"📊 ЕЖО v{ver} отправлен")
+                    else:
+                        send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                     continue
                 status = get_poll_status(SANDBOX, today_str)
                 if status:
@@ -748,11 +783,9 @@ while True:
                     with open(path, "rb") as f:
                         b64_enc = base64.b64encode(f.read()).decode()
                     ver = len(existing)
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                              "fileName": f"ЕЖО_{today_str}_v{ver}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
                     send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
+                    if not _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
+                        send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                     continue
                 from poll import get_poll_status as _get_poll_st4, close_poll as _close_poll2
                 p_status4 = _get_poll_st4(SANDBOX, today_str)
@@ -760,26 +793,20 @@ while True:
                     send_msg(SANDBOX, "⚡ Принудительное формирование ЕЖО...")
                     p_id4, ejo_path4 = _close_poll2(SANDBOX, today_str)
                     if ejo_path4:
-                        with open(ejo_path4, "rb") as f:
-                            b64_enc = base64.b64encode(f.read()).decode()
-                        requests.post(f"{EVO}/message/sendMedia/alikhan",
-                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                                  "fileName": f"ЕЖО_{today_str}.xlsx"},
-                            headers={"apikey": KEY}, timeout=30)
-                        send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен (принудительно)")
+                        if _send_document(SANDBOX, ejo_path4, f"ЕЖО_{today_str}.xlsx"):
+                            send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен (принудительно)")
+                        else:
+                            send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 else:
                     subprocess.run([sys.executable, "fill_ejo.py", today_str],
                         cwd=os.path.dirname(os.path.abspath(__file__)))
                     files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
                     if files:
                         path = files[-1]
-                        with open(path, "rb") as f:
-                            b64_enc = base64.b64encode(f.read()).decode()
-                        requests.post(f"{EVO}/message/sendMedia/alikhan",
-                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                                  "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"},
-                            headers={"apikey": KEY}, timeout=30)
-                        send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{len(files)}.xlsx"):
+                            send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        else:
+                            send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 continue
 
             # Fill EJO trigger
@@ -795,10 +822,10 @@ while True:
                         b64_enc = base64.b64encode(f.read()).decode()
                     ver = len(existing)
                     send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    requests.post(f"{EVO}/message/sendMedia/alikhan",
-                        json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                              "fileName": f"ЕЖО_{today_str}_v{ver}.xlsx"},
-                        headers={"apikey": KEY}, timeout=30)
+                    if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
+                        send_msg(SANDBOX, f"📊 ЕЖО v{ver} отправлен")
+                    else:
+                        send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                     continue
                 # Check if poll is active
                 from poll import get_poll_status as _get_poll_st3, build_poll_summary as _build_poll_sum3, close_poll as _close_poll
@@ -816,13 +843,10 @@ while True:
                     send_msg(SANDBOX, "📊 Все данные есть. Формирую ЕЖО...")
                     p_id3, ejo_path3 = _close_poll(SANDBOX, today_str)
                     if ejo_path3:
-                        with open(ejo_path3, "rb") as f:
-                            b64_enc = base64.b64encode(f.read()).decode()
-                        requests.post(f"{EVO}/message/sendMedia/alikhan",
-                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                                  "fileName": f"ЕЖО_{today_str}.xlsx"},
-                            headers={"apikey": KEY}, timeout=30)
-                        send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен")
+                        if _send_document(SANDBOX, ejo_path3, f"ЕЖО_{today_str}.xlsx"):
+                            send_msg(SANDBOX, f"📊 ЕЖО за {today_str} отправлен")
+                        else:
+                            send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 else:
                     # Direct EJO generation without poll
                     subprocess.run([sys.executable, "fill_ejo.py", today_str],
@@ -830,13 +854,10 @@ while True:
                     files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
                     if files:
                         path = files[-1]
-                        with open(path, "rb") as f:
-                            b64_enc = base64.b64encode(f.read()).decode()
-                        requests.post(f"{EVO}/message/sendMedia/alikhan",
-                            json={"number": SANDBOX, "mediatype": "document", "media": b64_enc,
-                                  "fileName": f"ЕЖО_{today_str}_v{len(files)}.xlsx"},
-                            headers={"apikey": KEY}, timeout=30)
-                        send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{len(files)}.xlsx"):
+                            send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        else:
+                            send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 continue
 
             # Route
