@@ -24,6 +24,21 @@
 
 Если grep не показан — патч не принят. Откат.
 
+## Agent-Driven Development Rules (Codex CLI / Grok Build)
+
+**Загрузить перед делегированием:** `skill_view('codex-grok-delegation')`
+
+При делегировании задач в Codex CLI или Grok Build:
+
+1. **Read docs first** — прочитать этот AGENTS.md + `INDEX.md` + `CHRONOLOGY.md` перед любым изменением
+2. **Use build plan** — для задач >20 строк кода: Шаблон 1 из `codex-grok-delegation` (Goal Mode)
+3. **Preserve security** — НЕ слать в боевую группу `120363400682390076@g.us`. НЕ менять secrets/DB connection
+4. **Verification ladder** — `python3 -m py_compile bot/*.py` → `pytest test_ejo_simulation.py -q` → WhatsApp sandbox test → `tail -30 /tmp/alikhan.log` → CHRONOLOGY.md
+5. **Reproducible setup** — `pip install -r requirements.txt`, Evolution API через Docker Compose
+6. **No production without approval** — НЕ рестартить `alikhan.service`, `alikhan-document-extractor.service`, Evolution API
+7. **Never expose credentials** — Evolution API ключи, WhatsApp токены, DB connection — не коммитить
+8. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
+
 ### Alikhan-специфичные
 
 ## Canonical files

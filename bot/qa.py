@@ -153,17 +153,18 @@ def parse_qa(gid, text, date_str=None):
         grok_result = ""
         if grok_input:
             print(f"[QA] Sending to Grok (VOR-free): '{grok_input[:100]}...'", flush=True)
-            prompt = f"""Извлеки ВСЕ факты из ответа прораба. Каждый факт — отдельной строкой.
-Формат: building | category | fact_text
-building: АБК/Общежитие/общая
-category: персонал/техника/инцидент/бетонирование/монтаж/земляные работы/документация
-ВАЖНО: ИТР и рабочие — это РАЗНЫЕ факты. Если сказано «Атантай ИТР 1, рабочих 6», извлеки ДВЕ строки С НАЗВАНИЕМ ПОДРЯДЧИКА:
-общая | персонал | Атантай ИТР 1
-общая | персонал | Атантай 6 рабочих
+            prompt = f"""Извлеки ВСЕ факты из ответа прораба. Верни ТОЛЬКО JSON-массив объектов.
+
+Каждый объект:
+{{"building": "АБК"|"Общежитие"|"общая", "category": "персонал"|"техника"|"инцидент"|"бетонирование"|"монтаж"|"земляные работы"|"документация", "fact": "текст факта"}}
+
+ВАЖНО: ИТР и рабочие — РАЗНЫЕ факты. Если «Атантай ИТР 1, рабочих 6» → ДВА объекта:
+{{"building": "общая", "category": "персонал", "fact": "Атантай ИТР 1"}},
+{{"building": "общая", "category": "персонал", "fact": "Атантай 6 рабочих"}}
 
 {grok_input}
 
-Только строки фактов, без пояснений."""
+Только JSON-массив, без пояснений, без markdown."""
             grok_result = ask_grok(prompt, max_tokens=500)
 
         conn = get_conn()
@@ -179,16 +180,39 @@ category: персонал/техника/инцидент/бетонирова�
             )
             count += 1
 
-        # Step 4: Process Grok results for personnel/incidents/equipment
+        # Step 4: Process Grok results (structured JSON — Neil XBT pattern)
+        # "natural language handoffs drift by week 3, structured handoffs don't"
         if grok_result:
-            for line in grok_result.split("\n"):
-                parts = [p.strip() for p in line.strip().split("|", 2)]
-                if len(parts) >= 3 and len(line) > 10:
-                    cur.execute(
-                        "INSERT INTO bot_memory_facts (chat_id,fact_date,building,category,fact,source) VALUES (%s,%s,%s,%s,%s,'qa')",
-                        (gid, today, parts[0], parts[1], parts[2])
-                    )
-                    count += 1
+            import json as _json
+            try:
+                grok_text = grok_result.strip()
+                # Strip markdown fences if present
+                if grok_text.startswith("```"):
+                    grok_text = grok_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                facts = _json.loads(grok_text)
+                if isinstance(facts, list):
+                    for obj in facts:
+                        b = obj.get("building", "общая")
+                        c = obj.get("category", "")
+                        f = obj.get("fact", "")
+                        if b and c and f:
+                            cur.execute(
+                                "INSERT INTO bot_memory_facts (chat_id,fact_date,building,category,fact,source) VALUES (%s,%s,%s,%s,%s,'qa')",
+                                (gid, today, b, c, f)
+                            )
+                            count += 1
+                print(f"[QA Grok] Structured: {count - len(vor_facts)} facts from JSON", flush=True)
+            except Exception as e:
+                print(f"[QA Grok] JSON parse failed ({e}), falling back to pipe format", flush=True)
+                # Fallback: old pipe-delimited format (backward compat)
+                for line in grok_result.split("\n"):
+                    parts = [p.strip() for p in line.strip().split("|", 2)]
+                    if len(parts) >= 3 and len(line) > 10:
+                        cur.execute(
+                            "INSERT INTO bot_memory_facts (chat_id,fact_date,building,category,fact,source) VALUES (%s,%s,%s,%s,%s,'qa')",
+                            (gid, today, parts[0], parts[1], parts[2])
+                        )
+                        count += 1
 
         # Fallback: if nothing was saved, try simple "нет" patterns
         if count == 0:
