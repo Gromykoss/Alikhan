@@ -80,6 +80,130 @@ def calc_completion_pct(ws):
     return min(result, 100)
 
 
+def _hide_rows(ws):
+    """Hide completed/future rows. Keep rows per schedule-based rules.
+    
+    Levels: 1st (section: 2,3,4..) and 2nd (subsection: 2.1,3.2..) always visible.
+    3rd/4th level visibility:
+    - ALL work complete in subsection → hide all 3rd/4th
+    - Phase DONE (end_date < today) + has остаток → only rows with остаток>0
+    - Phase ACTIVE (end_date >= today) + has work → show all 3rd/4th rows
+    """
+    from datetime import date as dt_date
+    from db import get_conn
+    import psycopg2.extras
+    
+    # Get phase end dates from schedule
+    phase_ends = {}
+    try:
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT phase_num, MAX(end_date) as end_date FROM bot_schedule_phases "
+            "WHERE end_date IS NOT NULL GROUP BY phase_num"
+        )
+        for row in cur.fetchall():
+            phase_ends[str(row['phase_num'])] = row['end_date']
+        cur.close()
+    except Exception as e:
+        print(f"[HIDE ROWS] Schedule query failed: {e}", flush=True)
+        # Fallback: hardcoded from AGENTS.md
+        phase_ends = {'2': dt_date(2026,6,30), '3': dt_date(2026,7,31),
+                       '4': dt_date(2026,10,30), '5': dt_date(2027,7,1),
+                       '6': dt_date(2027,7,10), '7': dt_date(2026,10,1),
+                       '8': dt_date(2027,7,31)}
+    
+    today = dt_date.today()
+    
+    def _code_lvl(code_str):
+        """Return (section, subsection) and level depth."""
+        parts = code_str.strip().split('.')
+        if len(parts) >= 2:
+            return parts[0], '.'.join(parts[:2]), len(parts)
+        return parts[0] if parts else '', '', len(parts)
+    
+    # Build row map: code → (row, остаток, daily_vol)
+    header_rows = set()  # section/subsection headers — never hide
+    row_map = {}
+    for r in range(24, 852):
+        cd = ws.cell(r, 3).value
+        if not cd:
+            # Check if this is a section/subsection header (text in col A, no code)
+            a_val = ws.cell(r, 1).value
+            if a_val:
+                header_rows.add(r)
+            continue
+        code = str(cd).strip()
+        u_val = ws.cell(r, 21).value   # остаток
+        l_val = ws.cell(r, 12).value   # суточный объём
+        try: ost = float(u_val) if u_val is not None else 0
+        except: ost = 0
+        try: daily = float(l_val) if l_val is not None else 0
+        except: daily = 0
+        row_map[code] = (r, ost, daily)
+    
+    # Group rows by subsection (2nd level)
+    subsections = {}  # "2.1" → [(code, row, ost, daily), ...]
+    for code, (r, ost, daily) in row_map.items():
+        sect, sub, lvl = _code_lvl(code)
+        if not sub: continue
+        if sub not in subsections:
+            subsections[sub] = []
+        subsections[sub].append((code, r, ost, daily, lvl))
+    
+    # Determine visibility
+    visible = set()
+    
+    for sub, rows in subsections.items():
+        sect = sub.split('.')[0]
+        phase_end = phase_ends.get(sect)
+        
+        # Check subsection state
+        has_ostatok = any(ost > 0 for _, _, ost, _, _ in rows)
+        has_daily = any(daily > 0 for _, _, _, daily, _ in rows)
+        all_complete = not has_ostatok and not has_daily
+        
+        # Phase status
+        phase_done = phase_end and phase_end < today
+        phase_active = phase_end and phase_end >= today
+        
+        # Level 1 always visible. Level 2: only if subsection has work or children.
+        for code, r, ost, daily, lvl in rows:
+            if lvl == 1:
+                visible.add(r)
+            elif lvl == 2:
+                has_children = any(child_lvl >= 3 for _, _, _, _, child_lvl in rows)
+                if has_children or has_ostatok or has_daily:
+                    visible.add(r)
+        
+        # Level 3/4 rules
+        for code, r, ost, daily, lvl in rows:
+            if lvl <= 2:
+                continue  # already handled
+            
+            if all_complete:
+                # All work done — hide 3rd/4th
+                continue
+            
+            if phase_done and has_ostatok:
+                # Phase finished per schedule, but there's remaining work
+                if ost > 0:
+                    visible.add(r)
+            
+            elif phase_active and (has_ostatok or has_daily):
+                # Phase is active AND subsection has work → show all
+                visible.add(r)
+    
+    # Apply
+    hidden_count = 0
+    for r in range(24, 852):
+        if r not in visible and r not in header_rows:
+            ws.row_dimensions[r].hidden = True
+            hidden_count += 1
+    
+    print(f"[HIDE ROWS] Hidden: {hidden_count}, Visible: {len(visible)} + {len(header_rows)} headers", flush=True)
+
+
 def get_aibikon_headcount(date=None):
     """Extract АйБиКон headcount from latest timesheet, grouped by profession.
     Returns dict: {'total': N, 'by_prof': {'профессия': кол-во, ...}}"""
@@ -249,6 +373,7 @@ def staff(date):
             # Split format: "Атантай ИТР 1" or "Атантай 6 рабочих" or "Майкадам 1 ИТР"
             m4 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*итр', t)
             m5 = re.search(r'(атантай|майкадам|наватек)\s+(\d+)\s*рабоч', t)
+            m6 = re.search(r'(атантай|майкадам|наватек)\s+итр\s+(\d+)', t)  # "Атантай ИТР 1"
             if m4:
                 nm = mp[m4.group(1)]
                 if nm not in r: r[nm] = {'t':0,'i':0,'w':0}
@@ -257,6 +382,10 @@ def staff(date):
                 nm = mp[m5.group(1)]
                 if nm not in r: r[nm] = {'t':0,'i':0,'w':0}
                 wk = int(m5.group(2)); r[nm]['w'] += wk; r[nm]['t'] += wk
+            if m6:
+                nm = mp[m6.group(1)]
+                if nm not in r: r[nm] = {'t':0,'i':0,'w':0}
+                r[nm]['i'] += int(m6.group(2)); r[nm]['t'] += int(m6.group(2))
             continue
         if nm: r[nm] = {'t': i+wk, 'i': i, 'w': wk}
     for n in ['Атантай','Майкадам','Наватек','Алтын-Тас']:
@@ -641,6 +770,19 @@ def fill(date):
             # Track photo count per building
             photo_count = {'Общежитие': 0, 'АБК': 0, 'Галерея': 0, 'Общий план': 0}
             
+            # Save non-photo images (logo) before clearing
+            saved_images = []
+            for img in ws._images:
+                # Check if image is anchored in photo rows (856-859)
+                from openpyxl.drawing.spreadsheet_drawing import AnchorMarker
+                row_from = getattr(img.anchor, '_from', None)
+                if row_from is not None:
+                    img_row = row_from.row + 1  # 0-based
+                    if not (856 <= img_row <= 859):
+                        saved_images.append(img)
+                else:
+                    saved_images.append(img)
+            
             # Clear ALL old images from template
             ws._images.clear()
             
@@ -690,6 +832,14 @@ def fill(date):
                     except Exception as ex:
                         print(f"Photo err: {ex}", flush=True)
             c.close()
+        
+            # Restore saved non-photo images (logo)
+            for img in saved_images:
+                ws._images.append(img)
+        
+        # Hide completed/future rows — keep only active work visible
+        if name == "Ежедневный отчет":
+            _hide_rows(ws)
         
         if name == "Персонал и техника":
             sw(ws, 4, 1, df, True)

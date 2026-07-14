@@ -25,6 +25,9 @@ and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
 - Bot routing and replies: `bot/main_waha.py`, `bot/router.py`, then helper
   modules in `bot/`.
 - EJO generation: `bot/fill_ejo.py` plus `bot/templates/ЕЖО_шаблон.xlsx`.
+  - Auto-hide rows: `_hide_rows()` — скрывает завершённые/будущие строки по графику (`bot_schedule_phases`).
+  - Personnel parsing: `staff()` — из QA-фактов (ВСЕ подрядчики, regex для «Имя ИТР N»).
+  - Logo preservation: логотип сохраняется при очистке фото-строк.
 - Document extraction: `bot/document_extractor.py` and the local extractor
   service on `127.0.0.1:8099`.
 - Sandbox WhatsApp validation: `120363179621030401@g.us`.

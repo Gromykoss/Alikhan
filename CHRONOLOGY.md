@@ -1,5 +1,27 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 14.07.2026 — Auto-hide rows + Personnel fix + Logo preservation
+
+### Rows auto-hide (`_hide_rows()` in `fill_ejo.py`)
+Автоматическое скрытие завершённых/будущих строк по графику производства:
+- 1-й и 2-й уровень всегда видны (этапы + разделы)
+- 3-й и 4-й: если ВСЕ работы выполнены → скрыть; если фаза завершена по графику + есть остатки → только строки с остатком; если фаза активна + есть работы → все строки
+- Секция 8: пустые разделы 2-го уровня скрыты до начала работ
+- Фазы из `bot_schedule_phases`: 2 — DONE (30.06), 3/4/7 — ACTIVE, 5/6/8 — future
+
+### Personnel regex fix
+`staff()`: добавлен m6 regex для формата «Атантай ИТР 1» (число после ИТР). Ранее ловил только «Атантай 1 ИТР».
+
+### Logo preservation
+`fill_ejo.py`: логотип сохраняется при очистке изображений перед вставкой фото. `ws._images.clear()` заменён на выборочную очистку строк 856-859 + восстановление сохранённых изображений.
+
+### Structured QA Parser (Neil XBT pattern)
+`qa.py`: Grok-промпт переведён с pipe-delimited текста на structured JSON. Парсинг: `json.loads()` вместо `line.split("|")`. Fallback на старый формат при ошибке парсинга. Причина: «natural language handoffs drift by week 3» (Neil XBT).
+
+## 14.07.2026 — Agent-Driven Development Rules
+
+AGENTS.md: добавлены 8 правил делегирования в Codex CLI / Grok Build (build plan, security gate, verification ladder). Методика Tony Simons (wp-chatgpt-publisher). Skill: `codex-grok-delegation`.
+
 ## 13.07.2026 — Рефакторинг отправки ЕЖО + улучшения fill_ejo (заливка, стилизация, % готовности)
 
 ### Что было сделано
