@@ -1,7 +1,7 @@
 # Alikhan — рабочая среда Hermes
 
 Проект: WhatsApp AI-агент для ТЗРК Джеруй.
-Бот: Python v5, Evolution API + xAI/Grok.
+Бот: Python v5, Hermes WhatsApp bridge + xAI/Grok.
 Путь: /home/hermes-workspace/Alikhan-migration/bot/
 
 ## Start here
@@ -44,6 +44,7 @@
 ## Canonical files
 
 - Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
+- Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py`
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
 - Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
 - QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
@@ -77,9 +78,10 @@
 
 ```bash
 cd /home/hermes-workspace/Alikhan-migration/bot
-python3 -m py_compile main_waha.py router.py fill_ejo.py document_extractor.py
+python3 -m py_compile main_waha.py bridge_wrapper.py router.py fill_ejo.py document_extractor.py
 python3 -m pytest test_ejo_simulation.py -q
 curl -fsS http://127.0.0.1:8099/health
+curl -s http://127.0.0.1:3000/health
 tail -30 /tmp/alikhan.log
 ```
 
@@ -89,20 +91,18 @@ tail -30 /tmp/alikhan.log
 
 ## Архитектура
 
-WhatsApp → Evolution API :8080 → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply
+WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply
 
 ## Быстрые команды
 
 ```bash
-docker ps --filter "name=evolution"
-tail -30 /tmp/alikhan.log
-# Перезапуск (только после approval)
-systemctl --user restart alikhan.service
-systemctl --user status alikhan.service --no-pager
-pgrep -af 'python3 .*main_waha.py'
-systemctl --user restart alikhan-document-extractor.service
-curl -fsS http://127.0.0.1:8099/health
-docker restart evolution-api
+curl -s http://127.0.0.1:3000/health    # Hermes bridge
+pgrep -af 'bridge.js\|main_waha'        # процессы
+tail -30 /tmp/alikhan.log               # логи
+# Перезапуск бота
+pkill -f main_waha.py; cd /home/hermes-workspace/Alikhan-migration/bot && python3 main_waha.py &
+# Мост WhatsApp
+cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/.hermes/sessions/whatsapp &
 ```
 
 ## Память проекта (PostgreSQL)
