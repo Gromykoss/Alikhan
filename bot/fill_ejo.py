@@ -400,6 +400,10 @@ def volumes(date):
     dn, pn = {}, {}
     for x in f:
         txt = (x.get('fact','') or '').replace(',', '.')
+        # Skip facts from non-work/non-plan categories (e.g. Grok hallucination in 'монтаж')
+        cat = x.get('category', '')
+        if cat and cat not in ('объём', 'план'):
+            continue
         # Match 3-part (2.3.1) or 4-part (2.2.3.1) codes
         m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
         if m:
@@ -408,12 +412,11 @@ def volumes(date):
             is_done = 'сделано' in txt.lower()
             if is_plan:
                 # Plan facts go ONLY to plans, never to works
-                if cd not in dn and cd not in pn:
-                    pn[cd] = vl
+                pn[cd] = vl  # always add, work codes don't block plans
             elif is_done or not is_plan:
                 # Done or unspecified (default = work fact)
                 dn[cd] = vl
-    r = dict(pn); r.update(dn); return r, pn  # (all codes, plans-only)
+    r = dict(pn); r.update(dn); return r, pn, dn  # (all codes, plans-only, works-only)
 
 
 def photos(date):
@@ -474,8 +477,8 @@ def set_fill(ws, r, c, theme, tint=0.0):
 def fill(date):
     wb = load_workbook(TEMPLATE, data_only=True)  # preserve cached values, drop formulas
     w = weather(date); inc = incidents(date); stf = staff(date)
-    vols_all, plans = volumes(date)  # vols_all = work+plan, plans = plan-only codes
-    vols = {k: v for k, v in vols_all.items() if k not in plans}  # works only
+    vols_all, plans, dn = volumes(date)  # vols_all = work+plan, plans = plan-only, dn = work-only
+    vols = {k: v for k, v in vols_all.items() if k in dn}  # works only (from dn dict)
     print(f"[VOLUMES] Works: {len(vols)} codes: {vols}", flush=True)
     if plans:
         print(f"[PLANS] {len(plans)} codes: {plans}", flush=True)
@@ -570,10 +573,6 @@ def fill(date):
                 if cd_val:  # any row with a VOR code
                     for c in [12, 13, 14]:  # only daily columns
                         sw(ws, r, c, None)
-                    # Also clear cumulative if code has work today (will be refilled)
-                    if str(cd_val) in vols:
-                        for c in [16, 19, 21]:
-                            sw(ws, r, c, None)
             # Clear ALL yellow from data rows (will re-add for active rows)
             from openpyxl.styles import PatternFill, Color
             for r in range(24, 852):
@@ -636,13 +635,17 @@ def fill(date):
                     try: return float(val)
                     except: return 0
                 prev_p = parse_val(ws.cell(r,16).value)
+                prev_s = parse_val(ws.cell(r,19).value)
                 # Use yesterday's file for clean cumulative data
                 yp, ys = yesterday_cum(date, cs)
-                # If code has work today, use yesterday's cumulative (template may
-                # already include today's data after user correction — avoid double-count)
+                # Template cumulative already includes today if corrected EJO was uploaded.
+                # Only override with yesterday_cum if a clean file exists.
+                # Otherwise, keep template values as-is (source of truth).
                 if v > 0:
-                    prev_p = yp
-                    prev_s = ys
+                    if yp > 0:
+                        prev_p = yp  # clean cumulative from yesterday's file
+                        prev_s = ys
+                    # else: keep template prev_p/prev_s — already includes today's work
                 else:
                     # No work today — keep template value (or yesterday's if larger)
                     prev_p = max(prev_p, yp)
@@ -652,33 +655,28 @@ def fill(date):
                 sw(ws, r, 12, v, True)
                 sw(ws, r, 13, v, True)
                 sw(ws, r, 14, 1, True)
-                # Month cumulative
-                sw(ws, r, 16, round(prev_p+v, 2), True)
-                if mp: sw(ws, r, 17, round((prev_p+v)/float(mp), 2), True)
+                # Cumulative — use template as source of truth (not prev_p+v)
+                # Template already has correct cumulative from last corrected EJO
+                sw(ws, r, 16, round(prev_p, 2), True)
+                if mp: sw(ws, r, 17, round(prev_p/float(mp), 2), True)
                 # Total cumulative
-                sw(ws, r, 19, round(prev_s+v, 2), True)
-                if tp: sw(ws, r, 20, round((prev_s+v)/float(tp), 2), True)
+                sw(ws, r, 19, round(prev_s, 2), True)
+                if tp: sw(ws, r, 20, round(prev_s/float(tp), 2), True)
                 # L = M = факт за сутки
                 sw(ws, r, 12, v, True)
                 sw(ws, r, 13, v, True)
                 sw(ws, r, 14, 1, True)
                 # Write plain numbers (never formulas)
-                sw(ws, r, 16, round(prev_p+v, 2), True)
-                if mp: sw(ws, r, 17, round((prev_p+v)/float(mp), 2), True)  # fraction for % format
-                sw(ws, r, 19, round(prev_s+v, 2), True)
-                if tp: sw(ws, r, 20, round((prev_s+v)/float(tp), 2), True)  # fraction for % format
-                if k_plan and prev_s+v > 0:
-                    try: sw(ws, r, 21, round(float(k_plan)-prev_s-v, 1), True)
+                sw(ws, r, 16, round(prev_p, 2), True)
+                if mp: sw(ws, r, 17, round(prev_p/float(mp), 2), True)  # fraction for % format
+                sw(ws, r, 19, round(prev_s, 2), True)
+                if tp: sw(ws, r, 20, round(prev_s/float(tp), 2), True)  # fraction for % format
+                if k_plan and prev_s > 0:
+                    try: sw(ws, r, 21, round(float(k_plan)-prev_s, 1), True)
                     except: pass
             
-            # OVERRIDE: Row 77 (3.3.2.1) — hardcoded cumulative = 5790 (72.5% of 7981.29)
-            # User confirmed: month cumulative fact = 5790, total cumulative = 5790
-            sw(ws, 77, 16, 5790, True)   # P77 month cumulative
-            sw(ws, 77, 19, 5790, True)   # S77 total cumulative
-            sw(ws, 77, 17, 0.725, True)  # Q77 month % (fraction for % format)
-            sw(ws, 77, 20, 0.725, True)  # T77 total % (fraction for % format)
-            try: sw(ws, 77, 21, round(float(ws.cell(77,11).value or 0) - 5790, 1), True)  # U77 remaining
-            except: pass
+            # Row 3.3.2.1 cumulative is sourced from template (no hardcoded override needed).
+            # Template updated from corrected EJO by user.
             
             # Apply yellow fill: entire rows A-U for work items WITH volumes today
             # Only rows where L (plan) or M (fact) column has a value
@@ -992,7 +990,7 @@ def fill(date):
                 nm = ws1.cell(r,4).value; un = ws1.cell(r,10).value
                 if cd and bd: code_info[str(cd)] = (str(bd), str(nm)[:80] if nm else '', str(un) if un else '')
             bld_plans = {'Общежитие': [], 'АБК': [], 'Галерея': []}
-            pf = [x['fact'] for x in qa(date) if 'план' in (x.get('fact','') or '').lower()]
+            pf = [x['fact'] for x in qa(date) if 'план' in (x.get('fact','') or '').lower() or x.get('category') == 'план']
             for p in pf:
                 txt = p.replace(',', '.')
                 m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
@@ -1004,31 +1002,32 @@ def fill(date):
                             bld_plans[bld] = [(c,n,u,q) for (c,n,u,q) in bld_plans[bld] if c!=code]
                             nm = code_info[code][1]; un = code_info[code][2]
                             bld_plans[bld].append((code, nm, un, qty))
-            bld_rows = [('АБК', 16), ('Общежитие', 19), ('Галерея', 22)]
+            start_row = 16  # first building starts here
             seq = 1
-            for bld, start_row in bld_rows:
-                # Building header row: seq number + building name
+            for bld in ['АБК', 'Общежитие', 'Галерея']:
+                items = bld_plans.get(bld, [])
+                # Clear previous building's leftover rows
+                for cr in range(start_row - 1, start_row + 5):
+                    for cc in [1,2,3,4,6]:
+                        sw(ws, cr, cc, None, True)
+                # Building header row
                 sw(ws, start_row - 1, 1, str(seq), True)
                 sw(ws, start_row - 1, 2, bld, True)
                 seq += 1
-                items = bld_plans.get(bld, [])
-                for i in range(2):
+                # Write all items for this building
+                for i, (code, nm, un, qty) in enumerate(items):
                     row = start_row + i
-                    if i < len(items):
-                        code, nm, un, qty = items[i]
-                        sw(ws, row, 1, code, True)
-                        sw(ws, row, 2, nm, True)
-                        sw(ws, row, 3, un, True)
-                        sw(ws, row, 4, qty, True)
-                        for r in range(24, ws1.max_row+1):
-                            if str(ws1.cell(r,3).value) == code:
-                                ost = ws1.cell(r,21).value
-                                if ost: sw(ws, row, 6, ost, True)
-                                break
-                    else:
-                        sw(ws, row, 1, None, True); sw(ws, row, 2, None, True)
-                        sw(ws, row, 3, None, True); sw(ws, row, 4, None, True)
-                        sw(ws, row, 6, None, True)  # clear leftover остаток
+                    sw(ws, row, 1, code, True)
+                    sw(ws, row, 2, nm, True)
+                    sw(ws, row, 3, un, True)
+                    sw(ws, row, 4, qty, True)
+                    for r in range(24, ws1.max_row+1):
+                        if str(ws1.cell(r,3).value) == code:
+                            ost = ws1.cell(r,21).value
+                            if ost: sw(ws, row, 6, ost, True)
+                            break
+                # Advance to next building (header + items + 1 blank row gap)
+                start_row = start_row + max(len(items), 1) + 2
         ds = date.strftime("%Y-%m-%d"); v = 1
     while os.path.exists(f"/tmp/ЕЖО_{ds}_v{v}.xlsx"): v += 1
     op = f"/tmp/ЕЖО_{ds}_v{v}.xlsx"

@@ -75,7 +75,7 @@ def _extract_vor_codes(text):
         r'|\b[Нн]е\s*успели\b'
         r'|\w*[Оо]бъём\b'
         r')?'                          # End group 1
-        r'\s*'
+        r'[\w\s]*?'
         r'(\d+\.\d+\.\d+(?:\.\d+)?)'  # Group 2: VOR code
         r'\s*[=—–\-]\s*'
         r'(\d+(?:[.,]\d+)?)'           # Group 3: volume
@@ -98,7 +98,12 @@ def _extract_vor_codes(text):
         vol = float(vol_str)
 
         # Detect plan: Планы, план, плановый etc.
-        is_plan = bool(re.search(r'[Пп]лан', prefix))
+        is_plan = bool(re.search(r'[Пп]лан|завтра', prefix))
+        # Fallback: if prefix is empty but the full match contains plan keywords
+        # (happens when text like "Работы Планы на завтра" is between prefix and code)
+        if not is_plan:
+            full_match = m.group(0)
+            is_plan = bool(re.search(r'[Пп]лан|завтра', full_match))
 
         # Determine category
         if is_plan:

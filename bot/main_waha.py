@@ -1,16 +1,9 @@
-"""Alikhan EVO v5 — thin orchestrator (modules: stt, qa, router, db_lookup)"""
+from bridge_wrapper import *  # provides EVO, KEY, SANDBOX, PRODUCTION; patches requests/urllib for bridge
 import time, requests, json, sys, os, base64, tempfile, subprocess, urllib.request, threading
 from datetime import datetime
 import re
-from secret_config import get_evo_key
-
-EVO = "http://127.0.0.1:8080"
-KEY = get_evo_key(required=True)
-SANDBOX = "120363179621030401@g.us"
-PRODUCTION = "120363400682390076@g.us"
 
 sys.stdout.reconfigure(line_buffering=True)
-print("Alikhan EVO v5 — sandbox + production listener", flush=True)
 
 # Simulation date (set to None for production)
 SIM_DATE = None  # was "2026-06-30" — closed
@@ -527,6 +520,15 @@ while True:
 
             msg = m.get("message", {})
             text = msg.get("conversation", "") or msg.get("extendedTextMessage", {}).get("text", "")
+
+            # ── SAVE ALL text messages to DB BEFORE any processing (fix AL-005) ──
+            if text.strip():
+                sender = m.get("key",{}).get("remoteJid","?").split("@")[0] if "@" in m.get("key",{}).get("remoteJid","") else "?"
+                try:
+                    from db import save_message as _log_msg
+                    _log_msg(SANDBOX, sender, "user", text)
+                except Exception as e:
+                    print(f"[SAVE ERR] {e}", flush=True)
 
             # Photo
             img_msg = msg.get("imageMessage")
