@@ -113,16 +113,20 @@ cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" 
 Хост: `DB_HOST`/`EVO_DB_HOST` или авто-обнаружение `evolution-postgres` (docker inspect), порт 5432. База: evolution_db, пользователь: evolution.
 Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases, bot_poll_state, bot_poll_residuals.
 
-## ЕЖО
+## ЕЖО (v4 — 16.07.2026)
 
 - `fill_ejo.py` — погода (Open-Meteo 42.284,72.765) + QA-факты → Excel 4 листа
 - Шаблон: `bot/templates/ЕЖО_шаблон.xlsx`
-- SIM_DATE: None в продакшене (симуляция 30.06 закрыта 01.07.2026)
-- **Цикл:** авто-заполнение → ручная правка → diff по кодам → шаблон + `ЕЖО_{date}_v1.xlsx`
-- **Накопленные:** `yesterday_cum()` из v1-файла (защита от удвоения)
-- **Персонал:** из табеля (колонка C), лист «Персонал и техника» строки 9-13
-- **Дата:** из имени файла (`27.06.2026`) → `ЕЖО_{YYYY-MM-DD}_v1.xlsx`
-- **Шаблон:** `data_only=True` при загрузке
+- SIM_DATE: None в продакшене
+- **Цикл:** авто-заполнение → ручная правка → шаблон обновлён → следующий день
+- **Суточный цикл:** ЕЖО v1 → правки → шаблон (или авто 8:00 через cron)
+- **Месячный план:** «раскрой отчет» → заполнить O+U → шаблон на месяц
+- **Колонки:** N=100% (0%), U=O−P, P/S=prev+v, всего 76 строк открыто
+- **Скрытие:** O>0 ∧ U>0 видно, фаза 8 скрыта
+- **Планы:** парсинг из сырых сообщений (Grok-фолбек)
+- **Табель:** локальный кеш `/tmp/hermes-media-cache/`
+- **Отправка:** bridge 50mb, `_send_document` через `requests.post`
+- Навыки: `alikhan-fill-ejo`, `alikhan-template-handoff`, `alikhan-monthly-template`
 
 ## График производства
 
