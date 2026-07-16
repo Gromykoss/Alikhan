@@ -34,17 +34,20 @@
 2. **Use build plan** — для задач >20 строк кода: Шаблон 1 из `codex-grok-delegation` (Goal Mode)
 3. **Preserve security** — НЕ слать в боевую группу `120363400682390076@g.us`. НЕ менять secrets/DB connection
 4. **Verification ladder** — `python3 -m py_compile bot/*.py` → `pytest test_ejo_simulation.py -q` → WhatsApp sandbox test → `tail -30 /tmp/alikhan.log` → CHRONOLOGY.md
-5. **Reproducible setup** — `pip install -r requirements.txt`, Evolution API через Docker Compose
+5. **Reproducible setup** — `pip install -r requirements.txt`, Evolution API через Docker Compose (остановлен, миграция на Hermes Bridge)
 6. **No production without approval** — НЕ рестартить `alikhan.service`, `alikhan-document-extractor.service`, Evolution API
 7. **Never expose credentials** — Evolution API ключи, WhatsApp токены, DB connection — не коммитить
 8. **Preserve user changes** — `git status` перед работой, не перезаписывать чужие правки
 
 ### Alikhan-специфичные
 
-## Canonical files
+### Canonical files
 
-- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
-- Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py`
+- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py` (запуск: `python3 main_waha.py &`)
+- Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
+- Hermes Bridge: `cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/.hermes/sessions/whatsapp &`
+- Evolution API: остановлен (миграция на Hermes Bridge)
+- alikhan.service: остановлен (бот запускается напрямую)
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
 - Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
 - QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
@@ -141,7 +144,14 @@ cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/
 | 7 | Внутриплощадочные сети | 01.07.26 | 01.10.26 | 93 | 🔄 active |
 | 8 | Благоустройство, сдача | 01.07.26 | 31.07.27 | 396 | 🔄 active |
 
-## Последняя сессия (02.07.2026) — ключевой контекст
+## Последняя сессия (15.07.2026) — миграция на Hermes Bridge
+
+**Ключевое изменение:** Evolution API заменён на Hermes WhatsApp Bridge (:3000).
+- `bridge_wrapper.py` — monkey-patch слой: перехватывает `requests.post` к Evolution API, транслирует в Bridge API
+- `main_waha.py` — не менялся, просто импортирует `from bridge_wrapper import *`
+- Evolution API Docker — остановлен
+- `alikhan.service` — остановлен (заменён прямым запуском `python3 main_waha.py`)
+- Hermes Bridge: `node bridge.js --session ~/.hermes/sessions/whatsapp &`
 
 **Что сделано:**
 - ЕЖО 02.07.2026 (v1): без замечаний
