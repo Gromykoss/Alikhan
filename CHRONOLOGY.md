@@ -1,6 +1,13 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
-## 15.07.2026 — Bug hunt: QA plans, message save, cumulative fix, dynamic plans
+## 16.07.2026 — Восстановление после миграции на Hermes Bridge
+
+### Утренняя проверка
+- Hermes Bridge :3000 упал → перезапущен (PID 219253)
+- main_waha.py не запущен (alikhan.service inactive после миграции)
+- Бот запущен: `python3 main_waha.py` (PID 220120)
+- Sandbox 120363179621030401@g.us — ✅ watching
+- Production 120363400682390076@g.us — ✅ listener (read-only)
 
 ### Исправлено 9 багов
 
