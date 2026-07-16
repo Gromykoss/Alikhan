@@ -156,14 +156,6 @@ def _update_template_from_correction(b64_data, fname):
         summary += "\nОсновные изменения:\n" + "\n".join(diffs[:5])
     send_msg(SANDBOX, summary)
 
-    # Auto-close poll for this date — EJO is finalized, no need to keep asking
-    try:
-        from poll import close_poll as _close_poll_correction
-        _close_poll_correction(SANDBOX, date_str)
-        print(f"[TEMPLATE] Auto-closed poll for {date_str}", flush=True)
-    except Exception as ex:
-        print(f"[TEMPLATE] Could not close poll: {ex}", flush=True)
-
 def _extract_ejo_volumes(b64_data, fname, chat_id):
     """Extract work volumes from ЕЖО .xlsx and save as QA facts in bot_memory_facts.
     
@@ -588,12 +580,17 @@ while True:
                     cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)""",
                         (SANDBOX, "user", "user", "document", fname,
-                         _json.dumps({"msg_id": mid, "file_name": fname}),
+                         _json.dumps({"msg_id": mid, "file_name": fname, "local_path": local_path}),
                          datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
                     conn.commit()
                     print(f"[DOC] Saved: {fname}", flush=True)
                 else:
-                    print(f"[DOC] Skip duplicate: {mid[:12]}... {fname}", flush=True)
+                    # Update local_path on existing row (re-uploaded document)
+                    cur.execute(
+                        "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
+                        (_json.dumps({"local_path": local_path}), fname))
+                    conn.commit()
+                    print(f"[DOC] Updated local_path: {fname}", flush=True)
                 cur.close(); conn.close()
                 # If this is a corrected ЕЖО, update template
                 if fname and 'ЕЖО' in fname and fname.endswith('.xlsx'):
@@ -852,12 +849,9 @@ while True:
                 from poll import get_poll_status as _get_poll_st3, build_poll_summary as _build_poll_sum3, close_poll as _close_poll
                 p_status3 = _get_poll_st3(SANDBOX, today_str)
                 if p_status3 and p_status3['poll']['status'] == 'active':
-                    # Not all data may be collected, show summary
-                    send_msg(SANDBOX, _build_poll_sum3(p_status3))
-                    # Check if ready for EJO
+                    # Check if ready for EJO — only QA data required
                     qa = p_status3['qa_status']
-                    residuals_ok = len([r for r in p_status3['residuals'] if r.get('actual_today') is not None]) > 0
-                    if qa.get('персонал', 0) == 0 or qa.get('техника', 0) == 0 or not residuals_ok:
+                    if qa.get('персонал', 0) == 0 or qa.get('техника', 0) == 0:
                         send_msg(SANDBOX, "⚠️ Не все данные собраны. Сначала дособерите, потом «Алихан закончить опрос»")
                         continue
                     # Ready — close and generate

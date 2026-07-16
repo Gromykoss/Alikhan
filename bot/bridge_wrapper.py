@@ -110,6 +110,32 @@ def _patched_requests_post(url, json=None, headers=None, **kwargs):
         except Exception as e:
             return _evo_response({"status": "error", "message": str(e)})
 
+    if "/message/sendMedia/" in url:
+        # send document/image/audio via bridge
+        try:
+            body = json or {}
+            chat_id = body.get("number") or body.get("chatId")
+            media_b64 = body.get("media", "")
+            media_type = body.get("mediatype", "document")
+            fname = body.get("fileName", "file")
+            caption = body.get("caption", "")
+            if chat_id and media_b64:
+                import base64 as _b64, tempfile, os
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=f"_{fname}")
+                tmp.write(_b64.b64decode(media_b64))
+                tmp.close()
+                requests.post(f"{BRIDGE}/send-media", json={
+                    "chatId": chat_id,
+                    "filePath": tmp.name,
+                    "mediaType": media_type,
+                    "caption": caption,
+                    "fileName": fname
+                }, timeout=60)
+                os.unlink(tmp.name)
+            return _evo_response({"status": "ok"})
+        except Exception as e:
+            return _evo_response({"status": "error", "message": str(e)})
+
     # Fallback to original for anything else
     return _orig_requests_post(url, json=json, headers=headers, **kwargs)
 
