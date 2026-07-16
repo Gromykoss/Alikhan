@@ -45,7 +45,7 @@
 
 - Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py` (запуск: `python3 main_waha.py &`)
 - Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
-- Hermes Bridge: `cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/.hermes/sessions/whatsapp &`
+- Hermes Bridge: `cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &`
 - Evolution API: остановлен (миграция на Hermes Bridge)
 - alikhan.service: остановлен (бот запускается напрямую)
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
@@ -105,7 +105,7 @@ tail -30 /tmp/alikhan.log               # логи
 # Перезапуск бота
 pkill -f main_waha.py; cd /home/hermes-workspace/Alikhan-migration/bot && python3 main_waha.py &
 # Мост WhatsApp
-cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/.hermes/sessions/whatsapp &
+cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &
 ```
 
 ## Память проекта (PostgreSQL)
@@ -151,7 +151,7 @@ cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && node bridge.js --session ~/
 - `main_waha.py` — не менялся, просто импортирует `from bridge_wrapper import *`
 - Evolution API Docker — остановлен
 - `alikhan.service` — остановлен (заменён прямым запуском `python3 main_waha.py`)
-- Hermes Bridge: `node bridge.js --session ~/.hermes/sessions/whatsapp &`
+- Hermes Bridge: `node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &`
 
 **Что сделано:**
 - ЕЖО 02.07.2026 (v1): без замечаний
