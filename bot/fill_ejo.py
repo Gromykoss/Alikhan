@@ -837,7 +837,8 @@ def fill(date):
         
         # Hide completed/future rows — keep only active work visible
         if name == "Ежедневный отчет":
-            _hide_rows(ws)
+            # _hide_rows(ws)  # отключено 16.07 — все строки видны для месячного плана
+            pass
         
         if name == "Персонал и техника":
             sw(ws, 4, 1, df, True)

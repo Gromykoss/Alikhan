@@ -68,12 +68,17 @@ def _safe_float(val, fallback=0):
     return fallback
 
 def _get_work_items_from_template():
-    """Read active work items with residuals from EJO template."""
+    """Read work items for poll from EJO template.
+    
+    Business logic (16.07.2026):
+    - Column O (месячный план) = source of truth
+    - Show code if col O > 0 — works planned this month
+    - Residual (col 21) used only for display
+    """
     from openpyxl import load_workbook
     import glob
 
     src = TEMPLATE
-    # Try latest auto-generated first (by mtime)
     auto_files = sorted(glob.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
     if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE):
         src = auto_files[0]
@@ -85,29 +90,21 @@ def _get_work_items_from_template():
     ws = wb['Ежедневный отчет']
     items = []
 
-    ACTIVE_SECTIONS = {"2.1", "2.2", "2.3", "2.4", "3.1", "3.2", "3.3"}
-
     for row in range(22, ws.max_row + 1):
         building = ws.cell(row=row, column=1).value
         code = ws.cell(row=row, column=3).value
         name = ws.cell(row=row, column=4).value
         unit = ws.cell(row=row, column=5).value
-        ostatok = _safe_float(ws.cell(row=row, column=21).value)
-        # Fallback: calculate residual from cumulative plan - fact if col 21 is empty
-        if ostatok <= 0:
-            plan_cum = _safe_float(ws.cell(row=row, column=18).value)
-            fact_cum = _safe_float(ws.cell(row=row, column=19).value)
-            if plan_cum > 0:
-                ostatok = plan_cum - fact_cum
+        monthly_plan = _safe_float(ws.cell(row=row, column=15).value)  # col O
+        ostatok = _safe_float(ws.cell(row=row, column=21).value)       # col U
 
         if not code or not building:
             continue
         code_str = str(code).strip()
         building_str = str(building).strip()
-        if building_str in ('None', '', '—') or len(building_str) < 3:
+        if building_str in ('None', '', '—'):
             continue
-        section = '.'.join(code_str.split('.')[:2]) if '.' in code_str else ''
-        if section not in ACTIVE_SECTIONS:
+        if monthly_plan <= 0:
             continue
         if ostatok <= 0:
             continue
@@ -216,7 +213,7 @@ def start_poll(chat_id, poll_date_str=None):
     return poll_id, work_items, qa_status
 
 def build_poll_message(work_items, qa_status):
-    """Build the poll message to send to the WhatsApp group."""
+    """Build the poll message. Returns (header_part, residuals_part_or_None)."""
     lines = ["📋 ОПРОС — сбор остатков работ и данных ЕЖО:\n"]
 
     # Staff
@@ -233,56 +230,46 @@ def build_poll_message(work_items, qa_status):
     else:
         lines.append("❌ **Техника:** Какая техника работала?")
 
-    # Incidents (default: none)
     lines.append("✅ Происшествий нет (по умолчанию)")
 
-    # Materials
     if qa_status.get('материалы', 0) > 0:
         lines.append("✅ Материалы: есть данные")
     else:
         lines.append("❌ **Материалы:** Поступления / расход материалов?")
 
-    # Photos
     pc = qa_status.get('photo_counts', {})
-    photos_ok = True
     photo_parts = []
     for bld, needed in [('Общежитие', 3), ('АБК', 3), ('Общий план', 3)]:
         got = pc.get(bld, 0)
-        if got >= needed:
-            photo_parts.append(f"✅ {bld}")
-        else:
-            photo_parts.append(f"📸 {bld} ({got}/{needed})")
-            photos_ok = False
+        photo_parts.append(f"{'✅' if got >= needed else '📸'} {bld} ({got}/{needed})")
     lines.append(f"📸 Фото: {' | '.join(photo_parts)}")
 
-    # Work plans
     if qa_status.get('планы', 0) > 0:
         lines.append("✅ Планы на завтра: есть")
     else:
         lines.append("❌ **Планы на завтра:** Напишите план работ на завтра")
 
-    # Residuals — это ключевая часть
-    if work_items:
-        lines.append("\n📊 **Остатки работ — нужны данные от прорабов:**")
-        lines.append("Напишите по каждому коду сколько сделано сегодня:")
-        lines.append("Формат: `код = выполненный_объём` (например: `2.1.1 = 85.5` или `2.3.2 = 50`)\n")
+    header = '\n'.join(lines)
 
-        from collections import defaultdict
-        by_bld = defaultdict(list)
-        for item in work_items:
-            by_bld[item['building']].append(item)
+    # Residuals — отдельным сообщением если есть
+    if not work_items:
+        return header, None
 
-        for bld in ['Общежитие', 'АБК', 'Галерея']:
-            if bld not in by_bld:
-                continue
-            lines.append(f"_{bld}:_")
-            for item in by_bld[bld]:
-                o = f"{item['ostatok']:.0f}" if item['ostatok'] and item['ostatok'] == int(item['ostatok']) else f"{item['ostatok']:.1f}" if item['ostatok'] else '0'
-                lines.append(f"• `{item['code']}` — {item['name'][:60]} — остаток: {o} {item['unit']}")
+    from collections import defaultdict
+    by_bld = defaultdict(list)
+    for item in work_items:
+        by_bld[item['building']].append(item)
 
-    lines.append("\n✏️ Отвечайте прямо в группу — я соберу данные.")
+    resid_lines = ["📊 **Остатки работ:**\nНапишите: `код = объём` (например: `2.1.1 = 85.5`)\n"]
+    for bld in by_bld:
+        resid_lines.append(f"_{bld}:_")
+        for item in by_bld[bld]:
+            o = f"{item['ostatok']:.0f}" if item['ostatok'] and item['ostatok'] == int(item['ostatok']) else f"{item['ostatok']:.1f}" if item['ostatok'] else '0'
+            resid_lines.append(f"• `{item['code']}` — {item['name'][:50]} — {o} {item['unit']}")
 
-    return '\n'.join(lines)
+    resid_lines.append("\n✏️ Отвечайте прямо в группу.")
+    residuals = '\n'.join(resid_lines)
+    return header, residuals
 
 def _format_qa_facts_by_category(category, poll_date_str=None):
     """Get a short summary of QA facts by category."""
