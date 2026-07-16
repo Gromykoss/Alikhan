@@ -170,7 +170,7 @@ def parse_qa(gid, text, date_str=None):
 {grok_input}
 
 Только JSON-массив, без пояснений, без markdown."""
-            grok_result = ask_grok(prompt, max_tokens=500)
+            grok_result = ask_grok(prompt, max_tokens=500, force_grok=True)
 
         conn = get_conn()
         cur = conn.cursor()
@@ -201,6 +201,13 @@ def parse_qa(gid, text, date_str=None):
                         c = obj.get("category", "")
                         f = obj.get("fact", "")
                         if b and c and f:
+                            # Validate personnel facts MUST have contractor name
+                            if c == 'персонал':
+                                contractors = ['айбикон', 'атантай', 'майкадам', 'наватек']
+                                has_contractor = any(cnt in f.lower() for cnt in contractors)
+                                if not has_contractor:
+                                    print(f"[QA VALIDATE] Rejected incomplete personnel: '{f}' — no contractor", flush=True)
+                                    continue  # skip this fact
                             cur.execute(
                                 "INSERT INTO bot_memory_facts (chat_id,fact_date,building,category,fact,source) VALUES (%s,%s,%s,%s,%s,'qa')",
                                 (gid, today, b, c, f)
@@ -213,9 +220,17 @@ def parse_qa(gid, text, date_str=None):
                 for line in grok_result.split("\n"):
                     parts = [p.strip() for p in line.strip().split("|", 2)]
                     if len(parts) >= 3 and len(line) > 10:
+                        c = parts[1]
+                        f = parts[2]
+                        # Validate personnel facts MUST have contractor name
+                        if c == 'персонал':
+                            contractors = ['айбикон', 'атантай', 'майкадам', 'наватек']
+                            if not any(cnt in f.lower() for cnt in contractors):
+                                print(f"[QA VALIDATE] Rejected incomplete personnel: '{f}' — no contractor", flush=True)
+                                continue
                         cur.execute(
                             "INSERT INTO bot_memory_facts (chat_id,fact_date,building,category,fact,source) VALUES (%s,%s,%s,%s,%s,'qa')",
-                            (gid, today, parts[0], parts[1], parts[2])
+                            (gid, today, parts[0], c, f)
                         )
                         count += 1
 
