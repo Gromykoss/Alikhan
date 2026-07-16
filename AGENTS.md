@@ -126,7 +126,7 @@ cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" 
 - **Планы:** парсинг из сырых сообщений (Grok-фолбек)
 - **Табель:** локальный кеш `/tmp/hermes-media-cache/`
 - **Отправка:** bridge 50mb, `_send_document` через `requests.post`
-- Навыки: `alikhan-fill-ejo`, `alikhan-template-handoff`, `alikhan-monthly-template`
+- Навыки: `alikhan-fill-ejo`, `alikhan-template-handoff`, `alikhan-monthly-template`, `alikhan-poll`
 
 ## График производства
 
