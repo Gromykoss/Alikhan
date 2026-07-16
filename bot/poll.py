@@ -417,7 +417,7 @@ def build_poll_summary(status):
     today = status.get('poll', {}).get('poll_date', datetime.now().strftime("%Y-%m-%d"))
     existing = sorted(_g.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
     if existing:
-        return f"📊 ЕЖО за {today} уже готов (v{len(existing)}). Правки загружены в шаблон."
+        return f"📊 ЕЖО за {today} уже готов (v{len(existing)}). Опрос закрыт."
     
     lines = ["📊 **Сводка опроса:**\n"]
 
@@ -456,18 +456,18 @@ def build_poll_summary(status):
     else:
         lines.append("❌ Планы — нет")
 
-    # Residuals
+    # Residuals — daily data is optional, show what's received
     residuals_updated = [r for r in status['residuals'] if r.get('actual_today') is not None]
     total_residuals = len(status['residuals'])
     if residuals_updated:
-        lines.append(f"\n✅ Обновлены остатки: {len(residuals_updated)}/{total_residuals} кодов")
+        lines.append(f"\n📊 Остатки (сегодня): {len(residuals_updated)}/{total_residuals} кодов")
         for r in residuals_updated:
             o = f"{r['residual_volume']:.0f}" if r['residual_volume'] is not None and r['residual_volume'] == int(r['residual_volume']) else f"{r['residual_volume']:.1f}" if r['residual_volume'] is not None else '0'
             a = f"{r['actual_today']:.0f}" if r['actual_today'] is not None and r['actual_today'] == int(r['actual_today']) else f"{r['actual_today']:.1f}" if r['actual_today'] is not None else '0'
-            lines.append(f"  • `{r['code']}`: сделано {a} (остаток был {o})")
+            lines.append(f"  • `{r['code']}`: сегодня {a} (остаток {o})")
     else:
-        lines.append(f"\n❌ Остатки работ: 0/{total_residuals} кодов")
-        lines.append("  Напишите: `код = объём` (например: `2.1.1 = 85.5`)")
+        lines.append(f"\n📊 Остатки: ещё не докладывали")
+        lines.append("  Напишите: `код = объём` (только где были работы сегодня)")
 
     # Missing summary
     missing = []
@@ -479,8 +479,6 @@ def build_poll_summary(status):
         missing.append("📦 Материалы")
     if not all(pc.get(b, 0) >= 3 for b in ['АБК', 'Общежитие', 'Общий план']):
         missing.append("📸 Фото")
-    if len(residuals_updated) < total_residuals:
-        missing.append("📊 Остатки работ")
     if qa.get('планы', 0) == 0:
         missing.append("📋 Планы")
 

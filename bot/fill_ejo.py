@@ -219,22 +219,32 @@ def get_aibikon_headcount(date=None):
         if not row or not row.get('tags'):
             return {'total': 5, 'by_prof': {}}
         tags = row['tags'] if isinstance(row['tags'], dict) else {}
-        msg_id = tags.get('msg_id', '')
-        if not msg_id:
-            return {'total': 5, 'by_prof': {}}
-        payload = json.dumps({"message": {"key": {"id": msg_id}}}).encode()
-        req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
-            data=payload, headers={"apikey": KEY, "Content-Type": "application/json"})
-        resp = urllib.request.urlopen(req, timeout=30)
-        b64 = json.loads(resp.read().decode()).get("base64", "")
-        if not b64:
-            return {'total': 5, 'by_prof': {}}
-        import tempfile, base64 as _b64
-        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tf:
-            tf.write(_b64.b64decode(b64))
-            tf.flush()
-            wb = load_workbook(tf.name, data_only=True)
-        os.unlink(tf.name)
+        local_path = tags.get('local_path', '')
+        
+        # Try local cache first (bridge stores files in /tmp/hermes-media-cache/)
+        if local_path and os.path.exists(local_path):
+            print(f"[TABEL] Loading from cache: {local_path}", flush=True)
+            wb = load_workbook(local_path, data_only=True)
+        else:
+            # Fallback: search cache directory for recent табель files
+            import glob
+            cache_dir = '/tmp/hermes-media-cache'
+            candidates = sorted(glob.glob(f"{cache_dir}/*xlsx*"), key=os.path.getmtime, reverse=True)
+            found = False
+            for c in candidates:
+                try:
+                    wb = load_workbook(c, data_only=True)
+                    ws_check = wb[wb.sheetnames[0]]
+                    # Verify it's a timesheet by checking cell content
+                    a1 = str(ws_check.cell(1, 1).value or '').lower()
+                    if 'табель' in a1 or 'числен' in a1:
+                        print(f"[TABEL] Found in cache: {c}", flush=True)
+                        found = True
+                        break
+                except: pass
+            if not found:
+                print("[TABEL] No timesheet found in cache", flush=True)
+                return {'total': 5, 'by_prof': {}}
         
         # Find day-of-month column: column 5 = day 1
         if date:
@@ -408,14 +418,39 @@ def volumes(date):
         m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
         if m:
             cd, vl = m.group(1), float(m.group(2))
-            is_plan = 'план' in txt.lower() or x.get('category') == 'план'
+            # Plan if "план" appears BEFORE the code (e.g. "План 2.1.5 = 50")
+            # NOT after (e.g. "3.1.5 = 142Планы" — that's work with suffix)
+            plan_pos = txt.lower().find('план')
+            is_plan = x.get('category') == 'план' or (plan_pos >= 0 and plan_pos < m.start())
             is_done = 'сделано' in txt.lower()
             if is_plan:
                 # Plan facts go ONLY to plans, never to works
                 pn[cd] = vl  # always add, work codes don't block plans
             elif is_done or not is_plan:
-                # Done or unspecified (default = work fact)
-                dn[cd] = vl
+                dn[cd] = vl  # add/update for works
+    
+    # Fallback: parse plans from raw messages (Grok sometimes misses "Планы" in text)
+    try:
+        from db import get_conn as _gc
+        from psycopg2.extras import RealDictCursor
+        conn = _gc(); cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT content FROM bot_memory_messages 
+            WHERE chat_id = '120363179621030401@g.us' 
+            AND created_at::date = %s::date 
+            AND content ILIKE '%%план%%'
+            ORDER BY created_at DESC LIMIT 10
+        """, (date.isoformat(),))
+        for row in cur.fetchall():
+            raw = (row['content'] or '').replace(',', '.')
+            # Find "Планы" or "план" followed by code = value
+            # e.g. "Планы  2.1.5 - 50" or "план 3.1.1 = 100"
+            plan_match = re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, re.I)
+            for cd, vl in plan_match:
+                pn[cd] = float(vl)
+        cur.close(); conn.close()
+    except Exception as e:
+        print(f"[PLAN PARSE ERR] {e}", flush=True)
     r = dict(pn); r.update(dn); return r, pn, dn  # (all codes, plans-only, works-only)
 
 
@@ -654,25 +689,21 @@ def fill(date):
                 # Daily values
                 sw(ws, r, 12, v, True)
                 sw(ws, r, 13, v, True)
+                # N = daily completion % = M / L × 100
+                # L always equals M (plan = fact), so N = 100%
                 sw(ws, r, 14, 1, True)
-                # Cumulative — use template as source of truth (not prev_p+v)
-                # Template already has correct cumulative from last corrected EJO
-                sw(ws, r, 16, round(prev_p, 2), True)
-                if mp: sw(ws, r, 17, round(prev_p/float(mp), 2), True)
-                # Total cumulative
-                sw(ws, r, 19, round(prev_s, 2), True)
-                if tp: sw(ws, r, 20, round(prev_s/float(tp), 2), True)
-                # L = M = факт за сутки
-                sw(ws, r, 12, v, True)
-                sw(ws, r, 13, v, True)
-                sw(ws, r, 14, 1, True)
-                # Write plain numbers (never formulas)
-                sw(ws, r, 16, round(prev_p, 2), True)
-                if mp: sw(ws, r, 17, round(prev_p/float(mp), 2), True)  # fraction for % format
-                sw(ws, r, 19, round(prev_s, 2), True)
-                if tp: sw(ws, r, 20, round(prev_s/float(tp), 2), True)  # fraction for % format
-                if k_plan and prev_s > 0:
-                    try: sw(ws, r, 21, round(float(k_plan)-prev_s, 1), True)
+                ws.cell(row=r, column=14).number_format = '0%'
+                # Cumulative = yesterday's known cumulative + today's volume
+                cum_p = round(prev_p + v, 2)
+                sw(ws, r, 16, cum_p, True)
+                if mp: sw(ws, r, 17, round(cum_p / float(mp), 2), True)
+                # Total cumulative from project start
+                cum_s = round(prev_s + v, 2)
+                sw(ws, r, 19, cum_s, True)
+                if tp: sw(ws, r, 20, round(cum_s / float(tp), 2), True)
+                # U = остаток на месяц = план (O) - накопленный с начала месяца (P)
+                if mp and cum_p > 0:
+                    try: sw(ws, r, 21, round(float(mp) - cum_p, 1), True)
                     except: pass
             
             # Row 3.3.2.1 cumulative is sourced from template (no hardcoded override needed).
@@ -837,7 +868,32 @@ def fill(date):
         
         # Hide completed/future rows — keep only active work visible
         if name == "Ежедневный отчет":
-            # _hide_rows(ws)  # отключено 16.07 — все строки видны для месячного плана
+            # Hide rows without today's work AND without monthly residual (U <= 0)
+            # Keep section/subsection headers visible (single-digit or X.Y format)
+            for r in range(24, 852):
+                L = ws.cell(r, 12).value
+                M = ws.cell(r, 13).value
+                if L is not None or M is not None:
+                    continue  # has work today — keep visible
+                code = ws.cell(r, 3).value
+                if not code:
+                    continue  # no code — could be header, keep visible
+                code_str = str(code).strip()
+                # Phase 8 has no sub-levels — hide entirely (no work + no residual)
+                # Section headers: "2", "3", "7" or subsection: "2.1", "3.3" — keep visible
+                parts = code_str.split('.')
+                if len(parts) <= 2 and not code_str.startswith('8'):
+                    continue
+                # Keep visible if in monthly plan AND has residual (O > 0 AND U > 0)
+                U = ws.cell(r, 21).value
+                O = ws.cell(r, 15).value
+                if U is not None and O is not None:
+                    try:
+                        if float(U) > 0 and float(O) > 0:
+                            continue
+                    except: pass
+                # Hide: no work today, no residual, 3rd+ level (or phase 8)
+                ws.row_dimensions[r].hidden = True
             pass
         
         if name == "Персонал и техника":
@@ -991,7 +1047,29 @@ def fill(date):
                 nm = ws1.cell(r,4).value; un = ws1.cell(r,10).value
                 if cd and bd: code_info[str(cd)] = (str(bd), str(nm)[:80] if nm else '', str(un) if un else '')
             bld_plans = {'Общежитие': [], 'АБК': [], 'Галерея': []}
-            pf = [x['fact'] for x in qa(date) if 'план' in (x.get('fact','') or '').lower() or x.get('category') == 'план']
+            pf = [x['fact'] for x in qa(date) if x.get('category') == 'план' or 
+                  ((x.get('fact','') or '').lower().find('план') >= 0 and 
+                   (x.get('fact','') or '').lower().find('план') < 
+                   ((x.get('fact','') or '').lower().find('=') if '=' in (x.get('fact','') or '') else len(x.get('fact',''))))]
+            # Fallback: parse plans from raw messages (Grok sometimes misses "Планы")
+            try:
+                from db import get_conn as _gc2
+                from psycopg2.extras import RealDictCursor as _RDC
+                conn = _gc2(); cur = conn.cursor(cursor_factory=_RDC)
+                cur.execute("""
+                    SELECT content FROM bot_memory_messages 
+                    WHERE chat_id = '120363179621030401@g.us' 
+                    AND created_at::date = %s::date 
+                    AND content ILIKE '%%план%%'
+                    ORDER BY created_at DESC LIMIT 10
+                """, (date.isoformat(),))
+                for row in cur.fetchall():
+                    raw = (row['content'] or '').replace(',', '.')
+                    for cd, vl in re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, re.I):
+                        pf.append(f"{cd} = {vl}")
+                cur.close(); conn.close()
+            except Exception as e:
+                print(f"[SHEET PLAN DB ERR] {e}", flush=True)
             for p in pf:
                 txt = p.replace(',', '.')
                 m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
@@ -1003,32 +1081,45 @@ def fill(date):
                             bld_plans[bld] = [(c,n,u,q) for (c,n,u,q) in bld_plans[bld] if c!=code]
                             nm = code_info[code][1]; un = code_info[code][2]
                             bld_plans[bld].append((code, nm, un, qty))
-            start_row = 16  # first building starts here
-            seq = 1
+            # Template layout from corrected EJO (15.07): headers at row 14, 17, 22
+            # Items go below each header. Don't rewrite headers.
+            bld_rows = {'АБК': (14, 15), 'Общежитие': (17, 18), 'Галерея': (22, 23)}
+            
+            # Clear old items (rows between this header and next, or 5 max)
+            # Don't clear header rows
             for bld in ['АБК', 'Общежитие', 'Галерея']:
                 items = bld_plans.get(bld, [])
-                # Clear previous building's leftover rows
-                for cr in range(start_row - 1, start_row + 5):
-                    for cc in [1,2,3,4,6]:
+                hdr_row, item_row = bld_rows[bld]
+                # Find next building's header to limit clearing
+                next_hdr = 27
+                for b in ['АБК', 'Общежитие', 'Галерея']:
+                    if bld_rows[b][0] > hdr_row:
+                        next_hdr = bld_rows[b][0]
+                        break
+                clear_end = min(item_row + 5, next_hdr)
+                for cr in range(item_row, clear_end):
+                    for cc in [1, 2, 3, 4, 6]:
                         sw(ws, cr, cc, None, True)
-                # Building header row
-                sw(ws, start_row - 1, 1, str(seq), True)
-                sw(ws, start_row - 1, 2, bld, True)
-                seq += 1
-                # Write all items for this building
+            
+            for bld in ['АБК', 'Общежитие', 'Галерея']:
+                items = bld_plans.get(bld, [])
+                hdr_row, item_row = bld_rows[bld]
+                # Write header (template may not have it at this position)
+                seq = ['АБК', 'Общежитие', 'Галерея'].index(bld) + 1
+                sw(ws, hdr_row, 1, str(seq), True)
+                sw(ws, hdr_row, 2, bld, True)
                 for i, (code, nm, un, qty) in enumerate(items):
-                    row = start_row + i
+                    row = item_row + i
                     sw(ws, row, 1, code, True)
                     sw(ws, row, 2, nm, True)
                     sw(ws, row, 3, un, True)
                     sw(ws, row, 4, qty, True)
+                    # Остаток lookup
                     for r in range(24, ws1.max_row+1):
                         if str(ws1.cell(r,3).value) == code:
                             ost = ws1.cell(r,21).value
                             if ost: sw(ws, row, 6, ost, True)
                             break
-                # Advance to next building (header + items + 1 blank row gap)
-                start_row = start_row + max(len(items), 1) + 2
         ds = date.strftime("%Y-%m-%d"); v = 1
     while os.path.exists(f"/tmp/ЕЖО_{ds}_v{v}.xlsx"): v += 1
     op = f"/tmp/ЕЖО_{ds}_v{v}.xlsx"
