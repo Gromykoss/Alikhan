@@ -559,62 +559,54 @@ while True:
                 continue
 
             # Document (табель, Excel, PDF)
-            doc_msg = msg.get("documentMessage") or msg.get("documentWithCaptionMessage", {}).get("message", {}).get("documentMessage")
-            if doc_msg:
-                try:
-                    payload = {"message": m}
-                    req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
-                        data=json.dumps(payload).encode(),
-                        headers={"apikey": KEY, "Content-Type": "application/json"})
-                    resp = urllib.request.urlopen(req, timeout=60)
-                    result = json.loads(resp.read().decode())
-                    b64 = result.get("base64", "")
-                    fname = result.get("fileName", doc_msg.get("fileName", "document"))
-                    if b64:
-                        # Save to DB
-                        import json as _json
-                        from db import get_conn as _getconn
-                        conn = _getconn(); cur = conn.cursor()
-                        cur.execute(
-                            "SELECT 1 FROM bot_memory_messages WHERE tags->>'msg_id' = %s OR content IN (%s, %s)",
-                            (mid, mid, fname))
-                        if not cur.fetchone():
-                            cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                                (SANDBOX, "user", "user", "document", fname,
-                                 _json.dumps({"msg_id": mid, "file_name": fname}),
-                                 datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
-                            conn.commit()
-                            print(f"[DOC] Saved: {fname}", flush=True)
-                        else:
-                            print(f"[DOC] Skip duplicate: {mid[:12]}... {fname}", flush=True)
-                        cur.close(); conn.close()
-                        # Extract text via document extractor for future AI analysis
-                        try:
-                            ext_req = urllib.request.Request("http://localhost:8099/extract-document",
-                                data=json.dumps({"base64": b64, "file_name": fname}).encode(),
-                                headers={"Content-Type": "application/json"})
-                            ext_resp = urllib.request.urlopen(ext_req, timeout=60)
-                            ext_data = json.loads(ext_resp.read().decode())
-                            ext_text = ext_data.get("content") or ext_data.get("text", "")
-                            if ext_text:
-                                print(f"[DOC] Extracted {len(ext_text)} chars from {fname}", flush=True)
-                        except Exception as ex:
-                            print(f"[DOC EXTRACT ERR] {ex}", flush=True)
-                        # If this is a corrected ЕЖО, update template
-                        if fname and 'ЕЖО' in fname and fname.endswith('.xlsx'):
-                            try:
-                                _update_template_from_correction(b64, fname)
-                            except Exception as ex:
-                                print(f"[TEMPLATE UPDATE ERR] {ex}", flush=True)
-                        # Extract volumes from ЕЖО .xlsx files (both ЕЖО and any .xlsx with codes)
-                        if fname and fname.endswith('.xlsx'):
-                            try:
-                                _extract_ejo_volumes(b64, fname, SANDBOX)
-                            except Exception as ex:
-                                print(f"[EJO EXTRACT CALL ERR] {ex}", flush=True)
-                except Exception as e:
-                    print(f"[DOC ERR] {e}", flush=True)
+            # Bridge already downloads media to local cache — use _media metadata
+            media_meta = msg.get("_media")
+            if media_meta and media_meta.get("mediaType") == "document":
+                fname = media_meta.get("fileName", "document")
+                media_urls = media_meta.get("mediaUrls", [])
+                local_path = media_urls[0] if media_urls else None
+                
+                if local_path and os.path.exists(local_path):
+                    try:
+                        with open(local_path, "rb") as f:
+                            b64 = base64.b64encode(f.read()).decode()
+                        print(f"[DOC] Loaded from cache: {fname} ({len(b64)} b64 chars)", flush=True)
+                    except Exception as e:
+                        print(f"[DOC READ ERR] {e}", flush=True)
+                        continue
+                else:
+                    print(f"[DOC] No local file for {fname}, urls={media_urls}", flush=True)
+                    continue
+                # Save to DB
+                import json as _json
+                from db import get_conn as _getconn
+                conn = _getconn(); cur = conn.cursor()
+                cur.execute(
+                    "SELECT 1 FROM bot_memory_messages WHERE tags->>'msg_id' = %s OR content IN (%s, %s)",
+                    (mid, mid, fname))
+                if not cur.fetchone():
+                    cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                        (SANDBOX, "user", "user", "document", fname,
+                         _json.dumps({"msg_id": mid, "file_name": fname}),
+                         datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                    conn.commit()
+                    print(f"[DOC] Saved: {fname}", flush=True)
+                else:
+                    print(f"[DOC] Skip duplicate: {mid[:12]}... {fname}", flush=True)
+                cur.close(); conn.close()
+                # If this is a corrected ЕЖО, update template
+                if fname and 'ЕЖО' in fname and fname.endswith('.xlsx'):
+                    try:
+                        _update_template_from_correction(b64, fname)
+                    except Exception as ex:
+                        print(f"[TEMPLATE UPDATE ERR] {ex}", flush=True)
+                # Extract volumes from ЕЖО .xlsx files
+                if fname and fname.endswith('.xlsx'):
+                    try:
+                        _extract_ejo_volumes(b64, fname, SANDBOX)
+                    except Exception as ex:
+                        print(f"[EJO EXTRACT CALL ERR] {ex}", flush=True)
                 continue
 
             # Audio / voice
@@ -651,7 +643,31 @@ while True:
             if not text.strip():
                 continue
 
-            # ── CALENDAR: Create reminder (Алихан напомни ...) ──
+            # ── UNHIDE: Раскрыть все строки отчёта для месячного плана ──
+            if any(w in text.lower() for w in ["раскрой отчет", "раскрой отчёт", "покажи все строки", "разверни отчет", "разверни отчёт"]):
+                try:
+                    from openpyxl import load_workbook
+                    import glob as _glob2
+                    src = TEMPLATE
+                    auto_files = sorted(_glob2.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
+                    if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE):
+                        src = auto_files[0]
+                    wb = load_workbook(src)
+                    ws = wb['Ежедневный отчет']
+                    unhidden = 0
+                    for r in range(1, ws.max_row + 1):
+                        if ws.row_dimensions[r].hidden:
+                            ws.row_dimensions[r].hidden = False
+                            unhidden += 1
+                    out_path = f"/tmp/ЕЖО_раскрытый_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+                    wb.save(out_path)
+                    wb.close()
+                    send_msg(SANDBOX, f"📂 Отчёт раскрыт: {unhidden} строк.\nЗаполните столбец O (месячный план) и пришлите обратно.")
+                    if _send_document(SANDBOX, out_path, f"ЕЖО_раскрытый_{datetime.now().strftime('%d.%m')}.xlsx"):
+                        pass
+                except Exception as e:
+                    send_msg(SANDBOX, f"❌ Ошибка: {e}")
+                continue
             remind_match = re.search(r'напомни\s+(.+?)\s+(\d{1,2}[.]\d{1,2}(?:[.]\d{2,4})?)\s+(\d{1,2}[:]\d{2})', text.lower())
             if remind_match:
                 try:
@@ -745,8 +761,11 @@ while True:
                 from poll import start_poll as _start_poll, build_poll_message as _build_poll_msg
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 p_id, work_items, qa_status = _start_poll(SANDBOX, today_str)
-                poll_msg = _build_poll_msg(work_items, qa_status)
-                send_msg(SANDBOX, poll_msg)
+                header, residuals = _build_poll_msg(work_items, qa_status)
+                send_msg(SANDBOX, header)
+                if residuals:
+                    time.sleep(1)
+                    send_msg(SANDBOX, residuals)
                 continue
 
             # ── POLL: Status check ──
