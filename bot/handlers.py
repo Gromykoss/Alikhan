@@ -121,7 +121,7 @@ def ask_ollama(prompt, system=None, max_tokens=700):
             "prompt": full_prompt,
             "stream": False,
             "options": {"temperature": 0.3, "num_predict": max_tokens}
-        }, timeout=90)
+        }, timeout=30)
         if r.status_code == 200:
             resp = r.json().get("response", "").strip()
             if resp and len(resp) > 5:
