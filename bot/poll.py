@@ -19,6 +19,7 @@ import psycopg2.extras
 EVO = "http://127.0.0.1:8080"
 from secret_config import get_evo_key
 KEY = get_evo_key(required=True)
+from messaging import send_msg  # unified messaging (AUDIT-011)
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
 # ── DB ──
@@ -559,16 +560,3 @@ def close_poll(chat_id, poll_date_str=None):
     ejo_path = files[-1] if files else None
 
     return poll_id, ejo_path
-
-
-def send_msg(chat_id, text):
-    """Send text message via Evolution API."""
-    body = json.dumps({"number": chat_id, "text": text[:3800]}).encode()
-    req = urllib.request.Request(f"{EVO}/message/sendText/alikhan", data=body, method='POST')
-    req.add_header('apikey', KEY)
-    req.add_header('Content-Type', 'application/json')
-    try:
-        urllib.request.urlopen(req, timeout=10)
-        print(f"[POLL REPLY] Sent to {chat_id[:20]}...", flush=True)
-    except Exception as e:
-        print(f"[POLL SEND ERR] {e}", flush=True)
