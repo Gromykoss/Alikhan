@@ -9,13 +9,14 @@ import requests
 
 import db
 from secret_config import get_secret
+from messaging import send_msg  # unified messaging (AUDIT-011)
 
 # WAHA API
 WAHA_URL = "http://127.0.0.1:3000"
 WAHA_KEY = get_secret("WAHA_KEY", "WAHA_API_KEY", default="waha123")
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "qwen2.5:14b"
+OLLAMA_MODEL = "qwen2.5:14b"  # installed model (verified 17.07.2026)
 
 
 def _load_keys():
@@ -89,25 +90,6 @@ def _extract_json(raw):
         raise
 
 
-def send_msg(group, text):
-    try:
-        import urllib.request, json
-        with open('/home/hermes-workspace/.hermes/secrets.env') as f:
-            secrets = {}
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    k, v = line.strip().split('=', 1)
-                    secrets[k] = v
-        key = secrets['EVO_KEY']
-        body = json.dumps({"number": group, "text": str(text or "")[:4000]}).encode()
-        req = urllib.request.Request('http://127.0.0.1:8080/message/sendText/alikhan', data=body, method='POST')
-        req.add_header('apikey', key)
-        req.add_header('Content-Type', 'application/json')
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status in (200, 201)
-    except Exception as e:
-        print(f"[send_msg ERR] {e}", flush=True)
-        return False
 
 
 def ask_ollama(prompt, system=None, max_tokens=700):
@@ -121,7 +103,7 @@ def ask_ollama(prompt, system=None, max_tokens=700):
             "prompt": full_prompt,
             "stream": False,
             "options": {"temperature": 0.3, "num_predict": max_tokens}
-        }, timeout=30)
+        }, timeout=120)
         if r.status_code == 200:
             resp = r.json().get("response", "").strip()
             if resp and len(resp) > 5:
@@ -174,7 +156,7 @@ def _download_media_base64(message_id):
     response = requests.get(
         f"{WAHA_URL}/api/alikhan/messages/{message_id}/download",
         headers={"X-Api-Key": WAHA_KEY},
-        timeout=30,
+        timeout=120,
     )
     if response.status_code == 200 and response.content:
         import base64 as b64
@@ -212,7 +194,7 @@ def _get_base64_evolution(quoted_message_id):
         req2 = urllib.request.Request(f"{evo_base}/chat/getBase64FromMediaMessage/alikhan", data=body2, method='POST')
         req2.add_header('apikey', evo_key)
         req2.add_header('Content-Type', 'application/json')
-        with urllib.request.urlopen(req2, timeout=30) as r2:
+        with urllib.request.urlopen(req2, timeout=120) as r2:
             data = json.loads(r2.read())
             return data.get("base64", "")
     except Exception as e:
@@ -625,9 +607,10 @@ def handle_ai(group, sender, payload):
     send_msg(group, ask_grok(ctx.get("userMessage") or ctx.get("text") or ""))
 
 def handle_daily_snapshot(group, sender, payload):
-    import subprocess
+    """Use the in-process generate_daily_snapshot from main_waha (AUDIT-007: daily_snapshot.py removed)."""
     try:
-        subprocess.run(["python3", "/home/hermes-workspace/Alikhan-migration/bot/daily_snapshot.py"], timeout=60)
+        from main_waha import generate_daily_snapshot as _gen_snapshot
+        _gen_snapshot(group)
     except Exception as e:
         send_msg(group, f"Ошибка снимка: {e}")
 

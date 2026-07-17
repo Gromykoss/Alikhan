@@ -5,32 +5,8 @@ import re
 
 sys.stdout.reconfigure(line_buffering=True)
 
-# Simulation date (set to None for production)
-SIM_DATE = None  # was "2026-06-30" — closed
-
-# ── Send message ──
-def send_msg(chat_id, text):
-    print(f"[REPLY] {text[:100]}", flush=True)
-    requests.post(f"{EVO}/message/sendText/alikhan",
-        json={"number": chat_id, "text": text[:3800]},
-        headers={"apikey": KEY, "Content-Type": "application/json"}, timeout=10)
-
-def send_voice(chat_id, text):
-    try:
-        mp3_path = "/tmp/tts_output.mp3"
-        subprocess.run(["edge-tts", "--voice", "ru-RU-SvetlanaNeural", "--text", text,
-                        "--write-media", mp3_path], check=True, capture_output=True)
-        with open(mp3_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        req = urllib.request.Request(
-            f"{EVO}/message/sendMedia/alikhan",
-            data=json.dumps({"number": chat_id, "mediatype": "audio", "mimetype": "audio/mpeg", "media": b64}).encode(),
-            headers={"apikey": KEY, "Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=30)
-        print(f"[TTS] Sent voice to {chat_id}", flush=True)
-    except Exception as e:
-        print(f"[TTS ERR] {e}", flush=True)
-        send_msg(chat_id, text)
+from config import SIM_DATE, SANDBOX as _SANDBOX, PRODUCTION as _PRODUCTION, TEMPLATE_PATH, EJO_TMP_DIR, EJO_START_ROW
+from messaging import send_msg, send_voice, send_document as _send_document
 
 def _safe_message_ts(m):
     try:
@@ -40,25 +16,6 @@ def _safe_message_ts(m):
         return int(ts)
     except (TypeError, ValueError):
         return int(time.time())
-
-def _send_document(chat_id, filepath, filename=None):
-    """Send a document via Evolution API with error checking. Returns True if sent."""
-    try:
-        with open(filepath, "rb") as f:
-            b64_enc = base64.b64encode(f.read()).decode()
-        r = requests.post(f"{EVO}/message/sendMedia/alikhan",
-            json={"number": chat_id, "mediatype": "document", "media": b64_enc,
-                  "fileName": filename or os.path.basename(filepath)},
-            headers={"apikey": KEY}, timeout=30)
-        if r.status_code == 200 or r.status_code == 201:
-            print(f"[SEND OK] {filename or filepath} → {chat_id}", flush=True)
-            return True
-        else:
-            print(f"[SEND FAIL] {filename or filepath}: HTTP {r.status_code} — {r.text[:200]}", flush=True)
-            return False
-    except Exception as e:
-        print(f"[SEND ERR] {filename or filepath}: {e}", flush=True)
-        return False
 
 
 def generate_daily_snapshot(chat_id):
@@ -91,7 +48,8 @@ def generate_daily_snapshot(chat_id):
     for r in photos_raw:
         d = r['desc']
         if not d:
-            d = f"фото {r['mid'][:8]}"
+            mid_val = r.get('mid')
+            d = f"фото {mid_val[:8]}" if mid_val else "фото (без ID)"
         photos.append((r['bld'] or 'общий', d))
     photos = photos[:10]
     # Documents — also check tags->>'file_name'
@@ -100,103 +58,159 @@ def generate_daily_snapshot(chat_id):
         WHERE message_type='document' AND created_at >= %s AND created_at < %s
     """, (bishkek_start, bishkek_end))
     docs = [r['fname'] for r in cur.fetchall() if r['fname']]
-    # QA facts
+    # QA facts — exclude negative entries («не выполнялось», «не выполнялся»)
     cur.execute("""
         SELECT category, building, fact FROM bot_memory_facts
         WHERE created_at >= %s AND created_at < %s AND source != 'снимок_дня'
+        AND fact NOT ILIKE '%не выполня%'
     """, (bishkek_start, bishkek_end))
     facts = cur.fetchall()
-    # Poll/EJO data — parse for fact→plan format, only performed works
+    # Poll/EJO data — from bot_poll_residuals (actual_today > 0 only — performed works)
     poll_info = ""
     try:
-        conn2 = get_conn()
-        cur2 = conn2.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today_str,))
-        poll = cur2.fetchone()
-        cur2.close(); conn2.close()
-        if poll:
-            pdata = poll['data']
-            if isinstance(pdata, str):
-                pdata = json.loads(pdata)
-            collected = pdata.get('collected', {}) if isinstance(pdata, dict) else {}
-            if collected:
-                # Build code→name lookup from EJO template
-                TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
-                code_name = {}
-                try:
-                    wb = load_workbook(TEMPLATE, data_only=False)
-                    ws = wb['Ежедневный отчет']
-                    for r in range(24, ws.max_row + 1):
-                        code = ws.cell(r, 3).value
-                        name = ws.cell(r, 4).value
-                        if code:
-                            code_name[str(code).strip()] = str(name).strip() if name else ""
-                    wb.close()
-                except:
-                    pass
-                items = []
-                for code, vals in list(collected.items())[:20]:
-                    if isinstance(vals, dict):
-                        fact_v = vals.get('actual_today', vals.get('volume', '?'))
-                        plan_v = vals.get('plan_tomorrow', '?')
-                    else:
-                        fact_v = vals
-                        plan_v = '?'
-                    name = code_name.get(str(code).strip(), "")
-                    code_str = f"{code} ({name})" if name else code
-                    if fact_v and fact_v != '?':
-                        items.append(f"{code_str} факт={fact_v} → план={plan_v}")
-                if items:
-                    poll_info = f"Выполнено {len(items)} позиций: " + "; ".join(items)
-                else:
-                    poll_info = "работы не проводились"
+        cur.execute("""
+            SELECT r.code, r.name, r.actual_today, r.plan_volume, r.building
+            FROM bot_poll_residuals r
+            JOIN bot_poll_state s ON r.poll_id = s.id
+            WHERE s.chat_id = %s AND s.poll_date = %s
+              AND r.actual_today IS NOT NULL AND r.actual_today > 0
+            ORDER BY r.code
+        """, (chat_id, today_str,))
+        residuals = cur.fetchall()
+        if residuals:
+            # Build code→name lookup from EJO template (fallback to r.name from residuals)
+            TEMPLATE = TEMPLATE_PATH
+            code_name = {}
+            try:
+                wb = load_workbook(TEMPLATE_PATH, data_only=False)
+                ws = wb['Ежедневный отчет']
+                for r in range(24, ws.max_row + 1):
+                    code = ws.cell(r, 3).value
+                    name = ws.cell(r, 4).value
+                    if code:
+                        code_name[str(code).strip()] = str(name).strip() if name else ""
+                wb.close()
+            except:
+                pass
+            items = []
+            for row in residuals[:20]:
+                code = row['code']
+                name = row['name'] or code_name.get(str(code).strip(), "")
+                fact_v = row['actual_today']
+                plan_v = row['plan_volume'] or '?'
+                code_str = f"{code} ({name})" if name else code
+                items.append(f"{code_str} факт={fact_v} → план={plan_v}")
+            poll_info = f"Выполнено {len(items)} позиций: " + "; ".join(items)
+        else:
+            # Check if poll exists but no residuals with actual_today > 0
+            cur.execute("""
+                SELECT status FROM bot_poll_state
+                WHERE chat_id = %s AND poll_date = %s
+            """, (chat_id, today_str,))
+            poll_state = cur.fetchone()
+            if poll_state:
+                st = poll_state['status']
+                poll_info = f"Опрос: статус {st}, работы не проводились"
             else:
-                poll_info = f"Опрос: статус {pdata.get('poll', {}).get('status', '?')}, собрано 0 позиций"
-    except:
-        pass
+                poll_info = "опрос не проводился"
+    except Exception as e:
+        print(f"[SNAPSHOT POLL ERR] {e}", flush=True)
+        poll_info = "опрос не проводился"
     cur.close(); conn.close()
-    # Weather — force lang=ru, use direct value key
+    # Weather — wttr.in primary (lang=ru), Open-Meteo fallback (17.07.2026)
     weather = "погода недоступна"
     try:
         r = requests.get("https://wttr.in/42.2,72.5?format=j1&lang=ru", timeout=10)
         if r.status_code == 200:
             data = r.json()
-            c = data.get('current_condition', [{}])[0]
+            current = data.get('current_condition') or [{}]
+            c = current[0] if current else {}
             temp = c.get('temp_C', 'N/A')
-            desc = c.get('lang_ru', [{}])[0].get('value', '') or c.get('weatherDesc', [{}])[0].get('value', '')
+            wd = c.get('weatherDesc') or [{}]
+            desc = wd[0].get('value', '') if wd else ''
             wind = c.get('windspeedKmph', 'N/A')
             weather = f"{desc}, +{temp}°C, ветер {wind} км/ч"
     except:
         pass
-    # Build blocks — NO LLM, assemble directly from structured data
+    # Fallback: Open-Meteo (wttr.in недоступен)
+    if weather == "погода недоступна":
+        try:
+            wmo = {0:"Ясно",1:"Ясно",2:"Переменная облачность",3:"Пасмурно",45:"Туман",48:"Иней",
+                   51:"Морось",53:"Морось",55:"Морось",61:"Дождь",63:"Дождь",65:"Ливень",
+                   71:"Снег",73:"Снег",75:"Снег",80:"Ливень",95:"Гроза",96:"Гроза с градом",99:"Гроза с градом"}
+            r = requests.get(
+                "https://api.open-meteo.com/v1/forecast?latitude=42.284&longitude=72.765"
+                "&current=temperature_2m,wind_speed_10m,weather_code&timezone=Asia/Bishkek&forecast_days=1",
+                timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                c = data.get('current', {})
+                temp = c.get('temperature_2m', 'N/A')
+                wind_ms = c.get('wind_speed_10m', 'N/A')
+                wind_kmh = round(float(wind_ms) * 3.6, 1) if wind_ms != 'N/A' else 'N/A'
+                code = c.get('weather_code', 0)
+                desc = wmo.get(code, 'Неизвестно')
+                weather = f"{desc}, +{temp}°C, ветер {wind_kmh} км/ч"
+        except:
+            pass
+    # Build blocks for Ollama (qwen2.5:14b)
     msg_block = "\n".join([f"- {s}: {t[:100]}" for s, t in msgs[:8]]) if msgs else "нет"
     photo_block = "\n".join([f"- [{b}] {d[:120]}" for b, d in photos]) if photos else "нет"
     doc_block = ", ".join(docs[:5]) if docs else "нет"
-    fact_lines = []
-    for f in facts[:10]:
-        fact_lines.append(f"  {f['category']}: {f['building']} — {f['fact'][:120]}")
-    fact_block = "\n".join(fact_lines) if fact_lines else "  нет"
-    # Assemble result directly — no LLM
-    text = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n"
-    text += f"📷 Фото:\n{photo_block}\n\n"
-    text += f"📄 Документы: {doc_block}\n\n"
-    text += f"💬 Сообщения:\n{msg_block}\n\n"
-    if poll_info:
-        text += f"📊 Работы:\n{poll_info}\n\n"
-    text += f"✅ QA-факты:\n{fact_block}"
-    result = text
-    # Save to DB
+    fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:100]}" for f in facts[:10]]) if facts else "нет"
+
+    from handlers import ask_ollama
+    # Load structured prompt template (v2, 17.07.2026)
+    prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "daily_snapshot_prompt.md")
     try:
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO bot_memory_facts (chat_id, category, building, fact, source, created_at)
-            VALUES (%s, 'снимок_дня', 'общий', %s, 'auto', NOW())
-        """, (chat_id, result,))
-        conn.commit(); cur.close(); conn.close()
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            template = f.read()
+        prompt = (template
+            .replace("{weather}", weather)
+            .replace("{photo_block}", photo_block)
+            .replace("{doc_block}", doc_block)
+            .replace("{msg_block}", msg_block)
+            .replace("{poll_block}", poll_info if poll_info else "опрос не проводился")
+            .replace("{fact_block}", fact_block))
+    except Exception:
+        # Fallback: inline prompt if template file is missing
+        prompt = f"""Составь связную описательную сводку дня для стройплощадки ТЗРК Джеруй. Только факты, без выводов, рекомендаций и оценок.
+
+Дата: {today_str}
+Погода: {weather}
+
+Фото (что видно на площадке):
+{photo_block}
+
+Документы: {doc_block}
+
+Сообщения в группе:
+{msg_block}
+
+Данные ЕЖО / опроса:
+{poll_info if poll_info else 'опрос не проводился'}
+
+QA-факты (персонал, техника, материалы):
+{fact_block}
+
+Напиши 4 блока на русском:
+
+📷 Фото — общая картина по фото (конструкции, состояние, наличие/отсутствие техники и людей). Используй только описания из БД.
+
+📄 Документы — какие файлы загружены.
+
+💬 Активность — о чём говорили.
+
+📊 Работы — объёмы и факты из ЕЖО и QA (с кодами и названиями работ, если есть). Если работ не было — «работы не проводились».
+
+Итог — одна строка."""
+
+    try:
+        narrative = ask_ollama(prompt, max_tokens=700)
     except Exception as e:
-        print(f"[SNAPSHOT DB ERR] {e}", flush=True)
-    print(f"[SNAPSHOT] {result[:200]}", flush=True)
+        narrative = f"⚠️ Ошибка генерации нарратива: {e}"
+
+    result = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n📷 Фото:\n{photo_block}\n\n📄 Документы: {doc_block}\n\n{narrative}"
     return result
 
 
@@ -381,16 +395,51 @@ def _extract_ejo_volumes(b64_data, fname, chat_id):
             if plan_f <= 0 and fact_f <= 0:
                 continue
 
-            # Determine category by section
-            section = code.split('.')[0]
-            if section in ('2',):
-                category = 'земляные работы'
-            elif section in ('3', '4'):
-                category = 'монтаж'
-            elif section in ('5', '6', '7', '8', '9'):
-                category = 'бетонирование'
-            else:
-                category = 'бетонирование'
+            # ── AUDIT-003 FIX: Determine category from template structure ──
+            # Previously: hardcoded section → category (2→земляные, 3-4→монтаж, 5-9→бетонирование)
+            # Now: look up the code in the EJO template to find the correct category/group header
+            category = 'земляные работы'  # default
+            try:
+                # Find the code in the EJO template sheet
+                wb_ejo = load_workbook(TEMPLATE_PATH, data_only=True)
+                ws_ejo = wb_ejo[wb_ejo.sheetnames[0]]
+                code_found_row = None
+                for _r in range(EJO_START_ROW, ws_ejo.max_row + 1):
+                    if str(ws_ejo.cell(_r, 3).value).strip() == code:
+                        code_found_row = _r
+                        break
+                if code_found_row:
+                    # Search upward for the nearest group header (row with bold/merged text in col B or C)
+                    for _r in range(code_found_row - 1, 0, -1):
+                        header_val = str(ws_ejo.cell(_r, 2).value or ws_ejo.cell(_r, 3).value or '').lower()
+                        if any(kw in header_val for kw in ['земляные', 'бетон', 'бетонирование',
+                               'монтаж', 'арматур', 'металлоконструкц', 'кровель', 'отделоч',
+                               'фасад', 'инженер', 'сантех', 'электромонтаж', 'благоустрой']):
+                            if 'бетон' in header_val or 'бетонирование' in header_val:
+                                category = 'бетонирование'
+                            elif 'монтаж' in header_val or 'металлоконструкц' in header_val:
+                                category = 'монтаж'
+                            elif 'земляные' in header_val:
+                                category = 'земляные работы'
+                            elif 'арматур' in header_val:
+                                category = 'арматурные работы'
+                            else:
+                                category = header_val.strip()
+                            break
+                wb_ejo.close()
+            except Exception:
+                # Fallback: section-based heuristic (improved over old hardcode)
+                section = code.split('.')[0]
+                if section in ('2',):
+                    category = 'земляные работы'
+                elif section in ('3', '4'):
+                    category = 'монтаж'
+                elif section in ('5', '6'):
+                    category = 'бетонирование'
+                elif section in ('7',):
+                    category = 'арматурные работы'
+                else:
+                    category = 'земляные работы'
 
             volume = fact_f if fact_f > 0 else plan_f
             fact_text = f"{code} = {volume}"
@@ -555,7 +604,7 @@ def production_listener_loop():
                                     if os.path.exists(img_path):
                                         with open(img_path, "rb") as f:
                                             b64 = base64.b64encode(f.read()).decode()
-                                        from handlers import ask_grok_raw
+                                        from handlers import ask_ollama_raw
                                         desc = ask_grok_raw(
                                             "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                             image_base64=b64, max_tokens=200)
@@ -712,7 +761,7 @@ while True:
                                 if os.path.exists(img_path):
                                     with open(img_path, "rb") as f:
                                         b64 = base64.b64encode(f.read()).decode()
-                                    from handlers import ask_grok_raw
+                                    from handlers import ask_ollama_raw
                                     desc = ask_grok_raw(
                                         "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                         image_base64=b64, max_tokens=200)
@@ -839,9 +888,9 @@ while True:
                 try:
                     from openpyxl import load_workbook
                     import glob as _glob2
-                    src = TEMPLATE
+                    src = TEMPLATE_PATH
                     auto_files = sorted(_glob2.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
-                    if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE):
+                    if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE_PATH):
                         src = auto_files[0]
                     wb = load_workbook(src)
                     ws = wb['Ежедневный отчет']
