@@ -60,6 +60,84 @@ def _send_document(chat_id, filepath, filename=None):
         print(f"[SEND ERR] {filename or filepath}: {e}", flush=True)
         return False
 
+
+def generate_daily_snapshot(chat_id):
+    """Query all today's data, generate compact Russian snapshot, save to bot_memory_facts, return text."""
+    from datetime import date
+    import psycopg2.extras
+    from db import get_conn
+    today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+    today = datetime.strptime(today_str, "%Y-%m-%d").date() if SIM_DATE else date.today()
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # Messages last 50 text today
+    cur.execute("""
+        SELECT content FROM bot_memory_messages
+        WHERE message_type='text' AND created_at::date = %s
+        ORDER BY created_at DESC LIMIT 50
+    """, (today,))
+    msgs = [r['content'] for r in cur.fetchall()]
+    # Photos with descriptions
+    cur.execute("""
+        SELECT tags->>'description' as desc FROM bot_memory_messages
+        WHERE message_type='image' AND created_at::date = %s AND tags IS NOT NULL
+    """, (today,))
+    photos = [r['desc'] for r in cur.fetchall() if r['desc']]
+    # Documents
+    cur.execute("""
+        SELECT file_name FROM bot_memory_messages
+        WHERE message_type='document' AND created_at::date = %s
+    """, (today,))
+    docs = [r['file_name'] for r in cur.fetchall() if r['file_name']]
+    # QA facts today
+    cur.execute("""
+        SELECT category, building, fact FROM bot_memory_facts
+        WHERE created_at::date = %s
+    """, (today,))
+    facts = cur.fetchall()
+    cur.close()
+    conn.close()
+    # Weather
+    weather = "🌤 ТЗРК Джеруй: данные недоступны"
+    try:
+        r = requests.get("https://wttr.in/42.2,72.5?format=j1", timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            c = data.get('current_condition', [{}])[0]
+            temp = c.get('temp_C', 'N/A')
+            desc = c.get('lang_ru', [{}])[0].get('value', c.get('weatherDesc', [{}])[0].get('value', ''))
+            weather = f"🌤 ТЗРК Джеруй: {desc}, +{temp}°C"
+    except:
+        pass
+    # Build snapshot
+    snap = [f"📅 Снимок дня {today_str}", weather]
+    if msgs:
+        snap.append("💬 Сообщения: " + "; ".join(msgs[:5]))
+    if photos:
+        snap.append("📷 Фото: " + "; ".join(photos[:3]))
+    if docs:
+        snap.append("📄 Документы: " + ", ".join(docs[:3]))
+    if facts:
+        snap.append("✅ Факты QA: " + str(len(facts)))
+    snap.append("— Сохранено в bot_memory_facts")
+    text = "\n".join(snap)
+    # Save to DB
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO bot_memory_facts (category, building, fact, source, created_at)
+            VALUES ('снимок_дня', 'общий', %s, 'auto', NOW())
+        """, (text,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[SNAPSHOT DB ERR] {e}", flush=True)
+    print(f"[SNAPSHOT] {text[:200]}", flush=True)
+    return text
+
+
 def _update_template_from_correction(b64_data, fname):
     """When user sends a corrected ЕЖО .xlsx, use it as new template."""
     import glob as _glob, base64 as _b64
@@ -927,6 +1005,17 @@ while True:
                             send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
                         else:
                             send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
+                continue
+
+            # ── SNAPSHOT: Снимок дня ──
+            if any(w in text.lower() for w in ["снимок дня", "итоги дня", "сводка дня", "дайджест"]):
+                send_msg(SANDBOX, "📸 Формирую снимок дня...")
+                try:
+                    snap_text = generate_daily_snapshot(SANDBOX)
+                    send_msg(SANDBOX, snap_text)
+                except Exception as e:
+                    send_msg(SANDBOX, f"❌ Ошибка: {e}")
+                    print(f"[SNAPSHOT ERR] {e}", flush=True)
                 continue
 
             # Route
