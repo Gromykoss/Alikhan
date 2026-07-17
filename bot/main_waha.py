@@ -582,6 +582,20 @@ while True:
                                             (_json.dumps({"description": desc.strip()}), mid))
                                         conn.commit()
                                         print(f"[PHOTO DESC] {desc.strip()[:100]}", flush=True)
+                                        # ── Escalation: low-confidence description ──
+                                        import re
+                                        low_conf_words = [
+                                            r'\bпредположител', r'\bвероятн', r'\bвозможн',
+                                            r'\bпохож', r'\bкажетс', r'\bвидим[оы]',
+                                            r'\bмонтаж.*(?:идет|ведет|производит)',
+                                            r'\b(?:идет|ведетс|производит).*работ',
+                                            r'\bпроцесс', r'\bактивн'
+                                        ]
+                                        low_conf = any(re.search(w, desc.lower()) for w in low_conf_words)
+                                        if low_conf:
+                                            send_msg(SANDBOX,
+                                                f"⚠️ Описание фото может быть неточным (проверьте):\n{desc.strip()[:200]}")
+                                            print(f"[PHOTO ESCALATE] Low confidence: {desc.strip()[:80]}", flush=True)
                             except Exception as e:
                                 print(f"[PHOTO DESC ERR] {e}", flush=True)
                     else:
