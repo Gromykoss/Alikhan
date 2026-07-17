@@ -407,6 +407,26 @@ def production_listener_loop():
                                  datetime.now()))
                             conn2.commit()
                             print(f"[PROD PHOTO] Saved: {building or 'без тег'} — {cap[:40]}", flush=True)
+                            # ── Vision description ──
+                            media_urls = media_meta.get("mediaUrls", [])
+                            if media_urls:
+                                try:
+                                    img_path = media_urls[0]
+                                    if os.path.exists(img_path):
+                                        with open(img_path, "rb") as f:
+                                            b64 = base64.b64encode(f.read()).decode()
+                                        from handlers import ask_grok_raw
+                                        desc = ask_grok_raw(
+                                            "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
+                                            image_base64=b64, max_tokens=200)
+                                        if desc and "ошиб" not in desc.lower():
+                                            cur2.execute(
+                                                "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
+                                                (json.dumps({"description": desc.strip()}), mid))
+                                            conn2.commit()
+                                            print(f"[PROD PHOTO DESC] {desc.strip()[:100]}", flush=True)
+                                except Exception as e:
+                                    print(f"[PROD PHOTO DESC ERR] {e}", flush=True)
                         conn2.close()
                     except Exception as e:
                         print(f"[PROD PHOTO ERR] {e}", flush=True)
@@ -544,6 +564,26 @@ while True:
                              _json.dumps({"building": building or "без тег", "msg_id": mid}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
                         conn.commit()
                         print(f"[PHOTO] Saved: {building or 'без тег'} — {caption[:40]}", flush=True)
+                        # ── Vision description ──
+                        media_urls = media_meta.get("mediaUrls", [])
+                        if media_urls:
+                            try:
+                                img_path = media_urls[0]
+                                if os.path.exists(img_path):
+                                    with open(img_path, "rb") as f:
+                                        b64 = base64.b64encode(f.read()).decode()
+                                    from handlers import ask_grok_raw
+                                    desc = ask_grok_raw(
+                                        "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
+                                        image_base64=b64, max_tokens=200)
+                                    if desc and "ошиб" not in desc.lower():
+                                        cur.execute(
+                                            "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
+                                            (_json.dumps({"description": desc.strip()}), mid))
+                                        conn.commit()
+                                        print(f"[PHOTO DESC] {desc.strip()[:100]}", flush=True)
+                            except Exception as e:
+                                print(f"[PHOTO DESC ERR] {e}", flush=True)
                     else:
                         print(f"[PHOTO] Skip duplicate: {mid[:12]}...", flush=True)
                 except Exception as e:
