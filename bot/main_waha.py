@@ -138,13 +138,13 @@ def generate_daily_snapshot(chat_id):
             weather = f"{desc}, +{temp}°C, ветер {wind} км/ч"
     except:
         pass
-    # Build data block for Grok
-    msg_block = "\n".join([f"- {s}: {t[:150]}" for s, t in msgs[:15]]) if msgs else "нет"
-    photo_block = "\n".join([f"- [{b}] {d[:200]}" for b, d in photos]) if photos else "нет"
-    doc_block = ", ".join(docs) if docs else "нет"
-    fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:150]}" for f in facts[:20]]) if facts else "нет"
+    # Build data block for Grok (compact — speed over completeness)
+    msg_block = "\n".join([f"- {s}: {t[:100]}" for s, t in msgs[:8]]) if msgs else "нет"
+    photo_block = "\n".join([f"- [{b}] {d[:120]}" for b, d in photos[:3]]) if photos else "нет"
+    doc_block = ", ".join(docs[:5]) if docs else "нет"
+    fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:100]}" for f in facts[:10]]) if facts else "нет"
     # Grok prompt
-    from handlers import ask_grok
+    from handlers import ask_grok_raw
     prompt = f"""Составь описательную сводку дня для стройплощадки ТЗРК Джеруй на русском языке.
 Никаких выводов, рекомендаций, прогнозов. Только описание того что зафиксировано.
 
@@ -178,7 +178,7 @@ QA-факты (персонал, техника, материалы, объём�
 
 Итог: одна строка — что зафиксировано за день без оценки."""
     try:
-        text = ask_grok(prompt, max_tokens=800)
+        text = ask_grok_raw(prompt, max_tokens=800)
     except:
         text = f"📅 Снимок дня {today_str}\n{weather}\n⚠️ Сводка не сформирована (ошибка Grok)"
     # Save to DB
