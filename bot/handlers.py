@@ -15,7 +15,7 @@ WAHA_URL = "http://127.0.0.1:3000"
 WAHA_KEY = get_secret("WAHA_KEY", "WAHA_API_KEY", default="waha123")
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "qwen3:8b"
+OLLAMA_MODEL = "qwen2.5:14b"
 
 
 def _load_keys():
