@@ -62,7 +62,7 @@ def _send_document(chat_id, filepath, filename=None):
 
 
 def generate_daily_snapshot(chat_id):
-    """Query all today's data, generate compact Russian snapshot, save to bot_memory_facts, return text."""
+    """Query all today's data, send to Grok for narrative summary, save to bot_memory_facts."""
     from datetime import date, timedelta
     import psycopg2.extras
     from db import get_conn
@@ -73,35 +73,60 @@ def generate_daily_snapshot(chat_id):
     bishkek_end = bishkek_start + timedelta(days=1)
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    # Messages last 50 text today (Bishkek time)
+    # Messages
     cur.execute("""
-        SELECT content FROM bot_memory_messages
+        SELECT content, sender FROM bot_memory_messages
         WHERE message_type='text' AND created_at >= %s AND created_at < %s
-        ORDER BY created_at DESC LIMIT 50
+        ORDER BY created_at DESC LIMIT 30
     """, (bishkek_start, bishkek_end))
-    msgs = [r['content'] for r in cur.fetchall()]
+    msgs = [(r['sender'], r['content']) for r in cur.fetchall()]
     # Photos with descriptions
     cur.execute("""
-        SELECT tags->>'description' as desc FROM bot_memory_messages
+        SELECT tags->>'description' as desc, tags->>'building' as bld FROM bot_memory_messages
         WHERE message_type='image' AND created_at >= %s AND created_at < %s AND tags IS NOT NULL
     """, (bishkek_start, bishkek_end))
-    photos = [r['desc'] for r in cur.fetchall() if r['desc']]
+    photos = [(r['bld'] or 'общий', r['desc']) for r in cur.fetchall() if r['desc']]
     # Documents
     cur.execute("""
         SELECT file_name FROM bot_memory_messages
         WHERE message_type='document' AND created_at >= %s AND created_at < %s
     """, (bishkek_start, bishkek_end))
     docs = [r['file_name'] for r in cur.fetchall() if r['file_name']]
-    # QA facts today
+    # QA facts
     cur.execute("""
         SELECT category, building, fact FROM bot_memory_facts
-        WHERE created_at >= %s AND created_at < %s
+        WHERE created_at >= %s AND created_at < %s AND source != 'снимок_дня'
     """, (bishkek_start, bishkek_end))
     facts = cur.fetchall()
-    cur.close()
-    conn.close()
+    # Poll/EJO data
+    poll_info = ""
+    try:
+        conn2 = get_conn()
+        cur2 = conn2.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today_str,))
+        poll = cur2.fetchone()
+        cur2.close(); conn2.close()
+        if poll:
+            pdata = poll['data']
+            if isinstance(pdata, str):
+                pdata = json.loads(pdata)
+            collected = pdata.get('collected', {}) if isinstance(pdata, dict) else {}
+            if collected:
+                items = []
+                for code, vals in list(collected.items())[:20]:
+                    if isinstance(vals, dict):
+                        v = vals.get('actual_today', vals.get('volume', '?'))
+                    else:
+                        v = vals
+                    items.append(f"{code}={v}")
+                poll_info = f"Опрошено {len(collected)} позиций: {', '.join(items)}"
+            else:
+                poll_info = f"Опрос: статус {pdata.get('poll', {}).get('status', '?')}, собрано 0 позиций"
+    except:
+        pass
+    cur.close(); conn.close()
     # Weather
-    weather = "🌤 ТЗРК Джеруй: данные недоступны"
+    weather = "погода недоступна"
     try:
         r = requests.get("https://wttr.in/42.2,72.5?format=j1", timeout=10)
         if r.status_code == 200:
@@ -109,52 +134,67 @@ def generate_daily_snapshot(chat_id):
             c = data.get('current_condition', [{}])[0]
             temp = c.get('temp_C', 'N/A')
             desc = c.get('lang_ru', [{}])[0].get('value', c.get('weatherDesc', [{}])[0].get('value', ''))
-            weather = f"🌤 ТЗРК Джеруй: {desc}, +{temp}°C"
+            wind = c.get('windspeedKmph', 'N/A')
+            weather = f"{desc}, +{temp}°C, ветер {wind} км/ч"
     except:
         pass
-    # Build snapshot
-    snap = [f"📅 Снимок дня {today_str}", weather]
-    if msgs:
-        snap.append("💬 Сообщения: " + "; ".join(msgs[:5]))
-    if photos:
-        snap.append("📷 Фото: " + "; ".join(photos[:10]))
-    if docs:
-        snap.append("📄 Документы: " + ", ".join(docs[:3]))
-    if facts:
-        snap.append("✅ Факты QA: " + str(len(facts)))
-    # Poll/EJO data for today
+    # Build data block for Grok
+    msg_block = "\n".join([f"- {s}: {t[:150]}" for s, t in msgs[:15]]) if msgs else "нет"
+    photo_block = "\n".join([f"- [{b}] {d[:200]}" for b, d in photos]) if photos else "нет"
+    doc_block = ", ".join(docs) if docs else "нет"
+    fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:150]}" for f in facts[:20]]) if facts else "нет"
+    # Grok prompt
+    from handlers import ask_grok
+    prompt = f"""Составь описательную сводку дня для стройплощадки ТЗРК Джеруй на русском языке.
+Никаких выводов, рекомендаций, прогнозов. Только описание того что зафиксировано.
+
+Дата: {today_str}
+Погода: {weather}
+
+Фото с описаниями (что видно на площадке):
+{photo_block}
+
+Документы за день:
+{doc_block}
+
+Сообщения в рабочей группе:
+{msg_block}
+
+Данные опроса / ЕЖО:
+{poll_info if poll_info else 'опрос не проводился'}
+
+QA-факты (персонал, техника, материалы, объёмы):
+{fact_block}
+
+Формат — 4 абзаца:
+
+📷 Стройплощадка — общая картина по фото: какие конструкции видны, состояние, наличие/отсутствие техники и людей. Не оценивай прогресс.
+
+📄 Документы — что загружено, пофамильно если есть. Без интерпретации содержания.
+
+💬 Активность — о чём говорили в группе (темы, не цитаты).
+
+📊 Работы — объёмы из ЕЖО/опроса. Если данных нет — так и напиши.
+
+Итог: одна строка — что зафиксировано за день без оценки."""
     try:
-        cur2 = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today_str,))
-        poll = cur2.fetchone()
-        cur2.close()
-        if poll:
-            pdata = poll['data']
-            if isinstance(pdata, str):
-                pdata = json.loads(pdata)
-            collected = pdata.get('collected', {}) if isinstance(pdata, dict) else {}
-            if collected:
-                codes = list(collected.keys())[:10]
-                snap.append(f"📊 ЕЖО (опрос): {len(collected)} позиций — {', '.join(codes)}")
+        text = ask_grok(prompt, max_tokens=800)
     except:
-        pass
-    snap.append("— Сохранено в bot_memory_facts")
-    text = "\n".join(snap)
+        text = f"📅 Снимок дня {today_str}\n{weather}\n⚠️ Сводка не сформирована (ошибка Grok)"
     # Save to DB
+    result = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n{text}"
     try:
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO bot_memory_facts (chat_id, category, building, fact, source, created_at)
             VALUES (%s, 'снимок_дня', 'общий', %s, 'auto', NOW())
-        """, (chat_id, text,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        """, (chat_id, result,))
+        conn.commit(); cur.close(); conn.close()
     except Exception as e:
         print(f"[SNAPSHOT DB ERR] {e}", flush=True)
-    print(f"[SNAPSHOT] {text[:200]}", flush=True)
-    return text
+    print(f"[SNAPSHOT] {result[:200]}", flush=True)
+    return result
 
 
 def _update_template_from_correction(b64_data, fname):
