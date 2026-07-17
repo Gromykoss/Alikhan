@@ -114,11 +114,27 @@ def generate_daily_snapshot(chat_id):
     if msgs:
         snap.append("💬 Сообщения: " + "; ".join(msgs[:5]))
     if photos:
-        snap.append("📷 Фото: " + "; ".join(photos[:3]))
+        snap.append("📷 Фото: " + "; ".join(photos[:10]))
     if docs:
         snap.append("📄 Документы: " + ", ".join(docs[:3]))
     if facts:
         snap.append("✅ Факты QA: " + str(len(facts)))
+    # Poll/EJO data for today
+    try:
+        cur2 = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today,))
+        poll = cur2.fetchone()
+        cur2.close()
+        if poll:
+            pdata = poll['data']
+            if isinstance(pdata, str):
+                pdata = json.loads(pdata)
+            collected = pdata.get('collected', {}) if isinstance(pdata, dict) else {}
+            if collected:
+                codes = list(collected.keys())[:10]
+                snap.append(f"📊 ЕЖО (опрос): {len(collected)} позиций — {', '.join(codes)}")
+    except:
+        pass
     snap.append("— Сохранено в bot_memory_facts")
     text = "\n".join(snap)
     # Save to DB
