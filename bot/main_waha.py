@@ -84,6 +84,7 @@ def generate_daily_snapshot(chat_id):
     cur.execute("""
         SELECT tags->>'description' as desc, tags->>'building' as bld, content as mid FROM bot_memory_messages
         WHERE message_type='image' AND created_at >= %s AND created_at < %s AND tags IS NOT NULL
+        ORDER BY created_at DESC
     """, (bishkek_start, bishkek_end))
     photos_raw = cur.fetchall()
     photos = []
@@ -162,44 +163,29 @@ def generate_daily_snapshot(chat_id):
             data = r.json()
             c = data.get('current_condition', [{}])[0]
             temp = c.get('temp_C', 'N/A')
-            desc = c.get('weatherDesc', [{}])[0].get('value', '')
+            desc = c.get('lang_ru', [{}])[0].get('value', '') or c.get('weatherDesc', [{}])[0].get('value', '')
             wind = c.get('windspeedKmph', 'N/A')
             weather = f"{desc}, +{temp}°C, ветер {wind} км/ч"
     except:
         pass
-    # Build blocks — photo_block RAW (no LLM), only messages/works/facts to Ollama
+    # Build blocks — NO LLM, assemble directly from structured data
     msg_block = "\n".join([f"- {s}: {t[:100]}" for s, t in msgs[:8]]) if msgs else "нет"
     photo_block = "\n".join([f"- [{b}] {d[:120]}" for b, d in photos]) if photos else "нет"
     doc_block = ", ".join(docs[:5]) if docs else "нет"
-    fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:100]}" for f in facts[:10]]) if facts else "нет"
-    from handlers import ask_ollama
-    prompt = f"""Составь сухую сводку дня для стройплощадки ТЗРК Джеруй. Только факты, без выводов.
-
-Дата: {today_str}
-Погода: {weather}
-
-Сообщения: 
-{msg_block}
-
-ЕЖО/опрос:
-{poll_info if poll_info else 'не проводился'}
-
-QA-факты (персонал, техника, материалы):
-{fact_block}
-
-Формат — строго 3 блока:
-
-💬 Сообщения — темы обсуждений.
-📊 Работы — только выполненные (факт → план), из ЕЖО.
-QA-факты — персонал, техника, материалы.
-
-Итог — одна строка."""
-    try:
-        text = ask_ollama(prompt, max_tokens=600)
-    except:
-        text = f"📅 Снимок дня {today_str}\n{weather}\n⚠️ Сводка не сформирована (ошибка Ollama)"
-    # Assemble: raw photo_block + ollama narrative
-    result = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n📷 Фото:\n{photo_block}\n\n📄 Документы: {doc_block}\n\n{text}"
+    fact_lines = []
+    for f in facts[:10]:
+        fact_lines.append(f"  {f['category']}: {f['building']} — {f['fact'][:120]}")
+    fact_block = "\n".join(fact_lines) if fact_lines else "  нет"
+    # Assemble result directly — no LLM
+    text = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n"
+    text += f"📷 Фото:\n{photo_block}\n\n"
+    text += f"📄 Документы: {doc_block}\n\n"
+    text += f"💬 Сообщения:\n{msg_block}\n\n"
+    if poll_info:
+        text += f"📊 Работы:\n{poll_info}\n\n"
+    text += f"✅ QA-факты:\n{fact_block}"
+    result = text
+    # Save to DB
     try:
         conn = get_conn()
         cur = conn.cursor()
