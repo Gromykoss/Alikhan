@@ -63,37 +63,40 @@ def _send_document(chat_id, filepath, filename=None):
 
 def generate_daily_snapshot(chat_id):
     """Query all today's data, generate compact Russian snapshot, save to bot_memory_facts, return text."""
-    from datetime import date
+    from datetime import date, timedelta
     import psycopg2.extras
     from db import get_conn
     today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
     today = datetime.strptime(today_str, "%Y-%m-%d").date() if SIM_DATE else date.today()
+    # Bishkek day boundary: 00:01 Bishkek = 18:01 UTC previous day
+    bishkek_start = datetime(today.year, today.month, today.day, 0, 1) - timedelta(hours=6)
+    bishkek_end = bishkek_start + timedelta(days=1)
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    # Messages last 50 text today
+    # Messages last 50 text today (Bishkek time)
     cur.execute("""
         SELECT content FROM bot_memory_messages
-        WHERE message_type='text' AND created_at::date = %s
+        WHERE message_type='text' AND created_at >= %s AND created_at < %s
         ORDER BY created_at DESC LIMIT 50
-    """, (today,))
+    """, (bishkek_start, bishkek_end))
     msgs = [r['content'] for r in cur.fetchall()]
     # Photos with descriptions
     cur.execute("""
         SELECT tags->>'description' as desc FROM bot_memory_messages
-        WHERE message_type='image' AND created_at::date = %s AND tags IS NOT NULL
-    """, (today,))
+        WHERE message_type='image' AND created_at >= %s AND created_at < %s AND tags IS NOT NULL
+    """, (bishkek_start, bishkek_end))
     photos = [r['desc'] for r in cur.fetchall() if r['desc']]
     # Documents
     cur.execute("""
         SELECT file_name FROM bot_memory_messages
-        WHERE message_type='document' AND created_at::date = %s
-    """, (today,))
+        WHERE message_type='document' AND created_at >= %s AND created_at < %s
+    """, (bishkek_start, bishkek_end))
     docs = [r['file_name'] for r in cur.fetchall() if r['file_name']]
     # QA facts today
     cur.execute("""
         SELECT category, building, fact FROM bot_memory_facts
-        WHERE created_at::date = %s
-    """, (today,))
+        WHERE created_at >= %s AND created_at < %s
+    """, (bishkek_start, bishkek_end))
     facts = cur.fetchall()
     cur.close()
     conn.close()
@@ -122,7 +125,7 @@ def generate_daily_snapshot(chat_id):
     # Poll/EJO data for today
     try:
         cur2 = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today,))
+        cur2.execute("SELECT data FROM bot_poll_state WHERE chat_id = %s AND poll_date = %s", (chat_id, today_str,))
         poll = cur2.fetchone()
         cur2.close()
         if poll:
