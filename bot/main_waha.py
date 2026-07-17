@@ -62,13 +62,13 @@ def _send_document(chat_id, filepath, filename=None):
 
 
 def generate_daily_snapshot(chat_id):
-    """Query all today's data, send to Grok for narrative summary, save to bot_memory_facts."""
+    """Query all today's data, build raw photo_block from DB, send only messages/works/facts to Ollama."""
     from datetime import date, timedelta
     import psycopg2.extras
     from db import get_conn
+    from openpyxl import load_workbook
     today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
     today = datetime.strptime(today_str, "%Y-%m-%d").date() if SIM_DATE else date.today()
-    # Bishkek day boundary: 00:01 Bishkek = 18:01 UTC previous day
     bishkek_start = datetime(today.year, today.month, today.day, 0, 1) - timedelta(hours=6)
     bishkek_end = bishkek_start + timedelta(days=1)
     conn = get_conn()
@@ -80,25 +80,32 @@ def generate_daily_snapshot(chat_id):
         ORDER BY created_at DESC LIMIT 30
     """, (bishkek_start, bishkek_end))
     msgs = [(r['sender'], r['content']) for r in cur.fetchall()]
-    # Photos with descriptions
+    # Photos — RAW from DB (no LLM re-interpretation, up to 10)
     cur.execute("""
-        SELECT tags->>'description' as desc, tags->>'building' as bld FROM bot_memory_messages
+        SELECT tags->>'description' as desc, tags->>'building' as bld, content as mid FROM bot_memory_messages
         WHERE message_type='image' AND created_at >= %s AND created_at < %s AND tags IS NOT NULL
     """, (bishkek_start, bishkek_end))
-    photos = [(r['bld'] or 'общий', r['desc']) for r in cur.fetchall() if r['desc']]
-    # Documents
+    photos_raw = cur.fetchall()
+    photos = []
+    for r in photos_raw:
+        d = r['desc']
+        if not d:
+            d = f"фото {r['mid'][:8]}"
+        photos.append((r['bld'] or 'общий', d))
+    photos = photos[:10]
+    # Documents — also check tags->>'file_name'
     cur.execute("""
-        SELECT file_name FROM bot_memory_messages
+        SELECT COALESCE(file_name, tags->>'file_name') as fname FROM bot_memory_messages
         WHERE message_type='document' AND created_at >= %s AND created_at < %s
     """, (bishkek_start, bishkek_end))
-    docs = [r['file_name'] for r in cur.fetchall() if r['file_name']]
+    docs = [r['fname'] for r in cur.fetchall() if r['fname']]
     # QA facts
     cur.execute("""
         SELECT category, building, fact FROM bot_memory_facts
         WHERE created_at >= %s AND created_at < %s AND source != 'снимок_дня'
     """, (bishkek_start, bishkek_end))
     facts = cur.fetchall()
-    # Poll/EJO data
+    # Poll/EJO data — parse for fact→plan format, only performed works
     poll_info = ""
     try:
         conn2 = get_conn()
@@ -112,48 +119,64 @@ def generate_daily_snapshot(chat_id):
                 pdata = json.loads(pdata)
             collected = pdata.get('collected', {}) if isinstance(pdata, dict) else {}
             if collected:
+                # Build code→name lookup from EJO template
+                TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
+                code_name = {}
+                try:
+                    wb = load_workbook(TEMPLATE, data_only=False)
+                    ws = wb['Ежедневный отчет']
+                    for r in range(24, ws.max_row + 1):
+                        code = ws.cell(r, 3).value
+                        name = ws.cell(r, 4).value
+                        if code:
+                            code_name[str(code).strip()] = str(name).strip() if name else ""
+                    wb.close()
+                except:
+                    pass
                 items = []
                 for code, vals in list(collected.items())[:20]:
                     if isinstance(vals, dict):
-                        v = vals.get('actual_today', vals.get('volume', '?'))
+                        fact_v = vals.get('actual_today', vals.get('volume', '?'))
+                        plan_v = vals.get('plan_tomorrow', '?')
                     else:
-                        v = vals
-                    items.append(f"{code}={v}")
-                poll_info = f"Опрошено {len(collected)} позиций: {', '.join(items)}"
+                        fact_v = vals
+                        plan_v = '?'
+                    name = code_name.get(str(code).strip(), "")
+                    code_str = f"{code} ({name})" if name else code
+                    if fact_v and fact_v != '?':
+                        items.append(f"{code_str} факт={fact_v} → план={plan_v}")
+                if items:
+                    poll_info = f"Выполнено {len(items)} позиций: " + "; ".join(items)
+                else:
+                    poll_info = "работы не проводились"
             else:
                 poll_info = f"Опрос: статус {pdata.get('poll', {}).get('status', '?')}, собрано 0 позиций"
     except:
         pass
     cur.close(); conn.close()
-    # Weather
+    # Weather — force lang=ru, use direct value key
     weather = "погода недоступна"
     try:
-        r = requests.get("https://wttr.in/42.2,72.5?format=j1", timeout=10)
+        r = requests.get("https://wttr.in/42.2,72.5?format=j1&lang=ru", timeout=10)
         if r.status_code == 200:
             data = r.json()
             c = data.get('current_condition', [{}])[0]
             temp = c.get('temp_C', 'N/A')
-            desc = c.get('lang_ru', [{}])[0].get('value', c.get('weatherDesc', [{}])[0].get('value', ''))
+            desc = c.get('weatherDesc', [{}])[0].get('value', '')
             wind = c.get('windspeedKmph', 'N/A')
             weather = f"{desc}, +{temp}°C, ветер {wind} км/ч"
     except:
         pass
-    # Build data block for Grok (compact — speed over completeness)
+    # Build blocks — photo_block RAW (no LLM), only messages/works/facts to Ollama
     msg_block = "\n".join([f"- {s}: {t[:100]}" for s, t in msgs[:8]]) if msgs else "нет"
-    photo_block = "\n".join([f"- [{b}] {d[:120]}" for b, d in photos[:3]]) if photos else "нет"
+    photo_block = "\n".join([f"- [{b}] {d[:120]}" for b, d in photos]) if photos else "нет"
     doc_block = ", ".join(docs[:5]) if docs else "нет"
     fact_block = "\n".join([f"- [{f['category']}] {f['building']}: {f['fact'][:100]}" for f in facts[:10]]) if facts else "нет"
-    # Grok prompt — use Ollama (xAI is only for photo vision, snapshots don't need it)
     from handlers import ask_ollama
     prompt = f"""Составь сухую сводку дня для стройплощадки ТЗРК Джеруй. Только факты, без выводов.
 
 Дата: {today_str}
 Погода: {weather}
-
-Фото (что видно):
-{photo_block}
-
-Документы: {doc_block}
 
 Сообщения: 
 {msg_block}
@@ -164,20 +187,19 @@ def generate_daily_snapshot(chat_id):
 QA-факты (персонал, техника, материалы):
 {fact_block}
 
-Формат — строго 4 блока, не смешивай данные из разных источников:
+Формат — строго 3 блока:
 
-📷 Фото — что видно на снимках (только из описаний фото, не из QA).
-📄 Документы — какие файлы загружены.
 💬 Сообщения — темы обсуждений.
-📊 Работы — персонал, техника, объёмы (только из ЕЖО и QA, не из фото).
+📊 Работы — только выполненные (факт → план), из ЕЖО.
+QA-факты — персонал, техника, материалы.
 
 Итог — одна строка."""
     try:
         text = ask_ollama(prompt, max_tokens=600)
     except:
         text = f"📅 Снимок дня {today_str}\n{weather}\n⚠️ Сводка не сформирована (ошибка Ollama)"
-    # Save to DB
-    result = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n{text}"
+    # Assemble: raw photo_block + ollama narrative
+    result = f"📅 Снимок дня {today_str}\n🌤 {weather}\n\n📷 Фото:\n{photo_block}\n\n📄 Документы: {doc_block}\n\n{text}"
     try:
         conn = get_conn()
         cur = conn.cursor()
