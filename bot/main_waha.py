@@ -383,13 +383,13 @@ def production_listener_loop():
                         json.dump(list(prod_seen), f)
                 except: pass
                 msg = m.get("message", {})
-                caption = msg.get("imageMessage", {}).get("caption", "") or msg.get("documentMessage", {}).get("fileName", "") or ""
+                caption = (msg.get("_media") or {}).get("fileName", "") or (msg.get("_media") or {}).get("caption", "") or ""
                 print(f"[PROD] {mid[:12]}... {caption[:60]}", flush=True)
 
-                # Photo
-                img_msg = msg.get("imageMessage")
-                if img_msg:
-                    cap = img_msg.get("caption", "")
+                # Photo — check _media metadata from bridge
+                media_meta = msg.get("_media")
+                if media_meta and media_meta.get("mediaType") == "image":
+                    cap = media_meta.get("fileName", "") or media_meta.get("caption", "")
                     building = None
                     for tag in ["АБК", "Общежитие", "Галерея", "Общий план"]:
                         if tag.lower() in cap.lower():
@@ -522,10 +522,10 @@ while True:
                 except Exception as e:
                     print(f"[SAVE ERR] {e}", flush=True)
 
-            # Photo
-            img_msg = msg.get("imageMessage")
-            if img_msg:
-                caption = img_msg.get("caption", "")
+            # Photo — check _media metadata from bridge (not Evolution imageMessage)
+            media_meta = msg.get("_media")
+            if media_meta and media_meta.get("mediaType") == "image":
+                caption = media_meta.get("fileName", "") or media_meta.get("caption", "")
                 building = None
                 for tag in ["АБК", "Общежитие", "Галерея", "Общий план"]:
                     if tag.lower() in caption.lower():
