@@ -142,9 +142,9 @@ def generate_daily_snapshot(chat_id):
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO bot_memory_facts (category, building, fact, source, created_at)
-            VALUES ('снимок_дня', 'общий', %s, 'auto', NOW())
-        """, (text,))
+            INSERT INTO bot_memory_facts (chat_id, category, building, fact, source, created_at)
+            VALUES (%s, 'снимок_дня', 'общий', %s, 'auto', NOW())
+        """, (chat_id, text,))
         conn.commit()
         cur.close()
         conn.close()
