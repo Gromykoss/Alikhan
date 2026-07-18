@@ -852,8 +852,9 @@ def fill(date):
             import psycopg2, psycopg2.extras
             c = db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             c.execute(
-                "SELECT content as fp, tags->>'building' as b FROM bot_memory_messages "
-                "WHERE message_type='image' AND DATE(created_at)=%s",
+                "SELECT m.content as fp, p.building as b FROM ojr_photo_log p "
+                "JOIN bot_memory_messages m ON p.file_message_id = m.id "
+                "WHERE p.photo_date = %s::date",
                 (date.strftime('%Y-%m-%d'),)
             )
             
