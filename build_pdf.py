@@ -16,6 +16,8 @@ def img_b64(path):
 
 arch_b64 = img_b64(f"{OUT}/arch_diagram.png")
 tiers_b64 = img_b64(f"{OUT}/tiers_diagram.png")
+wa_b64 = img_b64(f"{OUT}/whatsapp_mockup.png")
+ba_b64 = img_b64(f"{OUT}/before_after.png")
 
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -121,10 +123,16 @@ blockquote {
 with open(f"{BASE}/PRESENTATION_PITCH.md") as f:
     pitch_md = f.read()
 
-# Insert architecture diagram after section 2
+# Insert WhatsApp mockup after section 2 (before case)
 pitch_md = pitch_md.replace(
-    "## 3. Пакеты Hermes:",
-    f'<div class="diagram"><img src="data:image/png;base64,{arch_b64}" alt="Architecture"><div class="caption">Архитектура Hermes + Alikhan</div></div>\n\n## 3. Пакеты Hermes:'
+    "## 3. Реальный кейс:",
+    f'<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">Алихан в WhatsApp — живой диалог</div></div>\n\n## 3. Реальный кейс:'
+)
+
+# Insert BEFORE/AFTER after case section
+pitch_md = pitch_md.replace(
+    "## 4. Как это работает",
+    f'<div class="diagram"><img src="data:image/png;base64,{ba_b64}" alt="Before/After"><div class="caption">ДО и ПОСЛЕ внедрения Алихана</div></div>\n\n## 4. Как это работает'
 )
 
 # Insert tiers diagram after section 5 (three levels)
