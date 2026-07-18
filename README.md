@@ -1,172 +1,156 @@
-# Алихан — AI WhatsApp Agent
+# <img src="https://img.icons8.com/fluency/48/000000/construction.png" width="32"> Alikhan — Автономный AI-прораб на WhatsApp
 
-**Владелец:** [Gromykoss](https://github.com/Gromykoss)
-**Репозиторий:** [Gromykoss/Alikhan](https://github.com/Gromykoss/Alikhan)
-**Дата инвентаризации:** 2026-06-20
-**Статус:** ⚙️ В работе (миграция)
+> **Стройка, которая отчитывается сама.**
 
-## Обзор
+[![Version](https://img.shields.io/badge/version-v5.0_OЖР-blue)](https://github.com/Gromykoss/Alikhan)
+[![Python](https://img.shields.io/badge/python-3.11-green)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14_tables-blue)](db/ojr_schema.sql)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-Алихан — AI-агент для WhatsApp, построенный на n8n + evolution-api + xAI (Grok). Отвечает на сообщения в групповых чатах WhatsApp, сохраняет контекст диалога (Redis + PostgreSQL), анализирует документы, управляет календарём.
+**Alikhan** — AI-агент для управления строительством через WhatsApp. Собирает данные от прорабов, парсит через Grok (xAI), заполняет 14 таблиц ОЖР по ГОСТ РД-11-05-2007, формирует ЕЖО за 30 секунд. **Сам чинит и улучшает свой код.**
 
-### Возможности
+---
 
-- **AI-чат** — отвечает на сообщения, понимает русский и казахский языки
-- **Долгая память** — сохраняет историю диалогов в PostgreSQL, находит релевантные сообщения по ключевым словам  
-- **Календарь** — отслеживает `bot_calendar_events`, отправляет напоминания в WhatsApp за N минут
-- **Анализ документов** — распознаёт и обрабатывает загруженные PDF/DOCX/XLSX файлы
-- **Интеллектуальный роутинг** — различает команды: `memory_status`, `only_name`, поиск, обычный диалог
-
-## Архитектура
+## Архитектура одной строкой
 
 ```
-WhatsApp → evolution-api → n8n (Webhook) → Guard → Router → xAI API → WhatsApp
-                                  ↓           ↓
-                               Redis      PostgreSQL
-                             (short mem)  (long mem + calendar)
+WhatsApp → Hermes Bridge (:3000) → Python-бот (main_waha.py) → Grok AI → PostgreSQL (14 таблиц ОЖР) → ЕЖО (Excel)
 ```
 
-### Компоненты
+---
 
-| Компонент | Тип | Порт | Назначение |
-|-----------|-----|------|------------|
-| n8n | Docker контейнер | 5678 | Оркестрация воркфлоу |
-| evolution-api | Docker контейнер | 8080 | WhatsApp API мост |
-| evolution-postgres | Docker контейнер | 5432 | База evolution-api |
-| evolution-redis | Docker контейнер | 6379 | Кэш evolution-api |
-| xAI (Grok) | Внешний API | — | AI-модель для ответов |
-| PostgreSQL (n8n) | Внешний/контейнер | — | Бот-память и календарь |
-| Redis (n8n) | Внешний/контейнер | — | Краткосрочная память диалогов |
+## Ключевые цифры
 
-## Воркфлоу n8n
+| | | | |
+|:---:|:---:|:---:|:---:|
+| **14** | **69** | **2 765** | **71** |
+| таблиц ГОСТ ОЖР | записей работ с VOR-кодами | фото с AI-описанием (Grok Vision) | ИТР-сотрудников в базе |
+| **18** | **827** | **1 день** | **443 млн ₽** |
+| дней сводок (daily summary) | дней графика СМР (8 этапов) | на клонирование под объект | контракт ЕРС |
 
-### 1. Алихан AI-whatsApp agent
+---
 
-**ID:** `PwTANwctgUAVogTt`  
-**Активен:** ✅  
-**Триггер:** Webhook `/whatsapp` (входящие сообщения из evolution-api)
-
-**Узлы (ноды):**
-
-| Узел | Тип | Назначение |
-|------|-----|------------|
-| Guard Алихан | Code | Фильтр: только группа `120363400682390076@g.us`, не fromMe, содержит «алихан» |
-| Router Алихан | Code | Классификация команд: `only_name`, `memory_status`, документы, поиск |
-| Redis | Redis | Чтение краткой памяти по chatId |
-| Execute a SQL query | Postgres | Сохранение входящего сообщения в `bot_memory_messages` |
-| Execute a SQL query2 | Postgres | Загрузка долгой памяти (`bot_memory_summaries`) |
-| Search Long Memory | Postgres | Семантический поиск по `bot_memory_messages` |
-| Build Long Facts | Set | Сборка контекста (short memory + long memory + long facts) |
-| HTTP Request к xAI | HTTP | Запрос к xAI API (модель Grok) |
-| Edit Fields | Set | Формирование ответа (number + reply) |
-| HTTP Request | HTTP | Отправка ответа через evolution-api |
-| Redis1 | Redis | Сохранение ответа в краткую память |
-| Execute a SQL query1 | Postgres | Сохранение ответа в `bot_memory_messages` |
-| Postgres Memory Status | Postgres | Статистика памяти |
-| Build Memory Status | Set | Форматирование статуса |
-| WhatsApp HTTP Request | HTTP | Отправка статуса в WhatsApp |
-
-### 2. Алихан Calendar Reminders
-
-**ID:** `nsox5DrKIF1KLUYi`  
-**Активен:** ✅  
-**Триггер:** Schedule (каждую минуту)
-
-**Узлы:**
-
-| Узел | Тип | Назначение |
-|------|-----|------------|
-| Schedule Trigger | Schedule | Запуск каждую минуту |
-| Get Due Calendar Reminders | Postgres | `SELECT` из `bot_calendar_events` где `remind_at <= NOW()` |
-| Edit Fields | Set | Форматирование текста напоминания |
-| HTTP Request | HTTP | Отправка напоминания через evolution-api |
-| Update Reminder Flag | Postgres | `UPDATE reminder_sent = TRUE` |
-
-## База данных
-
-### Таблицы (в PostgreSQL, schema `n8n`)
-
-#### `bot_memory_messages`
-
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| id | SERIAL | PK |
-| chat_id | VARCHAR | WhatsApp chat JID |
-| sender | VARCHAR | Имя отправителя |
-| message_time | TIMESTAMP | Время сообщения |
-| role | VARCHAR | `user` / `assistant` |
-| message_type | VARCHAR | `text` / `image` / `document` |
-| content | TEXT | Текст сообщения |
-| file_name | VARCHAR | Имя файла (для документов) |
-| created_at | TIMESTAMP | Время записи |
-
-#### `bot_memory_summaries`
-
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| chat_id | VARCHAR | WhatsApp chat JID |
-| summary | TEXT | Суммаризация истории |
-| updated_at | TIMESTAMP | Время обновления |
-
-#### `bot_calendar_events`
-
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| id | SERIAL | PK |
-| chat_id | VARCHAR | WhatsApp chat JID |
-| title | VARCHAR | Название события |
-| description | TEXT | Описание |
-| location | VARCHAR | Место |
-| timezone | VARCHAR | Часовой пояс |
-| event_start | TIMESTAMP | Начало события |
-| remind_at | TIMESTAMP | Когда напомнить |
-| remind_minutes_before | INT | За сколько минут |
-| status | VARCHAR | `active` / `cancelled` |
-| reminder_sent | BOOLEAN | Отправлено ли |
-
-## Зависимости
-
-### Внешние API
-
-| Сервис | Назначение | Переменная |
-|--------|------------|------------|
-| xAI (Grok) | AI-ответы | `XAI_API_KEY` |
-| evolution-api | WhatsApp отправка | `apikey` header |
-| Redis | Кэш памяти | `REDIS_URL` |
-| PostgreSQL | Долгая память | `DATABASE_URL` |
-
-### ENV (evolution-api)
-
-```env
-DATABASE_CONNECTION_URI=postgresql://evolution:***@postgres:5432/evolution_db
-CACHE_REDIS_URI=redis://redis:***@redis:6379
-DATABASE_PROVIDER=postgresql
-CACHE_REDIS_ENABLED=true
-SERVER_URL=http://72.60.16.105:8080
-LOG_LEVEL=debug
-```
-
-## План миграции
-
-- [x] Инвентаризация воркфлоу и контейнеров
-- [x] Экспорт n8n workflows в JSON
-- [x] Документирование архитектуры и БД
-- [ ] Перенос evolution-api на новый хост
-- [ ] Миграция PostgreSQL (структура + данные)
-- [ ] Миграция Redis (опционально)
-- [ ] Импорт n8n workflows на новый инстанс
-- [ ] Тестирование end-to-end
-- [ ] Обновление webhook URL в evolution-api
-
-## Управление
+## 🚀 Быстрое начало
 
 ```bash
-# Посмотреть статус
-docker ps --filter "name=evolution"
+# Проверка статуса
+curl -s http://127.0.0.1:3000/health                     # Hermes Bridge
+systemctl --user status hermes-whatsapp-bridge            # WhatsApp Bridge
+systemctl status alikhan-bot                              # Python-бот
+tail -30 /tmp/alikhan.log                                 # Логи
 
-# Логи evolution-api
-docker logs evolution-api --tail 50
+# Health check (8 измерений)
+python3 ~/.hermes/scripts/alikhan_health_check.py
 
-# Рестарт
-docker restart evolution-api evolution-postgres evolution-redis
+# Перезапуск бота
+sudo systemctl restart alikhan-bot
+
+# Бэкап БД
+python3 /home/hermes-workspace/Alikhan-migration/bot/backup_db.py
 ```
+
+---
+
+## 📚 Документация
+
+| Документ | Описание |
+|:---------|:---------|
+| [📄 **PRESENTATION_PITCH.md**](PRESENTATION_PITCH.md) | Презентация для клиентов — проблема, решение, кейс ТЗРК Джеруй |
+| [⚙️ **TECHNICAL_REQUIREMENTS.md**](TECHNICAL_REQUIREMENTS.md) | Технические условия — VPS, API-ключи, варианты развёртывания |
+| [📡 **COMMUNICATION_CHANNELS.md**](COMMUNICATION_CHANNELS.md) | Каналы связи — WhatsApp, Telegram, Discord |
+| [🧠 **SKILL_METHODOLOGY.md**](SKILL_METHODOLOGY.md) | Методика создания AI-навыков Hermes Agent |
+| [🤖 **JUNIOR_HERMES_PLAN.md**](JUNIOR_HERMES_PLAN.md) | План архитектуры автономного Junior Hermes «Alikhan» |
+
+**Дополнительно:**
+- [📋 **AGENTS.md**](AGENTS.md) — правила для Hermes-агента
+- [📑 **INDEX.md**](INDEX.md) — навигация по проекту
+- [🔧 **RUNBOOK.md**](RUNBOOK.md) — руководство оператора
+- [💰 **PRICING_SLA.md**](PRICING_SLA.md) — тарифы и SLA
+- [📅 **CHRONOLOGY.md**](CHRONOLOGY.md) — история изменений
+
+---
+
+## 🧱 Структура проекта
+
+```
+Alikhan-migration/
+├── bot/                     # Python-бот (v5, OJR)
+│   ├── main_waha.py         # Главный цикл — poll 3s, Guard, command handlers
+│   ├── router.py            # Маршрутизация: QA, Grok, DB, Schedule, Poll
+│   ├── fill_ejo.py          # Генератор ЕЖО — view на ojr_section3_work_log
+│   ├── qa.py                # QA-парсер — извлечение фактов через Grok
+│   ├── poll.py              # Ежедневный опрос прорабов
+│   ├── db.py                # PostgreSQL — сообщения, факты, календарь
+│   ├── bridge_wrapper.py    # Monkey-patch Evolution API → Hermes Bridge
+│   ├── ojr_sync.py          # Синхронизация bot_memory_facts → таблицы ОЖР
+│   ├── document_extractor.py # Документ-экстрактор (:8099)
+│   ├── backup_db.py         # Бэкап/восстановление PostgreSQL
+│   ├── alerter.py           # Telegram-алерты
+│   ├── metrics.py           # Prometheus-метрики
+│   ├── config.py            # Централизованный конфиг
+│   ├── graceful.py          # Graceful degradation (fallback, retry)
+│   ├── validate_ejo.py      # Валидация ЕЖО перед отправкой
+│   └── watchdog_bridge.py   # Watchdog для Hermes Bridge
+├── db/
+│   ├── ojr_schema.sql       # Схема БД — 14 таблиц ОЖР (ГОСТ РД-11-05-2007)
+│   ├── ojr_er_diagram.md    # ER-диаграмма
+│   └── ojr_fill_guide.md    # Руководство по заполнению
+├── skills/                  # Hermes Agent навыки (9 шт.)
+├── n8n-workflows/           # Исторические n8n workflow (архив)
+├── PRESENTATION_PITCH.md    # Презентация
+├── TECHNICAL_REQUIREMENTS.md # Технические условия
+├── COMMUNICATION_CHANNELS.md # Каналы связи
+├── SKILL_METHODOLOGY.md     # Методика навыков
+├── JUNIOR_HERMES_PLAN.md    # План Junior Hermes
+├── PRICING_SLA.md           # Тарифы и SLA
+├── RUNBOOK.md               # Руководство оператора
+└── README.md                # ← вы здесь
+```
+
+---
+
+## 🔄 Поток данных (v5 — ОЖР)
+
+```
+WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s)
+  → Guard → Router → [QA/DB/Weather/Grok/Schedule/Poll] → Reply
+                          │
+                          ▼ QA-парсер (qa.py)
+                    bot_memory_facts (промежуточный слой)
+                          │
+            ┌─────────────┼─────────────┐
+            ▼             ▼             ▼
+   ┌──────────────┐ ┌────────────┐ ┌──────────┐
+   │ojr_section1  │ │ojr_section3│ │  ojr_    │
+   │_personnel    │ │_work_log   │ │ weather  │
+   └──────────────┘ └─────┬──────┘ └──────────┘
+            │             │             │
+            │    ┌────────┼────────┐    │
+            │    ▼        ▼        ▼    │
+            │ ┌──────┐┌──────┐┌──────┐ │
+            │ │photo ││daily ││mater-│ │
+            │ │_log  ││_summ ││ials  │ │
+            │ └──────┘└──┬───┘└──────┘ │
+            │            │             │
+            └────────────┼─────────────┘
+                         ▼
+                  ЕЖО (fill_ejo.py)
+```
+
+---
+
+## ⚡ Quick Links
+
+| Ресурс | Команда / URL |
+|:-------|:--------------|
+| 🏥 Health check | `python3 ~/.hermes/scripts/alikhan_health_check.py` |
+| 🌉 Bridge health | `curl -s http://127.0.0.1:3000/health` |
+| 📊 Prometheus | `http://localhost:9090/metrics` |
+| 📝 Логи | `tail -f /tmp/alikhan.log` |
+| 💾 Бэкапы | `/backups/` (30-дневная ротация) |
+| 🧪 Песочница | WhatsApp `120363179621030401@g.us` |
+| 🏭 Production | WhatsApp `120363400682390076@g.us` |
+
+---
+
+*Alikhan v5.0 — ОЖР · ТЗРК Джеруй · 18 июля 2026*
