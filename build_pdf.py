@@ -126,7 +126,7 @@ with open(f"{BASE}/PRESENTATION_PITCH.md") as f:
 # Inject WhatsApp mockup after commands, before self-improvement
 pitch_md = pitch_md.replace(
     "Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\n\n![WhatsApp](output_pdf/whatsapp_mockup.png)",
-    f'Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\n\n<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">Алихан в WhatsApp — живой диалог</div></div>'
+    f'Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\\n\\n<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">AI-ассистент в WhatsApp — живой диалог</div></div>'
 )
 
 # Inject BEFORE/AFTER image
@@ -158,7 +158,7 @@ with open(f"{BASE}/CLIENT_GUIDE.md") as f:
 
 guide_md = guide_md.replace(
     "## 2. Как это работает",
-    f'<div class="diagram"><img src="data:image/png;base64,{arch_b64}" alt="Architecture"><div class="caption">Архитектура Hermes + Alikhan</div></div>\n\n## 2. Как это работает'
+    f'<div class="diagram"><img src="data:image/png;base64,{arch_b64}" alt="Architecture"><div class="caption">Архитектура Hermes + AI-ассистент</div></div>\n\n## 2. Как это работает'
 )
 
 guide_md = guide_md.replace(
