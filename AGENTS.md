@@ -14,15 +14,26 @@
 
 **Общие правила (все проекты):** `skill_view('build')`
 
-### ⛔ PRE-PATCH GATE (MANDATORY — все проекты)
+### ⛔ PRE-COMMIT GATE (MANDATORY — все проекты)
 
-Перед любым изменением кода:
+**Автоматический хук** (`.git/hooks/pre-commit`) — 4 фазы:
+
+| Фаза | Команда | Блокирует commit? |
+|------|---------|-------------------|
+| 1. py_compile | `python3 -m py_compile` всех .py | ✅ Да |
+| 2. `/codex:review` | `codex review --uncommitted` — correctness, security, quality | ✅ Да |
+| 3. `/codex:adversarial-review` | `codex exec review --uncommitted` — агрессивный поиск багов | ✅ Да (CRITICAL) / ⚠️ (HIGH) |
+| 4. `/codex:rescue` | `codex exec` — авто-фикс MEDIUM/LOW предупреждений | Нет |
+
+**Перед любым изменением кода (ручная проверка):**
 1. `grep -rn "имя" bot/` — все места использования функции/переменной
 2. Показать grep в ответе пользователю
 3. Проследить логику в КАЖДОМ найденном месте
 4. Только потом патч
 
 Если grep не показан — патч не принят. Откат.
+
+**Обход pre-commit gate:** `git commit --no-verify` (только для некритичных правок).
 
 ## Agent-Driven Development Rules (Codex CLI / Grok Build)
 
@@ -45,7 +56,8 @@
 
 - Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py` (запуск: `python3 main_waha.py &`)
 - Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
-- Hermes Bridge: `cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &`
+- Hermes Bridge: `systemctl --user start hermes-whatsapp-bridge` (systemd, Restart=always, port 3000)
+- Bridge session: `~/.hermes/sessions/whatsapp/`
 - Evolution API: остановлен (миграция на Hermes Bridge)
 - alikhan.service: остановлен (бот запускается напрямую)
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
@@ -94,39 +106,113 @@ tail -30 /tmp/alikhan.log
 
 ## Архитектура
 
-WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply
+### Поток данных (v5 — 18.07.2026, миграция на ОЖР)
+
+```
+WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s)
+  → Guard → Router → [QA/DB/Weather/Grok/Schedule/Poll] → Reply
+                          │
+                          ▼
+                    QA-парсер (qa.py)
+                          │
+                    bot_memory_facts (промежуточный слой)
+                          │
+            ┌─────────────┼─────────────┐
+            ▼             ▼             ▼
+   ┌──────────────┐ ┌────────────┐ ┌──────────┐
+   │ ojr_section1 │ │ojr_section3│ │  ojr_    │
+   │ _personnel   │ │_work_log   │ │ weather  │
+   │ (ИТР)        │ │ (объёмы)   │ │ (погода) │
+   └──────────────┘ └─────┬──────┘ └──────────┘
+            │             │             │
+            │    ┌────────┼────────┐    │
+            │    ▼        ▼        ▼    │
+            │ ┌──────┐┌──────┐┌──────┐ │
+            │ │photo ││daily ││mater-│ │
+            │ │_log  ││_summ ││ials  │ │
+            │ └──────┘└──┬───┘└──────┘ │
+            │            │             │
+            └────────────┼─────────────┘
+                         ▼
+                  ЕЖО (fill_ejo.py)
+             = view на ojr_section3_work_log
+               + ojr_weather + ojr_photo_log
+               + ojr_daily_summary
+```
+
+**WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply**
 
 ## Быстрые команды
 
 ```bash
-curl -s http://127.0.0.1:3000/health    # Hermes bridge
-pgrep -af 'bridge.js\|main_waha'        # процессы
-tail -30 /tmp/alikhan.log               # логи
+curl -s http://127.0.0.1:3000/health              # Hermes bridge health
+systemctl --user status hermes-whatsapp-bridge     # bridge systemd status
+pgrep -af 'bridge.js\|main_waha'                   # процессы
+tail -30 /tmp/alikhan.log                          # логи
 # Перезапуск бота
 pkill -f main_waha.py; cd /home/hermes-workspace/Alikhan-migration/bot && python3 main_waha.py &
-# Мост WhatsApp
-cd ~/.hermes/hermes-agent/scripts/whatsapp-bridge && WHATSAPP_ALLOWED_USERS="*" node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &
+# Мост WhatsApp (systemd)
+systemctl --user restart hermes-whatsapp-bridge    # перезапуск моста
 ```
 
-## Память проекта (PostgreSQL)
+## Память проекта (PostgreSQL) — миграция на ОЖР (18.07.2026)
 
 Хост: `DB_HOST`/`EVO_DB_HOST` или авто-обнаружение `evolution-postgres` (docker inspect), порт 5432. База: evolution_db, пользователь: evolution.
-Таблицы: bot_memory_messages, bot_memory_facts, bot_building_profiles, bot_schedule_phases, bot_poll_state, bot_poll_residuals.
 
-## ЕЖО (v4 — 16.07.2026)
+### Структура ОЖР (14 таблиц, ГОСТ РД-11-05-2007)
 
-- `fill_ejo.py` — погода (Open-Meteo 42.284,72.765) + QA-факты → Excel 4 листа
+| # | Таблица | Раздел ГОСТ | Назначение |
+|---|---------|-------------|------------|
+| 1 | `ojr_title_page` | Титульный лист | Заказчик, подрядчик, объект, договор, разрешения |
+| 2 | `ojr_section1_personnel` | Раздел 1 | ИТР-персонал всех организаций (АйБиКон, субподрядчики) |
+| 3 | `ojr_section2_design_supervision` | Раздел 2 | Авторский надзор: ответственный, сертификаты |
+| 4 | `ojr_section2_visits` | Раздел 2 | Журнал посещений авторского надзора |
+| 5 | `ojr_section3_work_log` | Раздел 3 | **Главная таблица** — выполнение работ (код ВОР, объём, здание) |
+| 6 | `ojr_section4_construction_control` | Раздел 4 | Строительный контроль: ответственные |
+| 7 | `ojr_section4_checks` | Раздел 4 | Акты проверок строительного контроля |
+| 8 | `ojr_section5_asbuilt_docs` | Раздел 5 | Исполнительная документация (акты, протоколы, сертификаты) |
+| 9 | `ojr_section6_gosstroynadzor` | Раздел 6 | Госстройнадзор: проверки, предписания, протоколы |
+| 10 | `ojr_weather` | Погода | Ежедневная метеосводка (Open-Meteo API) |
+| 11 | `ojr_photo_log` | Фото-фиксация | Фото стройплощадки с привязкой к датам и работам |
+| 12 | `ojr_daily_summary` | Сводные | Предрасчитанные агрегаты за день (объёмы, персонал, %) |
+| 13 | `ojr_materials` | Материалы | Журнал поступления материалов, сертификаты |
+| 14 | `ojr_incidents` | Инциденты и ТБ | Происшествия, нарушения ТБ, простои |
+
+### Существующие таблицы (оставлены как история / промежуточный слой)
+
+- `bot_memory_messages` — исходные WhatsApp-сообщения (первичный источник)
+- `bot_memory_facts` — QA-факты (промежуточный слой перед ОЖР)
+- `bot_schedule_phases` — график производства (8 этапов)
+- `bot_building_profiles` — профили зданий
+- `bot_poll_state` — активные опросы (ссылка из work_log)
+- `bot_calendar_events` — календарь
+
+**Устаревшие таблицы (заменены ОЖР):** `bot_poll_residuals` → `ojr_section3_work_log` (category='объём'); ручной учёт погоды → `ojr_weather`; разрозненные фото → `ojr_photo_log`.
+
+**Поток данных:** QA → `bot_memory_facts` (промежуточный) → роутинг по `ojr_*` таблицам. Полная документация: `db/ojr_schema.sql`, `db/ojr_er_diagram.md`, `db/ojr_fill_guide.md`.
+
+## ЕЖО (v5 — 18.07.2026, миграция на ОЖР)
+
+- `fill_ejo.py` — читает `ojr_section3_work_log` (объёмы) + `ojr_weather` (погода) + `ojr_photo_log` (фото) → Excel 4 листа
+- **ЕЖО = view на `ojr_section3_work_log` за конкретную дату** (фильтр по `work_date`)
 - Шаблон: `bot/templates/ЕЖО_шаблон.xlsx`
 - SIM_DATE: None в продакшене
-- **Цикл:** авто-заполнение → ручная правка → шаблон обновлён → следующий день
+- **Цикл:** QA → `bot_memory_facts` → `ojr_section3_work_log` → `fill_ejo.py` → ЕЖО .xlsx
 - **Суточный цикл:** ЕЖО v1 → правки → шаблон (или авто 8:00 через cron)
 - **Месячный план:** «раскрой отчет» → заполнить O+U → шаблон на месяц
 - **Колонки:** N=100% (0%), U=O−P, P/S=prev+v, всего 76 строк открыто
 - **Скрытие:** O>0 ∧ U>0 видно, фаза 8 скрыта
+- **Заполнение разделов ГОСТ:**
+  - Раздел 1 (ИТР): `ojr_section1_personnel` → из QA + табель
+  - Раздел 3 (Работы): `ojr_section3_work_log` → из QA-фактов + poll
+  - Раздел 4 (СК): `ojr_section4_construction_control` + `ojr_section4_checks`
+  - Раздел 5 (ИД): `ojr_section5_asbuilt_docs`
+  - Раздел 6 (ГСН): `ojr_section6_gosstroynadzor`
+- **Погода:** Open-Meteo (42.284,72.765) → `ojr_weather` + Excel
 - **Планы:** парсинг из сырых сообщений (Grok-фолбек)
 - **Табель:** локальный кеш `/tmp/hermes-media-cache/`
 - **Отправка:** bridge 50mb, `_send_document` через `requests.post`
-- Навыки: `alikhan-fill-ejo`, `alikhan-template-handoff`, `alikhan-monthly-template`, `alikhan-poll`, `alikhan-photo-vision`
+- Навыки: `alikhan-fill-ejo`, `alikhan-template-handoff`, `alikhan-monthly-template`, `alikhan-poll`, `alikhan-photo-vision`, `alikhan-daily-snapshot`
 
 ## График производства
 

@@ -217,7 +217,7 @@ def get_aibikon_headcount(date=None):
         row = cur.fetchone()
         cur.close(); conn.close()
         if not row or not row.get('tags'):
-            return {'total': 5, 'by_prof': {}}
+            return {'total': 5, 'by_prof': {}, 'is_fallback': True}
         tags = row['tags'] if isinstance(row['tags'], dict) else {}
         local_path = tags.get('local_path', '')
         
@@ -244,7 +244,7 @@ def get_aibikon_headcount(date=None):
                 except: pass
             if not found:
                 print("[TABEL] No timesheet found in cache", flush=True)
-                return {'total': 5, 'by_prof': {}}
+                return {'total': 5, 'by_prof': {}, 'is_fallback': True}
         
         # Find day-of-month column: column 5 = day 1
         if date:
@@ -297,10 +297,10 @@ def get_aibikon_headcount(date=None):
                         pass
         wb.close()
         total = sum(by_prof.values())
-        return {'total': max(total, 1), 'by_prof': by_prof}
+        return {'total': max(total, 1), 'by_prof': by_prof, 'is_fallback': False}
     except Exception as e:
         print(f"[TABEL ERR] {e}", flush=True)
-        return {'total': 5, 'by_prof': {}}
+        return {'total': 5, 'by_prof': {}, 'is_fallback': True}
 
 
 def get_code_source():
@@ -343,7 +343,7 @@ def weather(date):
         if dl:
             mx, mn = dl['temperature_2m_max'][0], dl['temperature_2m_min'][0]
             ws, wd = dl['wind_speed_10m_max'][0], dl['wind_direction_10m_dominant'][0]
-            dirs = ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ']
+            dirs = ['С','СВ','В','ЮВ','Ю','З','ЮЗ','СЗ']
             w['t'] = f"{round((mx+mn)/2)}°C"
             w['w'] = f"{dirs[round(wd/45)%8]} {str(ws).replace('.', ',')} км/ч" if wd is not None else f"{str(ws).replace('.', ',')} км/ч"
         if cr:
@@ -355,16 +355,35 @@ def weather(date):
             elif hum > 60: vis = '8-10 км'
             else: vis = '10+ км'
             w['v'] = vis
+        # Save to OJR weather table
+        try:
+            from db import save_weather as _save_w
+            _save_w(ds, w)
+        except Exception as e:
+            print(f"[WEATHER SAVE ERR] {e}", flush=True)
         return w
     except: return {}
 
 
 def incidents(date):
-    f = qa(date, 'инцидент')
-    if not f: return "0"
-    for x in f:
-        if 'нет' in (x['fact'] or '').lower(): return "0"
-    return str(len(f))
+    """Read incidents from ojr_incidents for the given date."""
+    try:
+        from db import get_daily_incidents
+        rows = get_daily_incidents(date.strftime('%Y-%m-%d'))
+        if not rows:
+            return "0"
+        for x in rows:
+            desc = (x.get('description') or '').lower()
+            if 'нет' in desc:
+                return "0"
+        return str(len(rows))
+    except Exception as e:
+        print(f"[INCIDENTS OJR ERR] {e}, falling back to legacy", flush=True)
+        f = qa(date, 'инцидент')
+        if not f: return "0"
+        for x in f:
+            if 'нет' in (x['fact'] or '').lower(): return "0"
+        return str(len(f))
 
 
 def staff(date):
@@ -404,30 +423,54 @@ def staff(date):
 
 
 def volumes(date):
-    """{code: vol}. Supports 3- and 4-part codes. Comma decimals. Bare = done.
-    Queries ALL QA facts (any category) — regex filters for work code patterns."""
+    """{code: vol}. Supports 3- and 4-part codes. Comma decimals.
+    Reads from ojr_section3_work_log (primary) with legacy fallback."""
+    ds = date.strftime('%Y-%m-%d')
+    dn, pn = {}, {}
+    
+    # Primary: read from ojr_section3_work_log
+    try:
+        from db import get_daily_works
+        works = get_daily_works(ds)
+        for w in works:
+            code = w.get('vor_code', '').strip()
+            vol = float(w.get('volume', 0) or 0)
+            if not code or vol <= 0:
+                continue
+            cat = (w.get('category') or '').lower()
+            if cat == 'план':
+                pn[code] = vol
+            else:
+                dn[code] = vol
+        print(f"[VOLUMES OJR] Works: {len(dn)} codes, Plans: {len(pn)} codes", flush=True)
+        if dn or pn:
+            r = dict(pn); r.update(dn); return r, pn, dn
+    except Exception as e:
+        print(f"[VOLUMES OJR ERR] {e}, falling back to legacy", flush=True)
+    
+    # Legacy fallback: bot_memory_facts
     f = qa(date)  # all categories — regex below filters for work codes
     dn, pn = {}, {}
     for x in f:
         txt = (x.get('fact','') or '').replace(',', '.')
-        # Skip facts from non-work/non-plan categories (e.g. Grok hallucination in 'монтаж')
+        # ── AUDIT-005 FIX: Accept ALL categories with VOR code patterns ──
+        # Previously filtered on ('объём', 'план') only — missed 'бетонирование', 'монтаж', etc.
         cat = x.get('category', '')
-        if cat and cat not in ('объём', 'план'):
-            continue
         # Match 3-part (2.3.1) or 4-part (2.2.3.1) codes
-        m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
-        if m:
-            cd, vl = m.group(1), float(m.group(2))
-            # Plan if "план" appears BEFORE the code (e.g. "План 2.1.5 = 50")
-            # NOT after (e.g. "3.1.5 = 142Планы" — that's work with suffix)
-            plan_pos = txt.lower().find('план')
-            is_plan = x.get('category') == 'план' or (plan_pos >= 0 and plan_pos < m.start())
-            is_done = 'сделано' in txt.lower()
-            if is_plan:
-                # Plan facts go ONLY to plans, never to works
-                pn[cd] = vl  # always add, work codes don't block plans
-            elif is_done or not is_plan:
-                dn[cd] = vl  # add/update for works
+        m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*[=—–\-:\s]+\s*(\d+(?:\.\d+)?)', txt)
+        if not m:
+            continue
+        cd, vl = m.group(1), float(m.group(2))
+        # Plan if "план" appears BEFORE the code (e.g. "План 2.1.5 = 50")
+        # NOT after (e.g. "3.1.5 = 142Планы" — that's work with suffix)
+        plan_pos = txt.lower().find('план')
+        is_plan = cat == 'план' or (plan_pos >= 0 and plan_pos < m.start())
+        is_done = 'сделано' in txt.lower()
+        if is_plan:
+            # Plan facts go ONLY to plans, never to works
+            pn[cd] = vl
+        elif is_done or not is_plan:
+            dn[cd] = vl  # add/update for works
     
     # Fallback: parse plans from raw messages (Grok sometimes misses "Планы" in text)
     try:
@@ -456,12 +499,33 @@ def volumes(date):
 
 def photos(date):
     import psycopg2, psycopg2.extras
+    ds = date.strftime('%Y-%m-%d')
+    ct = {'Общежитие':0,'АБК':0,'Галерея':0,'Общий план':0}
+    # Primary: ojr_photo_log
+    try:
+        c = db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        c.execute("""
+            SELECT building, count(*) as n FROM ojr_photo_log
+            WHERE photo_date = %s::date
+            GROUP BY building
+        """, (ds,))
+        for r in c.fetchall():
+            b = r['building']
+            if b == 'без тег': b = 'Общий план'
+            if b in ct: ct[b] = r['n']
+            elif b: ct['Общий план'] += r['n']
+        c.close()
+        if any(ct.values()):
+            return ct
+    except Exception as e:
+        print(f"[PHOTOS OJR ERR] {e}, falling back to legacy", flush=True)
+    # Legacy fallback: bot_memory_messages
     c = db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    c.execute("SELECT coalesce(tags->>'building','Общий план') as b, count(*) as n FROM bot_memory_messages WHERE message_type='image' AND DATE(created_at)=%s GROUP BY 1", (date.strftime('%Y-%m-%d'),))
+    c.execute("SELECT coalesce(tags->>'building','Общий план') as b, count(*) as n FROM bot_memory_messages WHERE message_type='image' AND DATE(created_at)=%s GROUP BY 1", (ds,))
     ct = {'Общежитие':0,'АБК':0,'Галерея':0,'Общий план':0}
     for r in c.fetchall():
         b = r['b']
-        if b == 'без тега': b = 'Общий план'
+        if b == 'без тег': b = 'Общий план'
         if b in ct: ct[b] = r['n']
         elif b: ct['Общий план'] += r['n']
     c.close(); return ct

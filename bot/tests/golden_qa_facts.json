@@ -1,0 +1,238 @@
+{
+  "meta": {
+    "created": "2026-07-18",
+    "description": "Golden dataset for QA-parser recall testing. Each entry has input text and expected facts.",
+    "total_entries": 22,
+    "categories": {
+      "positive": "должны быть распознаны (should be detected)",
+      "negative": "не должны быть распознаны (should NOT be detected)",
+      "ambiguous": "граничные случаи (boundary cases)"
+    }
+  },
+  "entries": [
+    {
+      "id": "pos_01",
+      "category": "positive",
+      "text": "АйБиКон ИТР 5, рабочих 12. Атантай ИТР 2, рабочих 8. Майкадам ИТР 1, рабочих 6.",
+      "expected_facts": [
+        {"building": "общая", "category": "персонал", "fact": "АйБиКон ИТР 5"},
+        {"building": "общая", "category": "персонал", "fact": "АйБиКон 12 рабочих"},
+        {"building": "общая", "category": "персонал", "fact": "Атантай ИТР 2"},
+        {"building": "общая", "category": "персонал", "fact": "Атантай 8 рабочих"},
+        {"building": "общая", "category": "персонал", "fact": "Майкадам ИТР 1"},
+        {"building": "общая", "category": "персонал", "fact": "Майкадам 6 рабочих"}
+      ],
+      "min_recall": 6
+    },
+    {
+      "id": "pos_02",
+      "category": "positive",
+      "text": "Сделано АБК: бетонирование перекрытия 2 этажа. Общежитие: монтаж стеновых панелей.",
+      "expected_facts": [
+        {"building": "АБК", "category": "бетонирование", "fact": "бетонирование перекрытия 2 этажа"},
+        {"building": "Общежитие", "category": "монтаж", "fact": "монтаж стеновых панелей"}
+      ],
+      "min_recall": 2
+    },
+    {
+      "id": "pos_03",
+      "category": "positive",
+      "text": "Техника: экскаватор Volvo 2 ед., самосвал HOWO 4 ед., кран башенный 1 ед.",
+      "expected_facts": [
+        {"building": "общая", "category": "техника", "fact": "экскаватор Volvo 2 ед"},
+        {"building": "общая", "category": "техника", "fact": "самосвал HOWO 4 ед"},
+        {"building": "общая", "category": "техника", "fact": "кран башенный 1 ед"}
+      ],
+      "min_recall": 3
+    },
+    {
+      "id": "pos_04",
+      "category": "positive",
+      "text": "Происшествий нет. Техники нет. Материалов нет.",
+      "expected_facts": [
+        {"building": "общая", "category": "инцидент", "fact": "Происшествий нет"},
+        {"building": "общая", "category": "техника", "fact": "Техники нет"},
+        {"building": "общая", "category": "документация", "fact": "Поставок материалов нет"}
+      ],
+      "min_recall": 3
+    },
+    {
+      "id": "pos_05",
+      "category": "positive",
+      "text": "3.1.1 = 50 м2\n3.2.1 = 104.3\nПланы на завтра 3.1.1 = 41.8",
+      "expected_facts": [
+        {"building": "общая", "category": "объём", "fact": "3.1.1 = 50м2"},
+        {"building": "общая", "category": "объём", "fact": "3.2.1 = 104.3"},
+        {"building": "общая", "category": "план", "fact": "Планы на завтра 3.1.1 = 41.8"}
+      ],
+      "min_recall": 3
+    },
+    {
+      "id": "pos_06",
+      "category": "positive",
+      "text": "АБК фундамент 3.4.2 = 12.5 м3 бетон. Общежитие земляные работы 5.1.1 = 200.",
+      "expected_facts": [
+        {"building": "АБК", "category": "бетонирование", "fact": "фундамент 3.4.2 = 12.5м3 бетон"},
+        {"building": "Общежитие", "category": "земляные работы", "fact": "земляные работы 5.1.1 = 200"}
+      ],
+      "min_recall": 2
+    },
+    {
+      "id": "pos_07",
+      "category": "positive",
+      "text": "АйБиКон: инженер-геодезист вышел на площадку. Сделана разбивка осей АБК. ИТР на месте.",
+      "expected_facts": [
+        {"building": "общая", "category": "персонал", "fact": "инженер-геодезист на площадке"},
+        {"building": "АБК", "category": "документация", "fact": "разбивка осей"}
+      ],
+      "min_recall": 1
+    },
+    {
+      "id": "pos_08",
+      "category": "positive",
+      "text": "АйБиКон: на АБК работает 15 чел. Атантай: на Общежитии 10 чел.",
+      "expected_facts": [
+        {"building": "АБК", "category": "персонал", "fact": "АйБиКон 15 чел"},
+        {"building": "Общежитие", "category": "персонал", "fact": "Атантай 10 чел"}
+      ],
+      "min_recall": 2
+    },
+    {
+      "id": "pos_09",
+      "category": "positive",
+      "text": "Происшествие: падение поддона с кирпичом с высоты 2м. Пострадавших нет. Повреждён инструмент.",
+      "expected_facts": [
+        {"building": "общая", "category": "инцидент", "fact": "падение поддона с кирпичом с высоты 2м, пострадавших нет"}
+      ],
+      "min_recall": 1
+    },
+    {
+      "id": "pos_10",
+      "category": "positive",
+      "text": "Документация: получен журнал бетонных работ, подписан акт скрытых работ по фундаменту АБК.",
+      "expected_facts": [
+        {"building": "АБК", "category": "документация", "fact": "журнал бетонных работ"},
+        {"building": "АБК", "category": "документация", "fact": "акт скрытых работ по фундаменту"}
+      ],
+      "min_recall": 2
+    },
+    {
+      "id": "pos_11",
+      "category": "positive",
+      "text": "Материалы: доставка арматуры 10т. Доставка кирпича 5000 шт.",
+      "expected_facts": [
+        {"building": "общая", "category": "документация", "fact": "арматура 10т"},
+        {"building": "общая", "category": "документация", "fact": "кирпич 5000 шт"}
+      ],
+      "min_recall": 2
+    },
+    {
+      "id": "pos_12",
+      "category": "positive",
+      "text": "Сделано бетонирование колонн АБК. Монтаж металлоконструкций галереи. Земляные работы под трубопровод.",
+      "expected_facts": [
+        {"building": "АБК", "category": "бетонирование", "fact": "бетонирование колонн"},
+        {"building": "общая", "category": "монтаж", "fact": "монтаж металлоконструкций галереи"},
+        {"building": "общая", "category": "земляные работы", "fact": "земляные работы под трубопровод"}
+      ],
+      "min_recall": 3
+    },
+    {
+      "id": "neg_01",
+      "category": "negative",
+      "text": "Какая сегодня погода на площадке?",
+      "expected_facts": [],
+      "min_recall": 0,
+      "should_not_trigger_qa": true
+    },
+    {
+      "id": "neg_02",
+      "category": "negative",
+      "text": "Сколько человек работает на АБК?",
+      "expected_facts": [],
+      "min_recall": 0,
+      "should_not_trigger_qa": true
+    },
+    {
+      "id": "neg_03",
+      "category": "negative",
+      "text": "Пришли мне отчет за прошлую неделю.",
+      "expected_facts": [],
+      "min_recall": 0,
+      "should_not_trigger_qa": true
+    },
+    {
+      "id": "neg_04",
+      "category": "negative",
+      "text": "Алихан какой статус опроса?",
+      "expected_facts": [],
+      "min_recall": 0,
+      "should_not_trigger_qa": true
+    },
+    {
+      "id": "neg_05",
+      "category": "negative",
+      "text": "Доброе утро всем! Хорошего рабочего дня.",
+      "expected_facts": [],
+      "min_recall": 0,
+      "should_not_trigger_qa": true
+    },
+    {
+      "id": "amb_01",
+      "category": "ambiguous",
+      "text": "Не успели сделать 2.4.2 из-за дождя. Завтра наверстаем.",
+      "expected_facts": [
+        {"building": "общая", "category": "объём", "fact": "2.4.2 — не успели из-за дождя"}
+      ],
+      "min_recall": 0
+    },
+    {
+      "id": "amb_02",
+      "category": "ambiguous",
+      "text": "Леса на АБК установлены но еще не приняты. ИТР на площадке: АйБиКон 3 чел.",
+      "expected_facts": [
+        {"building": "АБК", "category": "монтаж", "fact": "леса установлены но не приняты"},
+        {"building": "АБК", "category": "персонал", "fact": "АйБиКон ИТР 3 чел"}
+      ],
+      "min_recall": 1
+    },
+    {
+      "id": "amb_03",
+      "category": "ambiguous",
+      "text": "Ждём бетон с 10 утра. Пока делаем опалубку. Сколько машин придёт — пока не знаем.",
+      "expected_facts": [
+        {"building": "общая", "category": "материалы", "fact": "ждали бетон с 10 утра"},
+        {"building": "общая", "category": "монтаж", "fact": "делаем опалубку"}
+      ],
+      "min_recall": 0
+    },
+    {
+      "id": "amb_04",
+      "category": "ambiguous",
+      "text": "Атантай сегодня без происшествий. Работают 8 человек. Плановая заливка фундамента.",
+      "expected_facts": [
+        {"building": "общая", "category": "персонал", "fact": "Атантай 8 человек"},
+        {"building": "общая", "category": "инцидент", "fact": "без происшествий"}
+      ],
+      "min_recall": 1
+    },
+    {
+      "id": "amb_05",
+      "category": "ambiguous",
+      "text": "План по бетону на сегодня 50м3, пока залили 30. Остаток добьём к вечеру.",
+      "expected_facts": [
+        {"building": "общая", "category": "бетонирование", "fact": "план 50м3, залито 30м3"}
+      ],
+      "min_recall": 0
+    }
+  ],
+
+  "validation_sets": {
+    "allowed_buildings": ["АБК", "Общежитие", "общая"],
+    "allowed_categories": [
+      "персонал", "техника", "инцидент", "бетонирование", "монтаж",
+      "земляные работы", "документация", "план", "объём"
+    ],
+    "allowed_contractors": ["айбикон", "атантай", "майкадам", "наватек"]
+  }
+}

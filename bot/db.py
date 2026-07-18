@@ -627,3 +627,279 @@ def create_calendar_event(chat_id, title, event_start, remind_minutes_before=30,
     cur.close()
     conn.close()
     return row
+
+
+# ═══════════════════════════════════════════════════════════════
+# OJR (Общий Журнал Работ) helpers — migration 2026-07-18
+# ═══════════════════════════════════════════════════════════════
+
+def _get_active_title_id():
+    """Return the active title_page id (defaults to 1)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row[0] if row else 1
+
+
+def save_personnel(chat_id, date_str, org_name, full_name, position,
+                   org_type='contractor', phone=None, sync_source='qa'):
+    """Save personnel fact to ojr_section1_personnel."""
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    cur.execute("""
+        INSERT INTO ojr_section1_personnel
+            (title_id, organization_type, organization_name, full_name,
+             position, phone, start_date, sync_source, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s, NOW(), NOW())
+        ON CONFLICT DO NOTHING
+    """, (title_id, org_type, org_name, full_name, position,
+          phone, date_str, sync_source))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_work_log(chat_id, date_str, vor_code, building, volume, unit='м³',
+                  work_name=None, contractor=None, category='объём',
+                  source_fact_id=None, source_poll_id=None, created_by='qa'):
+    """Save work volume fact to ojr_section3_work_log."""
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    cur.execute("""
+        INSERT INTO ojr_section3_work_log
+            (title_id, work_date, vor_code, work_name, building, volume, unit,
+             contractor, category, source_fact_id, source_poll_id, created_by, created_at, updated_at)
+        VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+        ON CONFLICT (work_date, vor_code, building, category) DO UPDATE
+        SET volume = EXCLUDED.volume,
+            updated_at = NOW()
+    """, (title_id, date_str, vor_code, work_name, building, volume, unit,
+          contractor, category, source_fact_id, source_poll_id, created_by))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_weather(date_str, weather_data):
+    """Save weather data to ojr_weather. weather_data is a dict from weather() in fill_ejo.py."""
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    try:
+        temp = float(weather_data.get('t', '0').replace('°C', '').replace('+', '').strip() or '0')
+    except (ValueError, TypeError):
+        temp = 0
+    wind_str = weather_data.get('w', '0')
+    wind_speed = 0
+    try:
+        import re
+        m = re.search(r'(\d+(?:[.,]\d+)?)', wind_str)
+        if m:
+            wind_speed = float(m.group(1).replace(',', '.'))
+    except (ValueError, TypeError):
+        pass
+    cur.execute("""
+        INSERT INTO ojr_weather
+            (title_id, weather_date, temp_avg, temp_max, temp_min,
+             wind_speed, humidity_pct, pressure_hpa, source, created_at)
+        VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, 'open_meteo', NOW())
+        ON CONFLICT (weather_date) DO UPDATE
+        SET temp_avg = EXCLUDED.temp_avg,
+            wind_speed = EXCLUDED.wind_speed,
+            humidity_pct = EXCLUDED.humidity_pct,
+            updated_at = NOW()
+    """, (title_id, date_str, temp, temp, temp, wind_speed,
+          int(weather_data.get('h', '50').replace('%', '') or '50'),
+          int(weather_data.get('p', '760').replace(' мм рт.ст.', '') or '760')))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_incident(chat_id, date_str, incident_type, description,
+                  severity='minor', location=None):
+    """Save incident to ojr_incidents."""
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    cur.execute("""
+        INSERT INTO ojr_incidents
+            (title_id, incident_date, incident_type, severity, description, location, created_at)
+        VALUES (%s, %s::date, %s, %s, %s, %s, NOW())
+    """, (title_id, date_str, incident_type, severity, description, location))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_material(chat_id, date_str, material_name, quantity=None, unit='м³',
+                  material_type=None, building=None, vor_code=None):
+    """Save material/delivery to ojr_materials."""
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    cur.execute("""
+        INSERT INTO ojr_materials
+            (title_id, material_date, material_name, material_type, quantity, unit,
+             building, vor_code, created_at)
+        VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, NOW())
+    """, (title_id, date_str, material_name, material_type, quantity, unit,
+          building, vor_code))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def get_daily_personnel(date_str):
+    """Get personnel for a given date from ojr_section1_personnel."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT organization_name, full_name, position, sync_source
+        FROM ojr_section1_personnel
+        WHERE start_date <= %s::date
+          AND (end_date IS NULL OR end_date >= %s::date)
+          AND is_active = TRUE
+        ORDER BY organization_name, position
+    """, (date_str, date_str))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_daily_works(date_str):
+    """Get work volumes for a given date from ojr_section3_work_log."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT vor_code, work_name, building, volume, unit, contractor, category
+        FROM ojr_section3_work_log
+        WHERE work_date = %s::date
+        ORDER BY building, vor_code
+    """, (date_str,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_daily_weather(date_str):
+    """Get weather for a given date from ojr_weather."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT weather_date, temp_avg, temp_max, temp_min, wind_speed,
+               humidity_pct, pressure_hpa, phenomenon
+        FROM ojr_weather
+        WHERE weather_date = %s::date
+        ORDER BY weather_date DESC LIMIT 1
+    """, (date_str,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+
+def get_daily_materials(date_str):
+    """Get materials for a given date from ojr_materials."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT material_name, material_type, quantity, unit, building, vor_code
+        FROM ojr_materials
+        WHERE material_date = %s::date
+        ORDER BY id
+    """, (date_str,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_daily_incidents(date_str):
+    """Get incidents for a given date from ojr_incidents."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT incident_type, severity, description, location
+        FROM ojr_incidents
+        WHERE incident_date = %s::date
+        ORDER BY id
+    """, (date_str,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_ojr_qa_status(date_str):
+    """Get QA data status across all OJR tables — replacement for _get_qa_status in poll.py."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    status = {}
+    # Personnel
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_section1_personnel
+        WHERE start_date = %s::date AND sync_source = 'qa'
+    """, (date_str,))
+    status['персонал'] = cur.fetchone()['c']
+    
+    # Equipment/Technique — stored in work_log with category 'техника'
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_section3_work_log
+        WHERE work_date = %s::date AND category = 'техника'
+    """, (date_str,))
+    status['техника'] = cur.fetchone()['c']
+    
+    # Incidents
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_incidents
+        WHERE incident_date = %s::date
+    """, (date_str,))
+    status['инцидент'] = cur.fetchone()['c']
+    
+    # Work volumes (VOR codes)
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_section3_work_log
+        WHERE work_date = %s::date AND category IN ('объём','бетонирование','монтаж','земляные работы')
+    """, (date_str,))
+    status['работы'] = cur.fetchone()['c']
+    
+    # Materials
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_materials
+        WHERE material_date = %s::date
+    """, (date_str,))
+    status['материалы'] = cur.fetchone()['c']
+    
+    # Plans (category='план' in work_log)
+    cur.execute("""
+        SELECT count(*) as c FROM ojr_section3_work_log
+        WHERE work_date = %s::date AND category = 'план'
+    """, (date_str,))
+    status['планы'] = cur.fetchone()['c']
+    
+    # Photos — still from bot_memory_messages (unchanged)
+    cur.execute("""
+        SELECT tags->>'building' as bld, count(*) as cnt
+        FROM bot_memory_messages
+        WHERE message_type='image' AND DATE(created_at)=%s::date
+        GROUP BY tags->>'building'
+    """, (date_str,))
+    photo_counts = {'АБК': 0, 'Общежитие': 0, 'Общий план': 0}
+    for r in cur.fetchall():
+        bld = r.get('bld', '')
+        if bld in photo_counts:
+            photo_counts[bld] = r['cnt']
+    status['photo_counts'] = photo_counts
+    
+    cur.close()
+    conn.close()
+    return status

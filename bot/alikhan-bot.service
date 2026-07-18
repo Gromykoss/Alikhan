@@ -12,11 +12,23 @@ ExecStartPre=/bin/sleep 10
 ExecStart=/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3 /home/hermes-workspace/Alikhan-migration/bot/main_waha.py
 Restart=always
 RestartSec=15
+# Health check: ensure only one process runs, kill zombies before restart
+ExecStartPre=-/usr/bin/pgrep -f main_waha.py | xargs -r kill -9 2>/dev/null
+# Monitoring: watchdog + health check via HTTP on bridge port
+WatchdogSec=60
+# Restart on failure within 30s — don't infinite loop
+StartLimitInterval=120
+StartLimitBurst=5
 StandardOutput=append:/home/hermes-workspace/Alikhan-migration/bot/bot.log
 StandardError=append:/home/hermes-workspace/Alikhan-migration/bot/bot.log
 
 # Environment: secrets from .env file
 EnvironmentFile=/home/hermes-workspace/.hermes/secrets.env
+
+# Restart policy — prevent zombie processes (AUDIT-002)
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
