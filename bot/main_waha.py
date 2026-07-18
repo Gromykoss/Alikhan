@@ -51,6 +51,20 @@ def generate_daily_snapshot(chat_id):
             mid_val = r.get('mid')
             d = f"фото {mid_val[:8]}" if mid_val else "фото (без ID)"
         photos.append((r['bld'] or 'общий', d))
+    # Also check ojr_photo_log for additional photos
+    try:
+        cur.execute("""
+            SELECT building, COALESCE(ai_description, caption, file_name) as desc
+            FROM ojr_photo_log
+            WHERE photo_date = %s::date
+            ORDER BY id
+        """, (today_str,))
+        for r in cur.fetchall():
+            bld = r.get('building', 'общий')
+            desc = r.get('desc') or f"фото {bld}"
+            photos.append((bld, desc))
+    except Exception as e:
+        print(f"[SNAPSHOT PHOTO OJR] {e}", flush=True)
     photos = photos[:10]
     # Documents — also check tags->>'file_name'
     cur.execute("""
@@ -58,13 +72,41 @@ def generate_daily_snapshot(chat_id):
         WHERE message_type='document' AND created_at >= %s AND created_at < %s
     """, (bishkek_start, bishkek_end))
     docs = [r['fname'] for r in cur.fetchall() if r['fname']]
-    # QA facts — exclude negative entries («не выполнялось», «не выполнялся»)
-    cur.execute("""
-        SELECT category, building, fact FROM bot_memory_facts
-        WHERE created_at >= %s AND created_at < %s AND source != 'снимок_дня'
-        AND fact NOT ILIKE '%не выполня%'
-    """, (bishkek_start, bishkek_end))
-    facts = cur.fetchall()
+    # QA facts — from OJR tables (work_log + personnel + incidents + materials)
+    facts = []
+    try:
+        # Works from ojr_section3_work_log
+        cur.execute("""
+            SELECT category, building, vor_code, volume, work_name
+            FROM ojr_section3_work_log
+            WHERE work_date = %s::date
+        """, (today_str,))
+        for r in cur.fetchall():
+            facts.append({
+                'category': r.get('category', ''),
+                'building': r.get('building', 'общая'),
+                'fact': f"{r.get('vor_code','')} = {r.get('volume','')} ({r.get('work_name','')})"
+            })
+        # Incidents
+        cur.execute("""
+            SELECT incident_type, description, location
+            FROM ojr_incidents
+            WHERE incident_date = %s::date
+        """, (today_str,))
+        for r in cur.fetchall():
+            facts.append({
+                'category': 'инцидент',
+                'building': r.get('location', 'общая'),
+                'fact': r.get('description', '')
+            })
+    except Exception as e:
+        print(f"[SNAPSHOT OJR ERR] {e}, falling back to bot_memory_facts", flush=True)
+        cur.execute("""
+            SELECT category, building, fact FROM bot_memory_facts
+            WHERE created_at >= %s AND created_at < %s AND source != 'снимок_дня'
+            AND fact NOT ILIKE '%не выполня%'
+        """, (bishkek_start, bishkek_end))
+        facts = cur.fetchall()
     # Poll/EJO data — from bot_poll_residuals (actual_today > 0 only — performed works)
     poll_info = ""
     try:
@@ -444,6 +486,15 @@ def _extract_ejo_volumes(b64_data, fname, chat_id):
             volume = fact_f if fact_f > 0 else plan_f
             fact_text = f"{code} = {volume}"
 
+            # Save to OJR work_log
+            try:
+                from db import save_work_log
+                save_work_log(chat_id, fact_date, code, 'общая', volume,
+                              category=category, created_by='ejo_extraction')
+            except Exception as e:
+                print(f"[EJO EXTRACT OJR ERR] {e}", flush=True)
+
+            # Also save to bot_memory_facts for backward compatibility
             cur.execute(
                 "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s, %s, %s, %s, %s, 'qa')",
                 (chat_id, fact_date, 'общая', category, fact_text))
@@ -604,7 +655,7 @@ def production_listener_loop():
                                     if os.path.exists(img_path):
                                         with open(img_path, "rb") as f:
                                             b64 = base64.b64encode(f.read()).decode()
-                                        from handlers import ask_ollama_raw
+                                        from handlers import ask_grok_raw
                                         desc = ask_grok_raw(
                                             "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                             image_base64=b64, max_tokens=200)
@@ -708,10 +759,10 @@ while True:
             mid = m["key"]["id"]
             if mid in seen:
                 continue
-            # Skip messages older than 5 minutes (prevents flood on restart)
+            # Skip messages older than 15 seconds (brief dedup window on restart)
             msg_ts = _safe_message_ts(m)
             now_ts = int(time.time())
-            if now_ts - msg_ts > 300:
+            if now_ts - msg_ts > 15:
                 seen.add(mid)
                 continue
             seen.add(mid)
@@ -761,7 +812,7 @@ while True:
                                 if os.path.exists(img_path):
                                     with open(img_path, "rb") as f:
                                         b64 = base64.b64encode(f.read()).decode()
-                                    from handlers import ask_ollama_raw
+                                    from handlers import ask_grok_raw
                                     desc = ask_grok_raw(
                                         "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                         image_base64=b64, max_tokens=200)

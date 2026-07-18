@@ -4,9 +4,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
-# Simulation mode: set to None for production, or "2026-06-27" for testing
-SIM_DATE = None  # closed 2026-07-01
+from config import SIM_DATE, VOICE_TRIGGERS  # unified config (AUDIT-012)
 
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""

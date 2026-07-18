@@ -122,49 +122,46 @@ def _get_work_items_from_template():
     return items
 
 def _get_qa_status(poll_date_str=None):
-    """Get QA data status for the current poll date."""
-    from db import get_conn
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    """Get QA data status for the current poll date from OJR tables."""
     today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
-
-    status = {}
-    for cat in ['персонал', 'техника', 'инцидент']:
-        cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND category=%s AND source='qa'",
-                     (today, cat))
-        status[cat] = cur.fetchone()['c']
-
-    # Work volumes: VOR code facts
-    cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND source='qa' AND fact ~ E'[0-9]+[.][0-9]+[.][0-9]+'",
-                 (today,))
-    status['работы'] = cur.fetchone()['c']
-
-    # Materials/doc facts
-    cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND category IN ('документация','материалы') AND source='qa'",
-                 (today,))
-    status['материалы'] = cur.fetchone()['c']
-
-    # Photos per building
-    cur.execute("""
-        SELECT tags->>'building' as bld, count(*) as cnt
-        FROM bot_memory_messages
-        WHERE message_type='image' AND DATE(created_at)=%s
-        GROUP BY tags->>'building'
-    """, (today,))
-    photo_counts = {'АБК': 0, 'Общежитие': 0, 'Общий план': 0}
-    for r in cur.fetchall():
-        bld = r.get('bld', '')
-        if bld in photo_counts:
-            photo_counts[bld] = r['cnt']
-    status['photo_counts'] = photo_counts
-
-    cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND source='qa' AND fact ILIKE '%%план%%'",
-                 (today,))
-    status['планы'] = cur.fetchone()['c']
-
-    cur.close()
-    conn.close()
-    return status
+    try:
+        from db import get_ojr_qa_status
+        return get_ojr_qa_status(today)
+    except Exception as e:
+        print(f"[POLL QA STATUS ERR] {e}, falling back to legacy", flush=True)
+        # Fallback to old bot_memory_facts query
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        status = {}
+        for cat in ['персонал', 'техника', 'инцидент']:
+            cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND category=%s AND source='qa'",
+                         (today, cat))
+            status[cat] = cur.fetchone()['c']
+        cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND source='qa' AND fact ~ E'[0-9]+[.][0-9]+[.][0-9]+'",
+                     (today,))
+        status['работы'] = cur.fetchone()['c']
+        cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND category IN ('документация','материалы') AND source='qa'",
+                     (today,))
+        status['материалы'] = cur.fetchone()['c']
+        cur.execute("""
+            SELECT tags->>'building' as bld, count(*) as cnt
+            FROM bot_memory_messages
+            WHERE message_type='image' AND DATE(created_at)=%s
+            GROUP BY tags->>'building'
+        """, (today,))
+        photo_counts = {'АБК': 0, 'Общежитие': 0, 'Общий план': 0}
+        for r in cur.fetchall():
+            bld = r.get('bld', '')
+            if bld in photo_counts:
+                photo_counts[bld] = r['cnt']
+        status['photo_counts'] = photo_counts
+        cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND source='qa' AND fact ILIKE '%%план%%'",
+                     (today,))
+        status['планы'] = cur.fetchone()['c']
+        cur.close()
+        conn.close()
+        return status
 
 # ── Core poll functions ──
 
@@ -273,16 +270,32 @@ def build_poll_message(work_items, qa_status):
     return header, residuals
 
 def _format_qa_facts_by_category(category, poll_date_str=None):
-    """Get a short summary of QA facts by category."""
+    """Get a short summary of QA facts by category from OJR tables."""
     today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT fact FROM bot_memory_facts WHERE fact_date=%s AND category=%s AND source='qa' ORDER BY id",
-                 (today, category))
-    facts = [r['fact'] for r in cur.fetchall()[:3]]
-    cur.close()
-    conn.close()
-    return '; '.join(facts) if facts else ''
+    try:
+        from db import get_conn as _gc2
+        conn2 = _gc2()
+        cur2 = conn2.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        facts = []
+        if category == 'персонал':
+            cur2.execute("SELECT organization_name || ' ' || position as fact FROM ojr_section1_personnel WHERE start_date=%s::date AND sync_source='qa' LIMIT 3", (today,))
+        elif category == 'техника':
+            cur2.execute("SELECT work_name as fact FROM ojr_section3_work_log WHERE work_date=%s::date AND category='техника' LIMIT 3", (today,))
+        else:
+            cur2.execute("SELECT description as fact FROM ojr_incidents WHERE incident_date=%s::date LIMIT 3", (today,))
+        facts = [r['fact'] for r in cur2.fetchall()[:3]]
+        cur2.close(); conn2.close()
+        return '; '.join(facts) if facts else ''
+    except Exception as e:
+        print(f"[FORMAT QA OJR ERR] {e}", flush=True)
+        # Legacy fallback
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT fact FROM bot_memory_facts WHERE fact_date=%s AND category=%s AND source='qa' ORDER BY id",
+                     (today, category))
+        facts = [r['fact'] for r in cur.fetchall()[:3]]
+        cur.close(); conn.close()
+        return '; '.join(facts) if facts else ''
 
 def parse_poll_reply(text, chat_id, poll_date_str=None):
     """
@@ -359,12 +372,15 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
             # No active poll — save as regular QA fact
             pass
 
-        # Also save as bot_memory_fact
-        cur.execute("""
-            INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source)
-            VALUES (%s, %s, 'общая', 'объём', %s, 'qa')
-        """, (chat_id, today, f'{code} = {vol}{unit}'))
-        result['facts_saved'] += 1
+        # Also save as work_log entry in ojr_section3_work_log
+        try:
+            from db import save_work_log
+            save_work_log(chat_id, today, code, 'общая', vol,
+                          unit=unit, category='объём',
+                          source_poll_id=poll_row['id'] if poll_row else None,
+                          created_by='poll')
+        except Exception as e:
+            print(f"[POLL OJR ERR] {e}", flush=True)
 
     conn.commit()
     cur.close()
@@ -517,7 +533,8 @@ def close_poll(chat_id, poll_date_str=None):
 
     poll_id = poll['id']
 
-    # Auto-fill missing categories
+    # Auto-fill missing categories in OJR tables
+    from db import save_work_log, save_material
     cats = {
         'бетонирование': 'Бетонирование не выполнялось',
         'монтаж': 'Монтаж не выполнялся',
@@ -525,11 +542,15 @@ def close_poll(chat_id, poll_date_str=None):
         'документация': 'Поставок материалов нет',
     }
     for cat, fact_text in cats.items():
-        cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND category=%s",
+        # Check ojr_section3_work_log for work categories
+        cur.execute("SELECT count(*) as c FROM ojr_section3_work_log WHERE work_date=%s::date AND category=%s",
                      (today, cat))
         if cur.fetchone()['c'] == 0:
-            cur.execute("INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s,%s,'общая',%s,%s,'auto')",
-                         (chat_id, today, cat, fact_text))
+            if cat == 'документация':
+                save_material(chat_id, today, fact_text, building='общая')
+            else:
+                save_work_log(chat_id, today, 'общая', 'общая', 0,
+                              work_name=fact_text, category=cat, created_by='auto')
 
     # Mark poll as closed
     cur.execute("""

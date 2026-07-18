@@ -102,7 +102,7 @@ pkill -f main_waha; python3 main_waha.py
 | **qa.py** | — | Парсинг QA-фактов (персонал, техника, материалы, инциденты) |
 | **daily_snapshot.py** | — | Ежедневный снимок состояния стройки |
 
-### Поток сообщения
+### Поток сообщения (v5 — 18.07.2026, ОЖР)
 
 ```
 Сообщение → main_waha.py
@@ -111,7 +111,13 @@ pkill -f main_waha; python3 main_waha.py
   → Проверка имени «алихан»
   → Router (Grok / DB lookup / расписание)
   → Ответ (текст или голос)
-  
+  → Роутинг в ОЖР:
+      персонал → ojr_section1_personnel
+      объём/план → ojr_section3_work_log
+      фото → ojr_photo_log
+      погода → ojr_weather
+      агрегаты → ojr_daily_summary
+
 ВСЕ сообщения → save_message() в БД (пассивный режим)
 ```
 
@@ -127,7 +133,7 @@ WhatsApp фото → Hermes Bridge (hasMedia=true, mediaType="image")
   → UPDATE tags->>'description' в БД
 ```
 
-### Методика заполнения ЕЖО (v3 — июль 2026)
+### Методика заполнения ЕЖО (v5 — июль 2026, миграция на ОЖР)
 
 **План на месяц (начало месяца):**
 1. Команда `Алихан раскрой отчет` — бот присылает шаблон со ВСЕМИ раскрытыми строками
@@ -139,10 +145,26 @@ WhatsApp фото → Hermes Bridge (hasMedia=true, mediaType="image")
 1. `Алихан запускай опрос` — бот формирует список работ по столбцу O (месячный план > 0)
 2. Прорабы отвечают: `код = объём` (например: `3.1.1 = 50`)
 3. `Алихан статус опроса` — сводка собранного
-4. `Алихан закончить опрос` — закрытие → формирование ЕЖО
+4. `Алихан закончить опрос` — закрытие → запись в `ojr_section3_work_log` → формирование ЕЖО
+
+**ЕЖО = view на `ojr_section3_work_log`:**
+- `fill_ejo.py` читает `SELECT * FROM ojr_section3_work_log WHERE work_date = ?`
+- Погода: `ojr_weather` (Open-Meteo, координаты 42.284,72.765)
+- Фото: `ojr_photo_log` → вставка в колонки C, E, J, N, Q (до 5 фото на здание)
+- Сводка дня: `ojr_daily_summary` — агрегаты за дату
 
 **Принцип:** Столбец O — единственный источник истины для фильтра опроса.
 Нет O > 0 → нет в опросе. Никаких догадок по графику.
+
+**Заполнение разделов 1-6 ГОСТ:**
+| Раздел | Таблица | Источник |
+|--------|---------|----------|
+| Раздел 1 — ИТР-персонал | `ojr_section1_personnel` | QA + табель |
+| Раздел 2 — Авторский надзор | `ojr_section2_*` | Вручную (посещения) |
+| Раздел 3 — Выполнение работ | `ojr_section3_work_log` | QA + poll |
+| Раздел 4 — Строительный контроль | `ojr_section4_*` | Акты проверок |
+| Раздел 5 — Исполнительная документация | `ojr_section5_asbuilt_docs` | Документы из WhatsApp |
+| Раздел 6 — Госстройнадзор | `ojr_section6_gosstroynadzor` | Предписания ГСН |
 
 ### Триггеры команд
 
@@ -169,10 +191,45 @@ WhatsApp фото → Hermes Bridge (hasMedia=true, mediaType="image")
 - Кумулятивные значения: P = prev_P + v, S = prev_S + v
 - N = 100% всегда (L = M)
 
-### База данных
+### База данных (v5 — 18.07.2026, миграция на ОЖР)
 
 - PostgreSQL (`evolution_db`), Docker-контейнер `evolution-postgres`
-- Таблицы: `bot_messages`, `bot_memory_facts`, `bot_poll_state`, `bot_poll_residuals`, `bot_calendar`, `bot_schedule`
+- **14 таблиц ОЖР (ГОСТ РД-11-05-2007):**
+  - `ojr_title_page` — Титульный лист: заказчик, подрядчик, объект, договор
+  - `ojr_section1_personnel` — Раздел 1: ИТР-персонал
+  - `ojr_section2_design_supervision` — Раздел 2: Авторский надзор
+  - `ojr_section2_visits` — Раздел 2: Посещения авторского надзора
+  - `ojr_section3_work_log` — **Раздел 3 (главная):** выполнение работ (код ВОР, объём, здание)
+  - `ojr_section4_construction_control` — Раздел 4: Строительный контроль
+  - `ojr_section4_checks` — Раздел 4: Акты проверок СК
+  - `ojr_section5_asbuilt_docs` — Раздел 5: Исполнительная документация
+  - `ojr_section6_gosstroynadzor` — Раздел 6: Госстройнадзор
+  - `ojr_weather` — Погода: ежедневная метеосводка
+  - `ojr_photo_log` — Фото-фиксация: снимки стройплощадки
+  - `ojr_daily_summary` — Сводные: агрегаты за день
+  - `ojr_materials` — Материалы: поступления, сертификаты
+  - `ojr_incidents` — Инциденты и ТБ
+
+- **Существующие таблицы (оставлены):** `bot_memory_messages`, `bot_memory_facts` (промежуточный слой), `bot_schedule_phases`, `bot_poll_state`, `bot_calendar_events`
+- Полная документация: `db/ojr_schema.sql`, `db/ojr_er_diagram.md`, `db/ojr_fill_guide.md`
+
+### Поток данных ОЖР
+
+```
+WhatsApp → QA-парсер (qa.py) → bot_memory_facts → роутинг:
+  ├─ «персонал» → ojr_section1_personnel
+  ├─ «объём»/«план» → ojr_section3_work_log
+  ├─ изображения → ojr_photo_log
+  ├─ погода (cron) → ojr_weather
+  └─ агрегаты → ojr_daily_summary
+```
+
+### Снимок дня (daily snapshot)
+
+Композит из трёх источников:
+- `ojr_photo_log` — фото за дату с AI-описанием (Grok Vision)
+- `ojr_daily_summary` — сводные показатели (объёмы, персонал, %)
+- `bot_memory_messages` — текстовая сводка сообщений за день
 
 ---
 
