@@ -123,10 +123,10 @@ blockquote {
 with open(f"{BASE}/PRESENTATION_PITCH.md") as f:
     pitch_md = f.read()
 
-# Insert WhatsApp mockup after section 2 (before case)
+# Insert WhatsApp mockup after commands, before self-improvement
 pitch_md = pitch_md.replace(
-    "## 3. Реальный кейс:",
-    f'<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">Алихан в WhatsApp — живой диалог</div></div>\n\n## 3. Реальный кейс:'
+    "Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.",
+    f'Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\n\n<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">Алихан в WhatsApp — живой диалог</div></div>'
 )
 
 # Insert BEFORE/AFTER after case section
