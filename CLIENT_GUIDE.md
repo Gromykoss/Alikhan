@@ -362,8 +362,10 @@ Hermes — это платформа цифровых сотрудников. К
 
 Через Telegram руководитель общается с системой напрямую. Вы ставите задачи, получаете отчёты, контролируете работу.
 
+> **Скоро:** поддержка iMessage — Hermes 2026.7.x добавляет Apple Messages как нативный канал. Клиенты с iPhone смогут работать напрямую, без дополнительных приложений.
+
 ```
-Руководитель → Telegram → Hermes Construction (AI-ассистент) → [WhatsApp] [Google Workspace] [Bitrix24] [1С] [SAP] [Ваши системы]
+Руководитель → Telegram / iMessage → Hermes Construction (AI-ассистент) → [WhatsApp] [Google Workspace] [Bitrix24] [1С] [SAP] [Ваши системы]
 ```
 
 **Основные команды:**
