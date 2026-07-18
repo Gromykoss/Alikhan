@@ -123,22 +123,28 @@ blockquote {
 with open(f"{BASE}/PRESENTATION_PITCH.md") as f:
     pitch_md = f.read()
 
-# Insert WhatsApp mockup after commands, before self-improvement
+# Inject WhatsApp mockup after commands, before self-improvement
 pitch_md = pitch_md.replace(
-    "Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.",
+    "Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\n\n![WhatsApp](output_pdf/whatsapp_mockup.png)",
     f'Система читает сообщения, раскладывает факты по таблицам ОЖР, формирует отчёты. В любой момент дня и ночи — AI-ассистент готов дать отчёт.\n\n<div class="diagram"><img src="data:image/png;base64,{wa_b64}" alt="WhatsApp"><div class="caption">Алихан в WhatsApp — живой диалог</div></div>'
 )
 
-# Insert BEFORE/AFTER after case section
+# Inject BEFORE/AFTER image
 pitch_md = pitch_md.replace(
-    "## 4. Как это работает",
-    f'<div class="diagram"><img src="data:image/png;base64,{ba_b64}" alt="Before/After"><div class="caption">ДО и ПОСЛЕ внедрения Алихана</div></div>\n\n## 4. Как это работает'
+    "![До и после](output_pdf/before_after.png)",
+    f'<div class="diagram"><img src="data:image/png;base64,{ba_b64}" alt="Before/After"><div class="caption">ДО и ПОСЛЕ внедрения AI-ассистента</div></div>'
 )
 
-# Insert tiers diagram after section 5 (three levels)
+# Inject arch diagram
 pitch_md = pitch_md.replace(
-    "## 6. Конкуренты:",
-    f'<div class="diagram"><img src="data:image/png;base64,{tiers_b64}" alt="Three tiers"><div class="caption">Три уровня Hermes</div></div>\n\n## 6. Конкуренты:'
+    "![Схема](output_pdf/arch_diagram.png)",
+    f'<div class="diagram"><img src="data:image/png;base64,{arch_b64}" alt="Architecture"><div class="caption">Схема работы AI-ассистента</div></div>'
+)
+
+# Inject tiers diagram
+pitch_md = pitch_md.replace(
+    "![Уровни](output_pdf/tiers_diagram.png)",
+    f'<div class="diagram"><img src="data:image/png;base64,{tiers_b64}" alt="Tiers"><div class="caption">Три уровня внедрения</div></div>'
 )
 
 html_body = markdown.markdown(pitch_md, extensions=['tables', 'fenced_code', 'codehilite'])
