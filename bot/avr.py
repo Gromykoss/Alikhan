@@ -99,6 +99,9 @@ def _priced_ejo_rows(ejo_path, pricing_path, quantity_key):
     rows = []
     for item in load_ejo(ejo_path):
         price = pricing.get(item["code"], {}).get("unit_price")
+        if price is None and "." in item["code"]:
+            parent = item["code"].rsplit(".", 1)[0]
+            price = pricing.get(parent, {}).get("unit_price")
         rows.append({**item, "unit_price": price,
                      "cost": item[quantity_key] * price if price is not None else None})
     return sorted(rows, key=lambda row: _code_sort(row["code"]))
@@ -204,7 +207,7 @@ def generate_ks2(start_date, end_date, pricing_path=PRICING_FILE, ejo_path=EJO_F
     start, end = _as_date(start_date), _as_date(end_date)
     if start > end:
         raise ValueError("Дата начала периода позже даты окончания")
-    rows = _priced_ejo_rows(ejo_path, pricing_path, "monthly_qty")
+    rows = [r for r in _priced_ejo_rows(ejo_path, pricing_path, "monthly_qty") if r["monthly_qty"] > 0]
     currency = os.getenv("KS2_CURRENCY", "сом")
 
     workbook = Workbook()
