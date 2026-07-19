@@ -15,9 +15,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PRICING_FILE = PROJECT_ROOT / "report" / "templates" / "ВОР_с_расценками.xlsx"
 EJO_FILE = PROJECT_ROOT / "bot" / "templates" / "ЕЖО_шаблон.xlsx"
 OUTPUT_DIR = Path("/tmp")
-OBJECT_NAME = os.getenv("KS2_OBJECT", "")
-CUSTOMER = os.getenv("KS2_CUSTOMER", "")
-CONTRACTOR = os.getenv("KS2_CONTRACTOR", "")
 MISSING_PRICE = "Требует расценки"
 
 _THIN = Side(style="thin", color="808080")
@@ -285,59 +282,102 @@ def generate_ks2(start_date, end_date, pricing_path=PRICING_FILE, ejo_path=EJO_F
 
 
 def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, output_dir=OUTPUT_DIR):
-    """Generate a four-section cumulative KS-6 journal for every EJO work row."""
+    """Generate one cumulative KS-6 table containing every coded EJO row."""
     as_of = _as_date(as_of_date)
     rows = _priced_ejo_rows(ejo_path, pricing_path, "cumulative_qty")
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "КС-6"
-    columns = ["Код ВОР", "Наименование", "Ед.изм.", "Кол-во", "Расценка", "Сумма"]
-    subtitle = (f"Объект: {OBJECT_NAME} | Заказчик: {CUSTOMER} | Подрядчик: {CONTRACTOR}\n"
-                f"Накопительно по состоянию на {as_of:%d.%m.%Y}")
-    _setup_sheet(sheet, "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)", subtitle, columns)
-    row_number = 5
-    sections = (("ВСЕ РАБОТЫ", "plan_qty"),
-                ("ВЫПОЛНЕНО С НАЧАЛА РАБОТ", "cumulative_qty"),
-                ("ЗА ОТЧЕТНЫЙ ПЕРИОД", "monthly_qty"),
-                ("ОСТАТОК", "remaining_qty"))
-    for title, quantity_key in sections:
-        sheet.merge_cells(start_row=row_number, start_column=1, end_row=row_number, end_column=6)
-        title_cell = sheet.cell(row_number, 1, title)
-        title_cell.font = Font(bold=True, color="FFFFFF")
-        title_cell.fill = _HEADER_FILL
-        title_cell.alignment = Alignment(horizontal="center")
-        title_cell.border = _BORDER
-        row_number += 1
-        for col, label in enumerate(columns, 1):
-            cell = sheet.cell(row_number, col, label)
-            cell.font = Font(bold=True)
-            cell.fill = _SUBHEADER_FILL
-            cell.alignment = Alignment(horizontal="center", wrap_text=True)
+    sheet.merge_cells("A5:L5")
+    sheet["A5"] = "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)"
+    sheet["A5"].font = Font(size=16, bold=True)
+    sheet["A5"].alignment = Alignment(horizontal="center")
+    sheet.merge_cells("A6:L6")
+    sheet["A6"] = (f"Объект: {os.getenv('KS2_OBJECT', '')} | "
+                   f"Заказчик: {os.getenv('KS2_CUSTOMER', '')} | "
+                   f"Подрядчик: {os.getenv('KS2_CONTRACTOR', '')}")
+    sheet["A6"].alignment = Alignment(horizontal="center", wrap_text=True)
+
+    # A single header row keeps the first EJO item at row 8. Repeating the group
+    # name in its sub-columns preserves the four-section hierarchy without a
+    # second header row.
+    headers = (
+        "Код ВОР", "Наименование работ", "Все работы по смете\nЕд.",
+        "Все работы по смете\nКол-во", "Все работы по смете\nЦена за ед., сом",
+        "Все работы по смете\nСумма", "Выполнено с начала работ\nКол-во",
+        "Выполнено с начала работ\nСумма", "Выполнено за отчетный период\nКол-во",
+        "Выполнено за отчетный период\nСумма", "ОСТАТОК\nКол-во", "ОСТАТОК\nСумма",
+    )
+    for column, value in enumerate(headers, 1):
+        cell = sheet.cell(7, column, value)
+        cell.font = Font(color="FFFFFF", bold=True)
+        cell.fill = _HEADER_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = _BORDER
+    sheet.row_dimensions[7].height = 52
+
+    body_start = 8
+    for row_number, details in enumerate(rows, body_start):
+        price = details["unit_price"]
+        plan = details["plan_qty"]
+        cumulative = details["cumulative_qty"]
+        monthly = details["monthly_qty"]
+        remaining = plan - cumulative
+        values = (
+            details["code"], details["description"], details["unit"], plan,
+            price if price is not None else MISSING_PRICE,
+            plan * price if price is not None else MISSING_PRICE,
+            cumulative, cumulative * price if price is not None else MISSING_PRICE,
+            monthly, monthly * price if price is not None else MISSING_PRICE,
+            remaining, remaining * price if price is not None else MISSING_PRICE,
+        )
+        for column, value in enumerate(values, 1):
+            sheet.cell(row_number, column, value)
+    body_end = body_start + len(rows) - 1
+    if rows:
+        _style_data(sheet, body_start, body_end, tuple(range(4, 13)))
+
+    total_row = max(body_start, body_end + 1)
+    sheet.cell(total_row, 2, "ИТОГО").font = Font(bold=True)
+    for column in range(4, 13):
+        total = sum((value for value in (_decimal(sheet.cell(row, column).value)
+                                         for row in range(body_start, body_end + 1))
+                     if value is not None), Decimal("0"))
+        sheet.cell(total_row, column, total).font = Font(bold=True)
+    _style_data(sheet, total_row, total_row, tuple(range(4, 13)))
+
+    report_total = sheet.cell(total_row, 10).value
+    advance_percent = _env_decimal("KS2_ADVANCE_RETENTION_PERCENT")
+    warranty_percent = _env_decimal("KS2_WARRANTY_RETENTION_PERCENT")
+    deductions = (
+        (f"Удержание аванса ({advance_percent:g}%)", report_total * advance_percent / Decimal("100")),
+        (f"Гарантийное удержание ({warranty_percent:g}%)", report_total * warranty_percent / Decimal("100")),
+        ("К оплате", report_total * (Decimal("100") - advance_percent - warranty_percent) / Decimal("100")),
+    )
+    for offset, (label, value) in enumerate(deductions, 1):
+        row_number = total_row + offset
+        sheet.merge_cells(start_row=row_number, start_column=2, end_row=row_number, end_column=9)
+        sheet.cell(row_number, 2, label).font = Font(bold=True)
+        sheet.merge_cells(start_row=row_number, start_column=10, end_row=row_number, end_column=12)
+        sheet.cell(row_number, 10, value).font = Font(bold=True)
+        sheet.cell(row_number, 10).number_format = '#,##0.00'
+        for cell in sheet[row_number][1:12]:
             cell.border = _BORDER
-        row_number += 1
-        section_total = Decimal("0")
-        for details in rows:
-            quantity = (details["plan_qty"] - details["cumulative_qty"]
-                        if quantity_key == "remaining_qty" else details[quantity_key])
-            price = details["unit_price"]
-            cost = quantity * price if price is not None else None
-            values = [details["code"], details["description"], details["unit"], quantity,
-                      price if price is not None else MISSING_PRICE,
-                      cost if cost is not None else MISSING_PRICE]
-            for col, value in enumerate(values, 1):
-                sheet.cell(row_number, col, value)
-            _style_data(sheet, row_number, row_number, (4, 5, 6))
-            if cost is not None:
-                section_total += cost
-            row_number += 1
-        sheet.merge_cells(start_row=row_number, start_column=1, end_row=row_number, end_column=5)
-        sheet.cell(row_number, 1, "ИТОГО").font = Font(bold=True)
-        sheet.cell(row_number, 6, section_total).font = Font(bold=True)
-        sheet.cell(row_number, 6).number_format = '#,##0.00'
-        _style_data(sheet, row_number, row_number, (6,))
-        row_number += 2
-    for col, width in enumerate((16, 70, 12, 16, 18, 22), 1):
+
+    signature_row = total_row + len(deductions) + 2
+    sheet.merge_cells(start_row=signature_row, start_column=1, end_row=signature_row, end_column=6)
+    sheet.cell(signature_row, 1, "Сдал (Подрядчик): __________________ / __________________")
+    sheet.merge_cells(start_row=signature_row, start_column=7, end_row=signature_row, end_column=12)
+    sheet.cell(signature_row, 7, "Принял (Заказчик): __________________ / __________________")
+    sheet.freeze_panes = "A8"
+    sheet.sheet_view.showGridLines = False
+    sheet.page_setup.orientation = "landscape"
+    sheet.page_setup.fitToWidth = 1
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.print_title_rows = "7:7"
+    sheet.print_area = f"A5:L{signature_row}"
+    for col, width in enumerate((16, 58, 11, 14, 18, 18, 16, 18, 16, 18, 16, 18), 1):
         sheet.column_dimensions[get_column_letter(col)].width = width
     path = Path(output_dir) / f"КС-6_{as_of:%Y-%m}.xlsx"
     workbook.save(path)
