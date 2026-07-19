@@ -67,6 +67,8 @@ class _FakeResponse:
     def __exit__(self, *_, **__): pass
     def read(self): return self.text.encode()
     def json(self): return json.loads(self.text)
+    @property
+    def status_code(self): return self.status
 
 def _evo_response(payload):
     return _FakeResponse(payload)
