@@ -14,6 +14,9 @@ and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
 - Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
 - EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
+- AVR generator: `/home/hermes-workspace/Alikhan-migration/bot/avr.py` (КС-2 / КС-6)
+- AVR tests: `/home/hermes-workspace/Alikhan-migration/bot/test_avr.py`
+- AVR pricing: `/home/hermes-workspace/Alikhan-migration/report/templates/ВОР_с_расценками.xlsx`
 - OJR sync module: `/home/hermes-workspace/Alikhan-migration/bot/ojr_sync.py`
 - OJR schema: `/home/hermes-workspace/Alikhan-migration/db/ojr_schema.sql` (14 таблиц ОЖР)
 - OJR ER diagram: `/home/hermes-workspace/Alikhan-migration/db/ojr_er_diagram.md`
@@ -33,6 +36,9 @@ and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
   - Auto-hide rows: `_hide_rows()` — скрывает завершённые/будущие строки по графику (`bot_schedule_phases`).
   - Personnel parsing: `staff()` — из `ojr_section1_personnel` + табель.
   - Logo preservation: логотип сохраняется при очистке фото-строк.
+- AVR generation: `bot/avr.py` plus `report/templates/ВОР_с_расценками.xlsx`.
+  - КС-2 формируется за выбранный период; КС-6 — накопительно на указанную дату.
+  - WhatsApp-команды: `АВР`, `формируй АВР`, `кс-2`, `кс-6`.
 - OJR data flow: QA (`qa.py`) → `bot_memory_facts` → роутинг по `ojr_*` таблицам (schema: `db/ojr_schema.sql`).
 - OJR sync: `bot/ojr_sync.py` — функции синхронизации facts→OJR, фото→`ojr_photo_log`, погода→`ojr_weather`.
 - Daily snapshot: композит из `ojr_photo_log` + `ojr_daily_summary` + сообщений.

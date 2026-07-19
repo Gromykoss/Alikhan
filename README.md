@@ -78,6 +78,8 @@ Alikhan-migration/
 │   ├── main_waha.py         # Главный цикл — poll 3s, Guard, command handlers
 │   ├── router.py            # Маршрутизация: QA, Grok, DB, Schedule, Poll
 │   ├── fill_ejo.py          # Генератор ЕЖО — view на ojr_section3_work_log
+│   ├── avr.py               # Генератор АВР — КС-2 за период и накопительный КС-6
+│   ├── test_avr.py          # Тесты генерации КС-2, КС-6 и стоимостной сводки
 │   ├── qa.py                # QA-парсер — извлечение фактов через Grok
 │   ├── poll.py              # Ежедневный опрос прорабов
 │   ├── db.py                # PostgreSQL — сообщения, факты, календарь
@@ -139,6 +141,17 @@ WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s
 
 ---
 
+## 📑 АВР — КС-2 и КС-6
+
+Модуль `bot/avr.py` формирует КС-2 за отчётный период и накопительный журнал КС-6 на выбранную дату из данных `ojr_section3_work_log`.
+
+- Команды WhatsApp: `АВР`, `формируй АВР`, `кс-2`, `кс-6`.
+- Расценки: `report/templates/ВОР_с_расценками.xlsx` — 607 позиций ВОР, ФЕР-2020 × 0,75, около 760 млн KGS.
+- Результат: Excel-файлы КС-2 и КС-6 плюс сводка стоимости по зданиям и видам работ.
+- Проверка: `python3 -m pytest bot/test_avr.py -q` — 3 теста.
+
+---
+
 ## ⚡ Quick Links
 
 | Ресурс | Команда / URL |
@@ -153,4 +166,4 @@ WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s
 
 ---
 
-*Alikhan v5.0 — ОЖР · ТЗРК Джеруй · 18 июля 2026*
+*Alikhan v5.0 — ОЖР + АВР · ТЗРК Джеруй · 19 июля 2026*

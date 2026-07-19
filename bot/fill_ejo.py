@@ -542,10 +542,19 @@ def yesterday_cum(date, code):
                 for r in range(24, ws.max_row+1):
                     if str(ws.cell(r,3).value) == code:
                         pm = ws.cell(r,16).value; pt = ws.cell(r,19).value; wb.close()
-                        return (float(pm) if pm else 0, float(pt) if pt else 0)
+                        return (parse_number(pm), parse_number(pt))
                 wb.close()
             except: pass
-    return (0, 0)
+    return None
+
+
+def parse_number(value):
+    if value is None:
+        return 0
+    try:
+        return float(str(value).replace(',', '.'))
+    except (TypeError, ValueError):
+        return 0
 
 
 def yellow(cell):
@@ -576,6 +585,10 @@ def set_fill(ws, r, c, theme, tint=0.0):
 
 def fill(date):
     wb = load_workbook(TEMPLATE, data_only=True)  # preserve cached values, drop formulas
+    template_date = wb["Ежедневный отчет"].cell(6, 4).value
+    if isinstance(template_date, datetime):
+        template_date = template_date.strftime('%d.%m.%Y')
+    template_has_today = str(template_date or '').strip() == date.strftime('%d.%m.%Y')
     w = weather(date); inc = incidents(date); stf = staff(date)
     vols_all, plans, dn = volumes(date)  # vols_all = work+plan, plans = plan-only, dn = work-only
     vols = {k: v for k, v in vols_all.items() if k in dn}  # works only (from dn dict)
@@ -731,25 +744,17 @@ def fill(date):
                 k_plan = ws.cell(r,11).value
                 # Read cumulative FROM TEMPLATE (previous report)
                 def parse_val(val):
-                    if val is None: return 0
-                    try: return float(val)
-                    except: return 0
+                    return parse_number(val)
                 prev_p = parse_val(ws.cell(r,16).value)
                 prev_s = parse_val(ws.cell(r,19).value)
                 # Use yesterday's file for clean cumulative data
-                yp, ys = yesterday_cum(date, cs)
-                # Template cumulative already includes today if corrected EJO was uploaded.
-                # Only override with yesterday_cum if a clean file exists.
-                # Otherwise, keep template values as-is (source of truth).
-                if v > 0:
-                    if yp > 0:
-                        prev_p = yp  # clean cumulative from yesterday's file
-                        prev_s = ys
-                    # else: keep template prev_p/prev_s — already includes today's work
-                else:
-                    # No work today — keep template value (or yesterday's if larger)
-                    prev_p = max(prev_p, yp)
-                    prev_s = max(parse_val(ws.cell(r,19).value), ys)
+                yesterday = yesterday_cum(date, cs)
+                # A corrected template dated today is the source of truth.
+                # Otherwise, use yesterday's file as the clean cumulative base.
+                if template_has_today:
+                    pass  # corrected template already includes today's work
+                elif yesterday is not None:
+                    prev_p, prev_s = yesterday
 
                 # Daily values
                 sw(ws, r, 12, v, True)
@@ -759,11 +764,12 @@ def fill(date):
                 sw(ws, r, 14, 1, True)
                 ws.cell(row=r, column=14).number_format = '0%'
                 # Cumulative = yesterday's known cumulative + today's volume
-                cum_p = round(prev_p + v, 2)
+                daily_increment = 0 if template_has_today else v
+                cum_p = round(prev_p + daily_increment, 2)
                 sw(ws, r, 16, cum_p, True)
                 if mp: sw(ws, r, 17, round(cum_p / float(mp), 2), True)
                 # Total cumulative from project start
-                cum_s = round(prev_s + v, 2)
+                cum_s = round(prev_s + daily_increment, 2)
                 sw(ws, r, 19, cum_s, True)
                 if tp: sw(ws, r, 20, round(cum_s / float(tp), 2), True)
                 # U = остаток на месяц = план (O) - накопленный с начала месяца (P)
