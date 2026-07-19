@@ -1205,16 +1205,32 @@ while True:
             from db import save_message as _log_msg
             _log_msg(SANDBOX, sender, "user", text)
             action, reply, voice = route(text, SANDBOX, sender)
-            if action == "AVR":
+            if action in ("AVR", "AVR_ALL", "AVR_MONTH"):
                 send_msg(SANDBOX, "📑 Формирую КС-2 и КС-6...")
                 try:
                     import calendar
                     from avr import format_summary, generate_ks2, generate_ks6
                     report_day = datetime.strptime(SIM_DATE, "%Y-%m-%d").date() if SIM_DATE else datetime.now().date()
-                    period_start = report_day.replace(day=1)
-                    period_end = report_day.replace(day=calendar.monthrange(report_day.year, report_day.month)[1])
+                    if action == "AVR_ALL":
+                        from db import get_conn
+                        conn = get_conn()
+                        try:
+                            cur = conn.cursor()
+                            cur.execute("SELECT MIN(work_date) FROM ojr_section3_work_log")
+                            period_start = cur.fetchone()[0]
+                            if period_start is None:
+                                raise ValueError("в журнале работ нет данных")
+                        finally:
+                            conn.close()
+                        period_end = report_day
+                    elif action == "AVR_MONTH":
+                        period_start = report_day.replace(year=reply["year"], month=reply["month"], day=1)
+                        period_end = period_start.replace(day=calendar.monthrange(period_start.year, period_start.month)[1])
+                    else:
+                        period_start = report_day.replace(day=1)
+                        period_end = report_day.replace(day=calendar.monthrange(report_day.year, report_day.month)[1])
                     ks2_path, ks2_summary = generate_ks2(period_start, period_end)
-                    ks6_path, _ = generate_ks6(report_day)
+                    ks6_path, _ = generate_ks6(period_end if action != "AVR" else report_day)
                     send_msg(SANDBOX, f"✅ АВР сформирован\n{format_summary(ks2_summary)}\nКС-2: {ks2_path}\nКС-6: {ks6_path}")
                     _send_document(SANDBOX, ks2_path, os.path.basename(ks2_path))
                     _send_document(SANDBOX, ks6_path, os.path.basename(ks6_path))
