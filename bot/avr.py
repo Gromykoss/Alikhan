@@ -74,7 +74,11 @@ def fetch_work_log(start_date=None, end_date=None):
     from db import get_conn
     import psycopg2.extras
 
-    clauses = ["volume > 0", "COALESCE(category, 'объём') <> 'план'"]
+    clauses = [
+        "volume > 0",
+        "COALESCE(category, 'объём') <> 'план'",
+        "LOWER(BTRIM(COALESCE(vor_code, ''))) <> 'общая'",
+    ]
     params = []
     if start_date is not None:
         clauses.append("work_date >= %s::date")

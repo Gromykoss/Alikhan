@@ -6,12 +6,37 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import SIM_DATE, VOICE_TRIGGERS  # unified config (AUDIT-012)
 
+_RU_MONTHS = {
+    "январь": 1, "января": 1, "февраль": 2, "февраля": 2,
+    "март": 3, "марта": 3, "апрель": 4, "апреля": 4,
+    "май": 5, "мая": 5, "июнь": 6, "июня": 6,
+    "июль": 7, "июля": 7, "август": 8, "августа": 8,
+    "сентябрь": 9, "сентября": 9, "октябрь": 10, "октября": 10,
+    "ноябрь": 11, "ноября": 11, "декабрь": 12, "декабря": 12,
+}
+
+def _parse_avr_month(normalized):
+    match = re.search(r"(?:^|\s)авр(?:\s+за)?\s+([а-я]+)(?:\s+(\d{4}))?(?:\s|$)", normalized)
+    if not match:
+        return None
+    token = match.group(1)
+    matches = {_RU_MONTHS[name] for name in _RU_MONTHS if name.startswith(token) and len(token) >= 3}
+    if len(matches) != 1:
+        return None
+    year = int(match.group(2)) if match.group(2) else datetime.now().year
+    return {"month": matches.pop(), "year": year}
+
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""
     from handlers import ask_grok
 
     # AVR is an operational command and may be sent without addressing the bot by name.
     normalized = text.lower().replace("ё", "е")
+    if re.search(r"(?:^|\s)авр\s+за\s+весь\s+период(?:\s|$)", normalized):
+        return "AVR_ALL", "", False
+    avr_month = _parse_avr_month(normalized)
+    if avr_month:
+        return "AVR_MONTH", avr_month, False
     if (re.search(r"(?:^|\s)авр(?:\s|$)", normalized)
             or "формируй авр" in normalized
             or "сформируй авр" in normalized
