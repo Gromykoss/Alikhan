@@ -299,25 +299,45 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
                    f"Подрядчик: {os.getenv('KS2_CONTRACTOR', '')}")
     sheet["A6"].alignment = Alignment(horizontal="center", wrap_text=True)
 
-    # A single header row keeps the first EJO item at row 8. Repeating the group
-    # name in its sub-columns preserves the four-section hierarchy without a
-    # second header row.
-    headers = (
-        "Код ВОР", "Наименование работ", "Все работы по смете\nЕд.",
-        "Все работы по смете\nКол-во", "Все работы по смете\nЦена за ед., сом",
-        "Все работы по смете\nСумма", "Выполнено с начала работ\nКол-во",
-        "Выполнено с начала работ\nСумма", "Выполнено за отчетный период\nКол-во",
-        "Выполнено за отчетный период\nСумма", "ОСТАТОК\nКол-во", "ОСТАТОК\nСумма",
-    )
-    for column, value in enumerate(headers, 1):
-        cell = sheet.cell(7, column, value)
+    sheet.merge_cells("A7:A8")
+    sheet.merge_cells("B7:B8")
+    sheet.merge_cells("C7:F7")
+    sheet.merge_cells("G7:H7")
+    sheet.merge_cells("I7:J7")
+    sheet.merge_cells("K7:L7")
+    headers = {
+        "A7": "Код",
+        "B7": "Наименование работ",
+        "C7": "ВСЕ РАБОТЫ ПО СМЕТЕ",
+        "G7": "ВЫПОЛНЕНО С НАЧАЛА РАБОТ",
+        "I7": "ВЫПОЛНЕНО ЗА ОТЧЕТНЫЙ ПЕРИОД",
+        "K7": "ОСТАТОК",
+        "C8": "Ед.",
+        "D8": "Кол-во",
+        "E8": "Цена за ед./сом",
+        "F8": "Сумма",
+        "G8": "Кол-во",
+        "H8": "Сумма",
+        "I8": "Кол-во",
+        "J8": "Сумма",
+        "K8": "Кол-во",
+        "L8": "Сумма",
+    }
+    for coordinate, value in headers.items():
+        cell = sheet[coordinate]
+        cell.value = value
         cell.font = Font(color="FFFFFF", bold=True)
         cell.fill = _HEADER_FILL
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = _BORDER
-    sheet.row_dimensions[7].height = 52
+    for row in sheet.iter_rows(min_row=7, max_row=8, min_col=1, max_col=12):
+        for cell in row:
+            cell.fill = _HEADER_FILL
+            cell.border = _BORDER
+    sheet.row_dimensions[7].height = 34
+    sheet.row_dimensions[8].height = 30
 
-    body_start = 8
+    body_start = 9
     for row_number, details in enumerate(rows, body_start):
         price = details["unit_price"]
         plan = details["plan_qty"]
@@ -347,7 +367,7 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
         sheet.cell(total_row, column, total).font = Font(bold=True)
     _style_data(sheet, total_row, total_row, tuple(range(4, 13)))
 
-    report_total = sheet.cell(total_row, 10).value
+    report_total = sheet.cell(total_row, 10).value  # J = monthly sum
     advance_percent = _env_decimal("KS2_ADVANCE_RETENTION_PERCENT")
     warranty_percent = _env_decimal("KS2_WARRANTY_RETENTION_PERCENT")
     deductions = (
@@ -370,12 +390,12 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
     sheet.cell(signature_row, 1, "Сдал (Подрядчик): __________________ / __________________")
     sheet.merge_cells(start_row=signature_row, start_column=7, end_row=signature_row, end_column=12)
     sheet.cell(signature_row, 7, "Принял (Заказчик): __________________ / __________________")
-    sheet.freeze_panes = "A8"
+    sheet.freeze_panes = "A9"
     sheet.sheet_view.showGridLines = False
     sheet.page_setup.orientation = "landscape"
     sheet.page_setup.fitToWidth = 1
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
-    sheet.print_title_rows = "7:7"
+    sheet.print_title_rows = "7:8"
     sheet.print_area = f"A5:L{signature_row}"
     for col, width in enumerate((16, 58, 11, 14, 18, 18, 16, 18, 16, 18, 16, 18), 1):
         sheet.column_dimensions[get_column_letter(col)].width = width
