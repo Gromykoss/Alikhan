@@ -97,27 +97,36 @@ def test_generate_ks6_has_one_grouped_table_and_every_ejo_row(tmp_path, monkeypa
     assert sheet["A5"].value == "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)"
     assert sheet["A6"].value == ("Объект: Тестовый объект | Заказчик: Тестовый заказчик | "
                                   "Подрядчик: Тестовый подрядчик")
-    assert sheet["A7"].value == "Код ВОР"
-    assert sheet["C7"].value == "Все работы по смете\nЕд."
-    assert sheet["L7"].value == "ОСТАТОК\nСумма"
-    assert sheet.freeze_panes == "A8"
+    assert sheet["A7"].value == "Код"
+    assert sheet["B7"].value == "Наименование работ"
+    assert sheet["C7"].value == "ВСЕ РАБОТЫ ПО СМЕТЕ"
+    assert sheet["G7"].value == "ВЫПОЛНЕНО С НАЧАЛА РАБОТ"
+    assert sheet["I7"].value == "ВЫПОЛНЕНО ЗА ОТЧЕТНЫЙ ПЕРИОД"
+    assert sheet["K7"].value == "ОСТАТОК"
+    assert [sheet.cell(8, column).value for column in (3, 4, 5, 6)] == [
+        "Ед.", "Кол-во", "Цена за ед./сом", "Сумма"]
+    assert {
+        "A5:L5", "A6:L6", "A7:A8", "B7:B8", "C7:F7",
+        "G7:H7", "I7:J7", "K7:L7",
+    }.issubset({str(cell_range) for cell_range in sheet.merged_cells.ranges})
+    assert sheet.freeze_panes == "A9"
     assert sheet.sheet_view.showGridLines is False
     assert sheet.page_setup.orientation == "landscape"
-    assert [sheet.cell(row, 1).value for row in range(8, 13)] == [
+    assert [sheet.cell(row, 1).value for row in range(9, 14)] == [
         "2.1.1", "2.1.2", "2.9.9", "7.1.1", "9.9.9"]
-    assert sheet["D8"].value == 1007
-    assert sheet["E8"].value == 600
-    assert sheet["F8"].value == 604200
-    assert sheet["G8"].value == 14
-    assert sheet["H8"].value == 8400
-    assert sheet["I8"].value == 10
-    assert sheet["J8"].value == 6000
-    assert sheet["K8"].value == 993
-    assert sheet["L8"].value == 595800
-    assert sheet["B13"].value == "ИТОГО"
-    assert sheet["J14"].value == 4730
-    assert sheet["J15"].value == 2365
-    assert sheet["J16"].value == 40205
-    assert sheet["D8"].number_format == '#,##0.00'
+    assert sheet["D9"].value == 1007
+    assert sheet["E9"].value == 600
+    assert sheet["F9"].value == 604200
+    assert sheet["G9"].value == 14
+    assert sheet["H9"].value == 8400
+    assert sheet["I9"].value == 10
+    assert sheet["J9"].value == 6000
+    assert sheet["K9"].value == 993
+    assert sheet["L9"].value == 595800
+    assert sheet["B14"].value == "ИТОГО"
+    assert sheet["J15"].value == 4730
+    assert sheet["J16"].value == 2365
+    assert sheet["J17"].value == 40205
+    assert sheet["D9"].number_format == '#,##0.00'
     assert summary["total"] == Decimal("49950")
     assert summary["missing_prices"] == ["2.9.9", "9.9.9"]
