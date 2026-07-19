@@ -1076,9 +1076,12 @@ while True:
                 from poll import parse_poll_reply, get_poll_status as _get_poll_st2, build_poll_summary as _build_poll_sum2
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 vor_result = parse_poll_reply(text, SANDBOX, today_str)
-                if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0:
+                poll_notice = vor_result.get('message') or '\n'.join(vor_result.get('warnings', []))
+                if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0 or poll_notice:
                     p_status2 = _get_poll_st2(SANDBOX, today_str)
                     report = _build_poll_sum2(p_status2) if p_status2 else "✅ Данные приняты."
+                    if poll_notice:
+                        report += f"\n\n{poll_notice}"
                     send_msg(SANDBOX, report)
                     continue
 
@@ -1208,11 +1211,16 @@ while True:
                 from poll import parse_poll_reply
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 result = parse_poll_reply(text, SANDBOX, today_str)
+                poll_notice = result.get('message') or '\n'.join(result.get('warnings', []))
                 if result.get('codes_updated'):
                     reply = f"✅ Принято: {len(result['codes_updated'])} кодов"
                     for c in result['codes_updated']:
                         reply += f"\n  • `{c['code']}`: {c['actual_today']}"
+                    if poll_notice:
+                        reply += f"\n\n{poll_notice}"
                     send_msg(SANDBOX, reply)
+                elif poll_notice:
+                    send_msg(SANDBOX, poll_notice)
                 continue
             if action in ("IGNORE", "CMD"):
                 continue

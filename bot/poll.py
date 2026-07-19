@@ -310,7 +310,7 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
     Returns: dict with updates made
     """
     today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
-    result = {'codes_updated': [], 'facts_saved': 0}
+    result = {'codes_updated': [], 'facts_saved': 0, 'warnings': []}
 
     # 1. Find current active poll
     conn = get_conn()
@@ -323,64 +323,97 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
     poll_row = cur.fetchone()
 
     # 2. Parse VOR code updates: "2.1.1 = 85.5" or "2.1.1 — 50" or "2.1.1 50м3"
-    code_pattern = re.findall(
-        r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*[=—–\-:\s]+\s*(\d+(?:[.,]\d+)?)\s*(\S*)?',
-        text
+    code_re = re.compile(
+        r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*[=—–\-:\s]+\s*'
+        r'(\d+(?:[.,]\d+)?)\s*(.*?)'
+        r'(?=\s*(?:[,;]\s*)?\d+\.\d+\.\d+(?:\.\d+)?\s*[=—–\-:]|\s*$)',
+        re.DOTALL,
     )
-    if not code_pattern:
+    code_matches = list(code_re.finditer(text))
+    if not code_matches:
         # Try simpler: "код значение" — space-separated
-        code_pattern = re.findall(
-            r'(\d+\.\d+\.\d+(?:\.\d+)?)\s+(\d+(?:[.,]\d+)?)\s*(\S*)?',
-            text
+        code_re = re.compile(
+            r'(\d+\.\d+\.\d+(?:\.\d+)?)\s+(\d+(?:[.,]\d+)?)\s*(.*?)'
+            r'(?=\s*(?:[,;]\s*)?\d+\.\d+\.\d+(?:\.\d+)?\s+\d|\s*$)',
+            re.DOTALL,
         )
+        code_matches = list(code_re.finditer(text))
 
-    for match in code_pattern:
-        code = match[0]
-        vol_str = match[1].replace(',', '.')
-        unit = (match[2] or '').strip()
+    if not poll_row:
+        from qa import parse_qa
+        result['facts_saved'] = parse_qa(chat_id, text, today)
+        result['message'] = (
+            "⚠️ Нет активного опроса; ответ сохранён как QA-факты."
+            if result['facts_saved'] else
+            "⚠️ Ответ не распознан: нет активного опроса."
+        )
+        cur.close()
+        conn.close()
+        return result
+
+    for code_match in code_matches:
+        code, vol_text, unit_text = code_match.groups()
+        vol_str = vol_text.replace(',', '.')
+        unit = unit_text.strip().strip(',;')
         try:
             vol = float(vol_str)
         except:
             continue
 
         # Update residual: actual_today = volume done today
-        if poll_row:
-            cur.execute("""
+        cur.execute("""
                 UPDATE bot_poll_residuals
                 SET actual_today = %s,
                     updated_at = NOW()
                 WHERE poll_id = %s AND code = %s
                 RETURNING id, code, building, name, unit, residual_volume
-            """, (vol, poll_row['id'], code))
-            updated = cur.fetchone()
-            if updated:
-                result['codes_updated'].append({
-                    'code': code,
-                    'actual_today': vol,
-                    'residual': updated['residual_volume'],
-                    'name': updated['name'],
-                })
-            else:
-                # Code not in our list — still save as a fact
-                cur.execute("""
-                    INSERT INTO bot_poll_residuals (poll_id, code, building, name, unit, actual_today)
-                    VALUES (%s, %s, 'общая', '', '', %s)
-                    ON CONFLICT (poll_id, code) DO UPDATE SET actual_today = %s
-                """, (poll_row['id'], code, vol, vol))
-                result['codes_updated'].append({'code': code, 'actual_today': vol, 'residual': 0, 'name': ''})
+        """, (vol, poll_row['id'], code))
+        updated = cur.fetchone()
+        if updated:
+            building = updated['building'] or 'общая'
+            unit = unit or updated['unit'] or 'м³'
+            result['codes_updated'].append({
+                'code': code,
+                'actual_today': vol,
+                'residual': updated['residual_volume'],
+                'name': updated['name'],
+            })
         else:
-            # No active poll — save as regular QA fact
-            pass
+            # Code not in our residual list — use the template mapping when possible.
+            building = next((item['building'] for item in _get_work_items_from_template()
+                             if item['code'] == code), 'общая')
+            cur.execute("""
+                    INSERT INTO bot_poll_residuals (poll_id, code, building, name, unit, actual_today)
+                    VALUES (%s, %s, %s, '', %s, %s)
+                    ON CONFLICT (poll_id, code) DO UPDATE SET actual_today = %s
+            """, (poll_row['id'], code, building, unit, vol, vol))
+            result['codes_updated'].append({'code': code, 'actual_today': vol, 'residual': 0, 'name': ''})
 
         # Also save as work_log entry in ojr_section3_work_log
         try:
             from db import save_work_log
-            save_work_log(chat_id, today, code, 'общая', vol,
+            save_work_log(chat_id, today, code, building, vol,
                           unit=unit, category='объём',
                           source_poll_id=poll_row['id'] if poll_row else None,
                           created_by='poll')
         except Exception as e:
             print(f"[POLL OJR ERR] {e}", flush=True)
+
+    # Preserve non-code parts (personnel, equipment, plans, materials) as QA facts.
+    remaining_text = code_re.sub(' ', text).strip(' ,;\n\t') if code_matches else text.strip()
+    if remaining_text:
+        from qa import parse_qa
+        result['facts_saved'] = parse_qa(chat_id, remaining_text, today)
+
+    mentioned_codes = re.findall(r'\d+\.\d+\.\d+(?:\.\d+)?', text)
+    if len(code_matches) < len(mentioned_codes):
+        result['warnings'].append(
+            f"Частичный разбор: принято {len(code_matches)} из {len(mentioned_codes)} кодов."
+        )
+    if not result['codes_updated'] and not result['facts_saved']:
+        result['message'] = "⚠️ Ответ не распознан. Используйте формат: `код = объём`."
+    elif result['warnings']:
+        result['message'] = "⚠️ " + ' '.join(result['warnings'])
 
     conn.commit()
     cur.close()

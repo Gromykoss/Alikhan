@@ -37,9 +37,9 @@ def _code(value):
     """Normalize Excel/DB work codes without altering their hierarchy."""
     if value is None:
         return ""
-    if isinstance(value, float) and value.is_integer():
-        value = int(value)
-    return str(value).strip().replace(",", ".")
+    if isinstance(value, float):
+        value = int(value) if value.is_integer() else format(value, ".15g")
+    return "".join(str(value).strip().lstrip("'").replace(",", ".").split())
 
 
 def load_pricing(path=PRICING_FILE):
@@ -53,8 +53,9 @@ def load_pricing(path=PRICING_FILE):
         unit = row[3] if len(row) > 3 else None
         plan_qty = _decimal(row[4] if len(row) > 4 else None)
         unit_price = _decimal(row[5] if len(row) > 5 else None)
-        # Section headings have short codes such as 2 or 2.1; work codes have >= 2 dots.
-        if code.count(".") < 2 or not description:
+        # Some real VOR positions have short codes (for example 2.3 or 5.10).
+        # Unlike section headings, they carry a unit, quantity, or price.
+        if not code or not description or (code.count(".") < 2 and not (unit or plan_qty is not None or unit_price is not None)):
             continue
         pricing[code] = {
             "code": code,
@@ -105,15 +106,31 @@ def _as_date(value):
     return date.fromisoformat(str(value))
 
 
+def _filter_entries(entries, start_date=None, end_date=None):
+    """Filter dated supplied entries while retaining legacy undated entries."""
+    result = []
+    for entry in entries:
+        value = entry.get("work_date") or entry.get("date")
+        if value is None:
+            result.append(entry)
+            continue
+        work_date = _as_date(value)
+        if (start_date is None or work_date >= start_date) and (end_date is None or work_date <= end_date):
+            result.append(entry)
+    return result
+
+
 def _aggregate(entries):
     grouped = {}
     for entry in entries:
-        code = _code(entry.get("vor_code") or entry.get("code"))
+        original_code = entry.get("vor_code") or entry.get("code")
+        code = _code(original_code)
         volume = _decimal(entry.get("volume")) or Decimal("0")
         if not code or volume <= 0:
             continue
         key = (code, str(entry.get("building") or "Не указано").strip())
-        item = grouped.setdefault(key, {"code": code, "building": key[1], "volume": Decimal("0"),
+        item = grouped.setdefault(key, {"code": code, "original_code": str(original_code).strip(),
+                                        "building": key[1], "volume": Decimal("0"),
                                         "work_name": entry.get("work_name"), "unit": entry.get("unit")})
         item["volume"] += volume
     return list(grouped.values())
@@ -122,7 +139,7 @@ def _aggregate(entries):
 def _enrich(entries, pricing):
     result = []
     for item in _aggregate(entries):
-        priced = pricing.get(item["code"], {})
+        priced = pricing.get(item.get("original_code")) or pricing.get(item["code"], {})
         unit_price = priced.get("unit_price")
         result.append({
             **item,
@@ -174,7 +191,7 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
     start, end = _as_date(start_date), _as_date(end_date)
     if start > end:
         raise ValueError("Дата начала периода позже даты окончания")
-    entries = fetch_work_log(start, end) if work_entries is None else work_entries
+    entries = fetch_work_log(start, end) if work_entries is None else _filter_entries(work_entries, start, end)
     rows = _enrich(entries, load_pricing(pricing_path))
 
     workbook = Workbook()
@@ -205,11 +222,16 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
 def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, output_dir=OUTPUT_DIR):
     """Generate a cumulative KS-6 journal from project start through as_of_date."""
     as_of = _as_date(as_of_date)
-    entries = fetch_work_log(end_date=as_of) if work_entries is None else work_entries
+    entries = fetch_work_log(end_date=as_of) if work_entries is None else _filter_entries(work_entries, end_date=as_of)
     pricing = load_pricing(pricing_path)
     done_by_code = defaultdict(Decimal)
+    log_details = {}
     for item in _aggregate(entries):
         done_by_code[item["code"]] += item["volume"]
+        details = log_details.setdefault(item["code"], {})
+        details["work_name"] = details.get("work_name") or item.get("work_name")
+        details["unit"] = details.get("unit") or item.get("unit")
+        details["original_code"] = details.get("original_code") or item.get("original_code")
 
     workbook = Workbook()
     sheet = workbook.active
@@ -222,12 +244,14 @@ def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, outpu
     summary_rows = []
     all_codes = sorted(set(pricing) | set(done_by_code), key=_code_sort)
     for row_number, code in enumerate(all_codes, 5):
-        item = pricing.get(code, {})
+        details = log_details.get(code, {})
+        item = pricing.get(details.get("original_code")) or pricing.get(code, {})
         plan = item.get("plan_qty", Decimal("0"))
         done = done_by_code[code]
         price = item.get("unit_price")
-        description = item.get("description", MISSING_PRICE)
-        values = [code, description, item.get("unit", ""), price if price is not None else MISSING_PRICE,
+        description = item.get("description") or details.get("work_name") or MISSING_PRICE
+        unit = item.get("unit") or details.get("unit") or ""
+        values = [code, description, unit, price if price is not None else MISSING_PRICE,
                   plan, done, plan - done, plan * price if price is not None else MISSING_PRICE,
                   done * price if price is not None else MISSING_PRICE]
         for col, value in enumerate(values, 1):
