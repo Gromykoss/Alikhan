@@ -11,7 +11,7 @@ from secret_config import get_evo_key
 
 EVO = "http://127.0.0.1:8080"
 KEY = get_evo_key(required=True)
-SANDBOX = "120363179621030401@g.us"
+SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 sys.stdout.reconfigure(line_buffering=True)
 

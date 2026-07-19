@@ -14,6 +14,7 @@ from consuming sandbox messages and vice versa.
 import requests
 import urllib.request
 import json
+import os
 import time
 from types import SimpleNamespace
 from functools import wraps
@@ -21,8 +22,8 @@ from functools import wraps
 # ── Exported globals (so main_waha.py does not break) ─────────────────────
 EVO = "http://127.0.0.1:3000"   # dummy – never actually called after patching
 KEY = "bridge"                  # dummy
-SANDBOX = "120363179621030401@g.us"
-PRODUCTION = "120363400682390076@g.us"
+SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
+PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "")
 
 BRIDGE = "http://127.0.0.1:3000"
 

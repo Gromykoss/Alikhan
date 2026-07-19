@@ -7,7 +7,7 @@ from datetime import datetime
 sys.path.insert(0, "/home/hermes-workspace/Alikhan-migration/bot")
 
 VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
-SANDBOX = "120363179621030401@g.us"
+SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 def is_qa(text):
     if "?" in text or any(w in text.lower() for w in

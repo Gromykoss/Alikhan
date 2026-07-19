@@ -148,8 +148,8 @@ WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s
 | 📊 Prometheus | `http://localhost:9090/metrics` |
 | 📝 Логи | `tail -f /tmp/alikhan.log` |
 | 💾 Бэкапы | `/backups/` (30-дневная ротация) |
-| 🧪 Песочница | WhatsApp `120363179621030401@g.us` |
-| 🏭 Production | WhatsApp `120363400682390076@g.us` |
+| 🧪 Песочница | WhatsApp (тестовая группа) |
+| 🏭 Production | WhatsApp (боевая группа) |
 
 ---
 

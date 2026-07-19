@@ -7,6 +7,7 @@ from openpyxl.utils import get_column_letter as _gcl
 from openpyxl.cell.cell import MergedCell
 from openpyxl.styles import Alignment
 from secret_config import get_evo_key
+from config import SANDBOX
 
 EVO = "http://127.0.0.1:8080"
 KEY = get_evo_key(required=True)
@@ -479,11 +480,11 @@ def volumes(date):
         conn = _gc(); cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             SELECT content FROM bot_memory_messages 
-            WHERE chat_id = '120363179621030401@g.us' 
+            WHERE chat_id = %s 
             AND created_at::date = %s::date 
             AND content ILIKE '%%план%%'
             ORDER BY created_at DESC LIMIT 10
-        """, (date.isoformat(),))
+        """, (SANDBOX, date.isoformat(),))
         for row in cur.fetchall():
             raw = (row['content'] or '').replace(',', '.')
             # Find "Планы" or "план" followed by code = value
@@ -1123,11 +1124,11 @@ def fill(date):
                 conn = _gc2(); cur = conn.cursor(cursor_factory=_RDC)
                 cur.execute("""
                     SELECT content FROM bot_memory_messages 
-                    WHERE chat_id = '120363179621030401@g.us' 
+                    WHERE chat_id = %s 
                     AND created_at::date = %s::date 
                     AND content ILIKE '%%план%%'
                     ORDER BY created_at DESC LIMIT 10
-                """, (date.isoformat(),))
+                """, (SANDBOX, date.isoformat(),))
                 for row in cur.fetchall():
                     raw = (row['content'] or '').replace(',', '.')
                     for cd, vl in re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, re.I):

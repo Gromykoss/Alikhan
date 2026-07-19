@@ -29,10 +29,10 @@ def _load_secrets():
 
 SECRETS = _load_secrets()
 EVO_KEY = SECRETS.get('EVO_KEY', '')
-EVO_DB_PASS = SECRETS.get('DB_PASS', 'pass123')
+EVO_DB_PASS = SECRETS.get('DB_PASS', os.environ.get('DB_PASS', ''))
 
 EVOLUTION_URL = "http://127.0.0.1:8080"
-SANDBOX_GROUP = "120363179621030401@g.us"
+SANDBOX_GROUP = os.environ.get("WHATSAPP_SANDBOX", "")
 
 def get_weather():
     """Get weather for ТЗРК Джеруй, Кыргызстан ~42.2, 72.5, alt 2700m"""

@@ -5,7 +5,7 @@ import subprocess
 import psycopg2, psycopg2.extras
 from datetime import datetime
 
-DB_PASS = "pass123"
+DB_PASS = os.environ.get("DB_PASS", "")
 try:
     with open('/home/hermes-workspace/.hermes/secrets.env') as f:
         for line in f:

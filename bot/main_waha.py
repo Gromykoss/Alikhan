@@ -1187,6 +1187,23 @@ while True:
             from db import save_message as _log_msg
             _log_msg(SANDBOX, sender, "user", text)
             action, reply, voice = route(text, SANDBOX, sender)
+            if action == "AVR":
+                send_msg(SANDBOX, "📑 Формирую КС-2 и КС-6...")
+                try:
+                    import calendar
+                    from avr import format_summary, generate_ks2, generate_ks6
+                    report_day = datetime.strptime(SIM_DATE, "%Y-%m-%d").date() if SIM_DATE else datetime.now().date()
+                    period_start = report_day.replace(day=1)
+                    period_end = report_day.replace(day=calendar.monthrange(report_day.year, report_day.month)[1])
+                    ks2_path, ks2_summary = generate_ks2(period_start, period_end)
+                    ks6_path, _ = generate_ks6(report_day)
+                    send_msg(SANDBOX, f"✅ АВР сформирован\n{format_summary(ks2_summary)}\nКС-2: {ks2_path}\nКС-6: {ks6_path}")
+                    _send_document(SANDBOX, ks2_path, os.path.basename(ks2_path))
+                    _send_document(SANDBOX, ks6_path, os.path.basename(ks6_path))
+                except Exception as e:
+                    send_msg(SANDBOX, f"❌ Ошибка формирования АВР: {e}")
+                    print(f"[AVR ERR] {e}", flush=True)
+                continue
             if action == "RESIDUAL":
                 from poll import parse_poll_reply
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")

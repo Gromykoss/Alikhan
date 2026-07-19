@@ -18,7 +18,7 @@ import db
 # Evolution API config
 EVO_BASE = "http://127.0.0.1:8080"
 EVO_INSTANCE = "alikhan"
-GROUPS = ["120363179621030401@g.us", "120363400682390076@g.us"]
+GROUPS = [os.environ.get("WHATSAPP_SANDBOX", ""), os.environ.get("WHATSAPP_PRODUCTION", "")]
 ALLOWED_GROUPS = set(GROUPS)
 
 EVO_KEY = get_evo_key(required=True)
@@ -38,7 +38,7 @@ import os
 os.makedirs("/tmp/alikhan_docs", exist_ok=True)
 
 # Update DB config dynamically if needed (db.py uses hardcoded, but we note EVO_DB_PASS)
-EVO_DB_PASS = get_secret("EVO_DB_PASS", "DB_PASS", default="pass123")
+EVO_DB_PASS = get_secret("EVO_DB_PASS", "DB_PASS")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():

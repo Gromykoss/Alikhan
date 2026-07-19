@@ -97,7 +97,7 @@ print("\n🗄️ 5. DB Fact Lookup")
 try:
     from db_memory import fact_lookup
     today = datetime.now().strftime("%Y-%m-%d")
-    facts = fact_lookup("120363179621030401@g.us", start_date=today, limit=5)
+    facts = fact_lookup(os.environ.get("WHATSAPP_SANDBOX", ""), start_date=today, limit=5)
     test("DB доступна", True)
     test(f"Фактов за сегодня: {len(facts)}", len(facts) >= 0)
     if facts:

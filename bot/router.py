@@ -10,6 +10,14 @@ def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""
     from handlers import ask_grok
 
+    # AVR is an operational command and may be sent without addressing the bot by name.
+    normalized = text.lower().replace("ё", "е")
+    if (re.search(r"(?:^|\s)авр(?:\s|$)", normalized)
+            or "формируй авр" in normalized
+            or "сформируй авр" in normalized
+            or re.search(r"(?:^|\s)кс[-\s]?[26](?:\s|$)", normalized)):
+        return "AVR", "", False
+
     # 1. QA — skip if question words present (STT output may contain data words)
     from qa import is_qa, parse_qa
     question_words = ["сколько", "какой", "какая", "какое", "какие", "что", "как",
@@ -33,6 +41,7 @@ def route(text, chat_id, sender=""):
                  "формируй ежо", "сделай ежо", "закрыть опрос", "завершить опрос",
                  "закончить опрос", "стоп опрос", "формируй отчет", "сформируй отчет",
                  "сделай отчет", "заполни отчет",
+                 "авр", "формируй авр", "сформируй авр", "кс-2", "кс-6",
                  "статус опроса", "что собрано", "сводка опроса", "опрос статус",
                  "опрос стоп", "опрос закрыть", "опрос завершить", "опрос закончить",
                  "опрос окончен", "опрос завершен"]
