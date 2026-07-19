@@ -62,7 +62,6 @@ def _evo_response(payload):
     r.status_code = 200
     r.text = json.dumps(payload)
     r.json = lambda: payload
-    r.read = lambda: r.text.encode()
     r.headers = {"Content-Type": "application/json"}
     return r
 
@@ -89,11 +88,8 @@ def _patched_requests_post(url, json=None, headers=None, **kwargs):
             }
             # Attach media metadata if present
             if m.get("hasMedia"):
-                media_type = (m.get("mediaType") or "").lower()
-                if media_type in {"voice", "ptt"}:
-                    media_type = "audio"
                 media = {
-                    "mediaType": media_type,
+                    "mediaType": m.get("mediaType", ""),
                     "mimetype": m.get("mime", ""),
                     "fileName": m.get("fileName", ""),
                     "mediaUrls": m.get("mediaUrls", []),
@@ -180,21 +176,6 @@ def _patched_urlopen(req, **kwargs):
             return _evo_response({"status": "error", "message": str(e)})
 
     if getattr(req, "_is_media_download", False):
-        try:
-            import base64 as _b64
-            payload = json.loads(req.data.decode()) if req.data else {}
-            media = payload.get("message", {}).get("message", {}).get("_media", {})
-            media_urls = media.get("mediaUrls", [])
-            local_path = media_urls[0] if media_urls else None
-            if local_path and os.path.exists(local_path):
-                with open(local_path, "rb") as f:
-                    return _evo_response({
-                        "base64": _b64.b64encode(f.read()).decode(),
-                        "fileName": media.get("fileName", ""),
-                        "mimetype": media.get("mimetype", ""),
-                    })
-        except Exception:
-            pass
         return _evo_response({"base64": ""})
 
     return _orig_urlopen(req, **kwargs)
