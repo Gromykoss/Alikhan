@@ -347,10 +347,10 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
         values = (
             details["code"], details["description"], details["unit"], plan,
             price if price is not None else MISSING_PRICE,
-            plan * price if price is not None else MISSING_PRICE,
-            cumulative, cumulative * price if price is not None else MISSING_PRICE,
-            monthly, monthly * price if price is not None else MISSING_PRICE,
-            remaining, remaining * price if price is not None else MISSING_PRICE,
+            round(plan * price, 2) if price is not None else MISSING_PRICE,
+            cumulative, round(cumulative * price, 2) if price is not None else MISSING_PRICE,
+            monthly, round(monthly * price, 2) if price is not None else MISSING_PRICE,
+            remaining, round(remaining * price, 2) if price is not None else MISSING_PRICE,
         )
         for column, value in enumerate(values, 1):
             sheet.cell(row_number, column, value)
@@ -360,12 +360,15 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
 
     total_row = max(body_start, body_end + 1)
     sheet.cell(total_row, 2, "ИТОГО").font = Font(bold=True)
-    for column in range(4, 13):
+    total_cols = (4, 6, 7, 8, 9, 10, 11, 12)  # skip C (ед.) and E (цена)
+    for column in total_cols:
         total = sum((value for value in (_decimal(sheet.cell(row, column).value)
                                          for row in range(body_start, body_end + 1))
                      if value is not None), Decimal("0"))
-        sheet.cell(total_row, column, total).font = Font(bold=True)
-    _style_data(sheet, total_row, total_row, tuple(range(4, 13)))
+        cell = sheet.cell(total_row, column, total)
+        cell.font = Font(bold=True)
+        cell.number_format = '#,##0.00'
+    _style_data(sheet, total_row, total_row, total_cols)
 
     report_total = sheet.cell(total_row, 10).value  # J = monthly sum
     advance_percent = _env_decimal("KS2_ADVANCE_RETENTION_PERCENT")
