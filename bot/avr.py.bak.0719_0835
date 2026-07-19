@@ -1,9 +1,8 @@
 """Generate KS-2 acceptance acts and KS-6 cumulative work journals."""
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-import os
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -14,9 +13,9 @@ from openpyxl.utils import get_column_letter
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PRICING_FILE = PROJECT_ROOT / "report" / "templates" / "ВОР_с_расценками.xlsx"
 OUTPUT_DIR = Path("/tmp")
-OBJECT_NAME = os.getenv("KS2_OBJECT", "")
-CUSTOMER = os.getenv("KS2_CUSTOMER", "")
-CONTRACTOR = os.getenv("KS2_CONTRACTOR", "")
+OBJECT_NAME = "ТЗРК Джеруй"
+CUSTOMER = "ОсОО Альянс-Алтын"
+CONTRACTOR = "ОсОО АйБиКон"
 MISSING_PRICE = "Требует расценки"
 
 _THIN = Side(style="thin", color="808080")
@@ -187,213 +186,34 @@ def _style_data(sheet, first_row, last_row, numeric_columns=()):
             sheet.cell(row[0].row, col).number_format = '#,##0.00'
 
 
-def _env_decimal(name, default="0"):
-    value = _decimal(os.getenv(name, default))
-    return value if value is not None else Decimal(default)
-
-
-def _previous_from_ks2(as_of_date, output_dir):
-    """Read cumulative quantities from the latest KS-2 ending on as_of_date."""
-    candidates = sorted(Path(output_dir).glob("КС-2_*.xlsx"), key=lambda path: path.stat().st_mtime, reverse=True)
-    for path in candidates:
-        try:
-            workbook = load_workbook(path, read_only=True, data_only=True)
-            if "_meta" not in workbook.sheetnames:
-                workbook.close()
-                continue
-            meta = workbook["_meta"]
-            if _as_date(meta["B1"].value) != as_of_date:
-                workbook.close()
-                continue
-            result = {}
-            for code, building, quantity in meta.iter_rows(min_row=3, min_col=1, max_col=3, values_only=True):
-                if code:
-                    result[(_code(code), str(building or "Не указано"))] = _decimal(quantity) or Decimal("0")
-            workbook.close()
-            return result
-        except (OSError, ValueError):
-            continue
-    return None
-
-
-def _previous_from_ejo(as_of_date, output_dir):
-    """Read cumulative quantity (column S) from yesterday's latest EJO."""
-    candidates = sorted(Path(output_dir).glob(f"ЕЖО_{as_of_date:%Y-%m-%d}_v*.xlsx"), reverse=True)
-    for path in candidates:
-        try:
-            workbook = load_workbook(path, read_only=True, data_only=True)
-            sheet = workbook[workbook.sheetnames[0]]
-            result = {}
-            for row in range(24, sheet.max_row + 1):
-                code = _code(sheet.cell(row, 3).value)
-                if code:
-                    result[(code, None)] = _decimal(sheet.cell(row, 19).value) or Decimal("0")
-            workbook.close()
-            return result
-        except OSError:
-            continue
-    return None
-
-
-def _previous_quantities(start, work_entries, output_dir):
-    """Resolve prior cumulative quantities: yesterday KS-2, EJO, then OJR."""
-    previous_date = start - timedelta(days=1)
-    previous = _previous_from_ks2(previous_date, output_dir)
-    if previous is not None:
-        return previous
-    previous = _previous_from_ejo(previous_date, output_dir)
-    if previous is not None:
-        return previous
-    if work_entries is None:
-        entries = fetch_work_log(end_date=previous_date)
-    else:
-        entries = [entry for entry in work_entries
-                   if entry.get("work_date") or entry.get("date")
-                   if _as_date(entry.get("work_date") or entry.get("date")) <= previous_date]
-    return {(item["code"], item["building"]): item["volume"] for item in _aggregate(entries)}
-
-
-def _previous_for_item(previous, item):
-    exact = previous.get((item["code"], item["building"]))
-    if exact is not None:
-        return exact
-    return previous.get((item["code"], None), Decimal("0"))
-
-
-def _write_ks2_header(sheet, start, end, currency):
-    customer = os.getenv("KS2_CUSTOMER", "")
-    contractor = os.getenv("KS2_CONTRACTOR", "")
-    contract_no = os.getenv("KS2_CONTRACT_NO", "")
-    contract_date = os.getenv("KS2_CONTRACT_DATE", "")
-    contract_sum = os.getenv("KS2_CONTRACT_SUM", "")
-    site = os.getenv("KS2_SITE", "")
-    object_name = os.getenv("KS2_OBJECT", "")
-    labels = (
-        (1, "Заказчик:", customer), (2, "Подрядчик:", contractor),
-        (3, "Стройка:", site), (4, "Объект:", object_name),
-        (5, "Договор:", f"№ {contract_no} от {contract_date}; сумма {contract_sum} {currency}".strip()),
-    )
-    for row, label, value in labels:
-        sheet.merge_cells(start_row=row, start_column=2, end_row=row, end_column=14)
-        sheet.cell(row, 1, label).font = Font(bold=True)
-        sheet.cell(row, 2, value)
-    sheet.merge_cells("A7:N7")
-    sheet["A7"] = f"АКТ № {os.getenv('KS2_ACT_NO', '___')}"
-    sheet["A7"].font = Font(size=16, bold=True)
-    sheet["A7"].alignment = Alignment(horizontal="center")
-    sheet.merge_cells("A8:N8")
-    sheet["A8"] = "о приёмке выполненных работ"
-    sheet["A8"].font = Font(bold=True)
-    sheet["A8"].alignment = Alignment(horizontal="center")
-    sheet.merge_cells("A9:N9")
-    sheet["A9"] = (f"Дата составления: {date.today():%d.%m.%Y}    "
-                   f"Отчётный период: с {start:%d.%m.%Y} по {end:%d.%m.%Y}")
-    sheet["A9"].alignment = Alignment(horizontal="center")
-
-
-def _write_ks2_table_header(sheet):
-    vertical = {1: "№ п/п", 2: "Наименование работ", 3: "Ед. изм.", 13: "Не заполняется", 14: "% выполнения работ"}
-    for column, value in vertical.items():
-        sheet.merge_cells(start_row=11, start_column=column, end_row=13, end_column=column)
-        sheet.cell(11, column, value)
-    groups = ((4, 6, "По Договору"), (7, 8, "Выполнено за предыдущий период"),
-              (9, 10, "Выполнено за отчётный период"), (11, 12, "Всего с начала периода"))
-    for first, last, value in groups:
-        sheet.merge_cells(start_row=11, start_column=first, end_row=11, end_column=last)
-        sheet.cell(11, first, value)
-    subheaders = {4: "Кол-во", 5: "Цена за ед.", 6: "Сумма", 7: "Кол-во", 8: "Сумма",
-                  9: "Кол-во", 10: "Сумма", 11: "Кол-во", 12: "Сумма"}
-    for column, value in subheaders.items():
-        sheet.merge_cells(start_row=12, start_column=column, end_row=13, end_column=column)
-        sheet.cell(12, column, value)
-    for row in sheet.iter_rows(min_row=11, max_row=13, min_col=1, max_col=14):
-        for cell in row:
-            cell.border = _BORDER
-            cell.fill = _SUBHEADER_FILL
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    sheet.row_dimensions[11].height = 32
-    sheet.row_dimensions[12].height = 24
-
-
 def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_FILE, output_dir=OUTPUT_DIR):
-    """Generate a 14-column KS-2 act for an inclusive reporting period."""
+    """Generate a KS-2 workbook for an inclusive reporting period."""
     start, end = _as_date(start_date), _as_date(end_date)
     if start > end:
         raise ValueError("Дата начала периода позже даты окончания")
     entries = fetch_work_log(start, end) if work_entries is None else _filter_entries(work_entries, start, end)
     rows = _enrich(entries, load_pricing(pricing_path))
-    previous = _previous_quantities(start, work_entries, output_dir)
-    currency = os.getenv("KS2_CURRENCY", "сом")
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "КС-2"
-    _write_ks2_header(sheet, start, end, currency)
-    _write_ks2_table_header(sheet)
-    body_start = 14
-    for item_number, item in enumerate(rows, 1):
-        row_number = body_start + item_number - 1
-        price = item["unit_price"]
-        prior_qty = _previous_for_item(previous, item)
-        current_qty = item["volume"]
-        total_qty = prior_qty + current_qty
-        contract_sum = item["plan_qty"] * price if price is not None else MISSING_PRICE
-        prior_sum = prior_qty * price if price is not None else MISSING_PRICE
-        current_sum = current_qty * price if price is not None else MISSING_PRICE
-        total_sum = total_qty * price if price is not None else MISSING_PRICE
-        completion = total_qty / item["plan_qty"] if item["plan_qty"] else Decimal("0")
-        values = [item_number, item["description"], item["unit"], item["plan_qty"],
-                  price if price is not None else MISSING_PRICE, contract_sum,
-                  prior_qty, prior_sum, current_qty, current_sum, total_qty, total_sum, None, completion]
+    subtitle = (f"Объект: {OBJECT_NAME} | Заказчик: {CUSTOMER} | Подрядчик: {CONTRACTOR}\n"
+                f"Период: {start:%d.%m.%Y}–{end:%d.%m.%Y} | Дата составления: {date.today():%d.%m.%Y}")
+    columns = ["Код", "Наименование работ", "Ед.", "Количество", "Цена за ед., сом", "Стоимость, сом", "Здание"]
+    _setup_sheet(sheet, "АКТ О ПРИЁМКЕ ВЫПОЛНЕННЫХ РАБОТ (КС-2)", subtitle, columns)
+    for row_number, item in enumerate(rows, 5):
+        values = [item["code"], item["description"], item["unit"], item["volume"],
+                  item["unit_price"] if item["unit_price"] is not None else MISSING_PRICE,
+                  item["cost"] if item["cost"] is not None else MISSING_PRICE, item["building"]]
         for col, value in enumerate(values, 1):
             sheet.cell(row_number, col, value)
-        sheet.cell(row_number, 14).number_format = "0.00%"
-    last_body_row = body_start + len(rows) - 1
-    if rows:
-        _style_data(sheet, body_start, last_body_row, tuple(range(4, 13)))
-
-    totals_start = max(body_start, last_body_row + 1)
-    report_total = sum((row["cost"] or Decimal("0")) for row in rows)
-    advance_percent = _env_decimal("KS2_ADVANCE_RETENTION_PERCENT")
-    warranty_percent = _env_decimal("KS2_WARRANTY_RETENTION_PERCENT")
-    advance = report_total * advance_percent / Decimal("100")
-    warranty = report_total * warranty_percent / Decimal("100")
-    totals = (("Итого", report_total), (f"Удержание аванса ({advance_percent:g}%)", advance),
-              (f"Гарантийное удержание ({warranty_percent:g}%)", warranty),
-              ("К оплате", report_total - advance - warranty))
-    for offset, (label, value) in enumerate(totals):
-        row_number = totals_start + offset
-        sheet.merge_cells(start_row=row_number, start_column=1, end_row=row_number, end_column=9)
-        sheet.cell(row_number, 1, label).font = Font(bold=True)
-        sheet.merge_cells(start_row=row_number, start_column=10, end_row=row_number, end_column=12)
-        sheet.cell(row_number, 10, value).font = Font(bold=True)
-        sheet.cell(row_number, 10).number_format = '#,##0.00'
-        for row in sheet.iter_rows(min_row=row_number, max_row=row_number, min_col=1, max_col=14):
-            for cell in row:
-                cell.border = _BORDER
-
-    signature_row = totals_start + len(totals) + 2
-    sheet.merge_cells(start_row=signature_row, start_column=1, end_row=signature_row, end_column=6)
-    sheet.cell(signature_row, 1, "Сдал (Подрядчик): __________________ / __________________")
-    sheet.merge_cells(start_row=signature_row, start_column=8, end_row=signature_row, end_column=14)
-    sheet.cell(signature_row, 8, "Принял (Заказчик): __________________ / __________________")
-    sheet.freeze_panes = "A14"
-    sheet.sheet_view.showGridLines = False
-    sheet.page_setup.orientation = "landscape"
-    sheet.page_setup.fitToWidth = 1
-    sheet.sheet_properties.pageSetUpPr.fitToPage = True
-    sheet.print_title_rows = "11:13"
-    sheet.print_area = f"A1:N{signature_row}"
-    for col, width in enumerate((7, 56, 10, 12, 15, 16, 12, 16, 12, 16, 12, 16, 13, 13), 1):
+    total_row = 5 + len(rows)
+    sheet.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=5)
+    sheet.cell(total_row, 1, "ИТОГО (без позиций, требующих расценки)").font = Font(bold=True)
+    sheet.cell(total_row, 6, sum((r["cost"] or Decimal("0")) for r in rows)).font = Font(bold=True)
+    _style_data(sheet, 5, total_row, (4, 5, 6))
+    for col, width in enumerate((14, 60, 11, 15, 19, 20, 22), 1):
         sheet.column_dimensions[get_column_letter(col)].width = width
-
-    meta = workbook.create_sheet("_meta")
-    meta.sheet_state = "hidden"
-    meta.append(("period_end", end.isoformat()))
-    meta.append(("code", "building", "cumulative_quantity"))
-    for item in rows:
-        meta.append((item["code"], item["building"], _previous_for_item(previous, item) + item["volume"]))
     path = Path(output_dir) / f"КС-2_{start:%Y-%m}_{end:%Y-%m}.xlsx"
     workbook.save(path)
     return str(path), summarize(rows)

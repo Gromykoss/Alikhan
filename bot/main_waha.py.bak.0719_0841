@@ -901,27 +901,17 @@ while True:
                 continue
 
             # Audio / voice
-            media_meta = msg.get("_media")
             audio_msg = msg.get("audioMessage") or msg.get("ptvMessage")
-            if audio_msg or (media_meta and media_meta.get("mediaType") in {"audio", "voice", "ptt"}):
+            if audio_msg:
                 try:
-                    media_urls = (media_meta or {}).get("mediaUrls", [])
-                    local_path = media_urls[0] if media_urls else None
-                    if local_path and os.path.exists(local_path):
-                        with open(local_path, "rb") as f:
-                            b64_audio = base64.b64encode(f.read()).decode()
-                        audio_format = os.path.splitext(local_path)[1].lstrip(".") or None
-                    else:
-                        payload = {"message": m}
-                        req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
-                            data=json.dumps(payload).encode(),
-                            headers={"apikey": KEY, "Content-Type": "application/json"})
-                        resp = urllib.request.urlopen(req, timeout=30)
-                        result = json.loads(resp.read().decode())
-                        b64_audio = result.get("base64", "")
-                        audio_format = None
+                    payload = {"message": m}
+                    req = urllib.request.Request(f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
+                        data=json.dumps(payload).encode(),
+                        headers={"apikey": KEY, "Content-Type": "application/json"})
+                    resp = urllib.request.urlopen(req, timeout=30)
+                    b64_audio = json.loads(resp.read().decode()).get("base64", "")
                     if b64_audio:
-                        transcribed = transcribe_audio(b64_audio, audio_format=audio_format)
+                        transcribed = transcribe_audio(b64_audio)
                         if transcribed:
                             text = transcribed
                             # Save to DB
@@ -937,13 +927,8 @@ while True:
                                 print(f"[STT] Saved to DB: {text[:60]}", flush=True)
                             except Exception as e:
                                 print(f"[STT DB ERR] {e}", flush=True)
-                        else:
-                            send_msg(SANDBOX, "Не удалось распознать голосовое сообщение. Пожалуйста, повторите или напишите текстом.")
-                    else:
-                        send_msg(SANDBOX, "Не удалось загрузить голосовое сообщение. Пожалуйста, повторите или напишите текстом.")
                 except Exception as e:
                     print(f"[STT FETCH ERR] {e}", flush=True)
-                    send_msg(SANDBOX, "Не удалось обработать голосовое сообщение. Пожалуйста, повторите или напишите текстом.")
                     continue
 
             if not text.strip():
