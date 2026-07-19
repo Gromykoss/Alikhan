@@ -1,7 +1,7 @@
 """Generate KS-2 acceptance acts and KS-6 cumulative work journals."""
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 import os
 from pathlib import Path
@@ -13,6 +13,7 @@ from openpyxl.utils import get_column_letter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PRICING_FILE = PROJECT_ROOT / "report" / "templates" / "ВОР_с_расценками.xlsx"
+EJO_FILE = PROJECT_ROOT / "bot" / "templates" / "ЕЖО_шаблон.xlsx"
 OUTPUT_DIR = Path("/tmp")
 OBJECT_NAME = os.getenv("KS2_OBJECT", "")
 CUSTOMER = os.getenv("KS2_CUSTOMER", "")
@@ -44,65 +45,45 @@ def _code(value):
 
 
 def load_pricing(path=PRICING_FILE):
-    """Return work-code keyed pricing from columns B:F of the priced VOR."""
+    """Return exact work-code keyed unit prices from VOR columns B and F."""
     workbook = load_workbook(path, read_only=True, data_only=True)
     sheet = workbook[workbook.sheetnames[0]]
     pricing = {}
     for row in sheet.iter_rows(values_only=True):
         code = _code(row[1] if len(row) > 1 else None)
-        description = row[2] if len(row) > 2 else None
-        unit = row[3] if len(row) > 3 else None
-        plan_qty = _decimal(row[4] if len(row) > 4 else None)
         unit_price = _decimal(row[5] if len(row) > 5 else None)
-        # Some real VOR positions have short codes (for example 2.3 or 5.10).
-        # Unlike section headings, they carry a unit, quantity, or price.
-        if not code or not description or (code.count(".") < 2 and not (unit or plan_qty is not None or unit_price is not None)):
+        if not code or unit_price is None:
             continue
-        pricing[code] = {
-            "code": code,
-            "description": str(description).strip(),
-            "unit": str(unit).strip() if unit else "",
-            "plan_qty": plan_qty or Decimal("0"),
-            "unit_price": unit_price,
-        }
+        pricing[code] = {"code": code, "unit_price": unit_price}
     workbook.close()
     return pricing
 
 
-def fetch_work_log(start_date=None, end_date=None, include_corrections=False):
-    """Read factual OJR volumes, optionally including negative corrections."""
-    from db import get_conn
-    import psycopg2.extras
-
-    clauses = [
-        "w.volume <> 0" if include_corrections else "w.volume > 0",
-        "COALESCE(w.category, 'объём') <> 'план'",
-        "LOWER(BTRIM(COALESCE(w.vor_code, ''))) <> 'общая'",
-    ]
-    params = []
-    if start_date is not None:
-        clauses.append("w.work_date >= %s::date")
-        params.append(_as_date(start_date))
-    if end_date is not None:
-        clauses.append("w.work_date <= %s::date")
-        params.append(_as_date(end_date))
-    conn = get_conn()
+def load_ejo(path=EJO_FILE):
+    """Read performed work from the canonical EJO worksheet."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
     try:
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            """SELECT w.vor_code, w.work_name, w.unit, w.volume, w.building,
-                      w.work_date, sp.phase_num AS schedule_phase_num
-               FROM ojr_section3_work_log w
-               LEFT JOIN bot_schedule_phases sp ON sp.id = w.schedule_phase_id
-               WHERE %s
-               ORDER BY w.work_date, w.building, w.vor_code""" % " AND ".join(clauses),
-            params,
-        )
-        return [dict(row) for row in cur.fetchall()]
+        sheet = workbook["Ежедневный отчет"]
+        rows = []
+        for values in sheet.iter_rows(values_only=True):
+            code = _code(values[2] if len(values) > 2 else None)
+            monthly = _decimal(values[15] if len(values) > 15 else None) or Decimal("0")
+            cumulative = _decimal(values[18] if len(values) > 18 else None) or Decimal("0")
+            if not code or (monthly <= 0 and cumulative <= 0):
+                continue
+            rows.append({
+                "code": code,
+                "description": str(values[3]).strip() if len(values) > 3 and values[3] else MISSING_PRICE,
+                "unit": str(values[9]).strip() if len(values) > 9 and values[9] else "",
+                "plan_qty": _decimal(values[10] if len(values) > 10 else None) or Decimal("0"),
+                "monthly_qty": monthly,
+                "previous_qty": cumulative - monthly,
+                "cumulative_qty": cumulative,
+                "building": "Все здания",
+            })
+        return rows
     finally:
-        if "cur" in locals():
-            cur.close()
-        conn.close()
+        workbook.close()
 
 
 def _as_date(value):
@@ -113,72 +94,14 @@ def _as_date(value):
     return date.fromisoformat(str(value))
 
 
-def _filter_entries(entries, start_date=None, end_date=None):
-    """Filter dated supplied entries while retaining legacy undated entries."""
-    result = []
-    for entry in entries:
-        value = entry.get("work_date") or entry.get("date")
-        if value is None:
-            result.append(entry)
-            continue
-        work_date = _as_date(value)
-        if (start_date is None or work_date >= start_date) and (end_date is None or work_date <= end_date):
-            result.append(entry)
-    return result
-
-
-def _aggregate(entries):
-    grouped = {}
-    buildings_by_code = defaultdict(set)
-    for entry in entries:
-        original_code = entry.get("vor_code") or entry.get("code")
-        code = _code(original_code)
-        volume = _decimal(entry.get("volume")) or Decimal("0")
-        if not code or volume <= 0:
-            continue
-        building = str(entry.get("building") or "").strip()
-        if building and building.casefold() not in {"общая", "общий", "общие планы", "общий план"}:
-            buildings_by_code[code].add(building)
-        item = grouped.setdefault(code, {"code": code, "original_code": str(original_code).strip(),
-                                         "building": "Не указано", "volume": Decimal("0"),
-                                         "work_name": entry.get("work_name"), "unit": entry.get("unit")})
-        item["volume"] += volume
-        item["work_name"] = item.get("work_name") or entry.get("work_name")
-        item["unit"] = item.get("unit") or entry.get("unit")
-    for code, item in grouped.items():
-        if buildings_by_code[code]:
-            item["building"] = ", ".join(sorted(buildings_by_code[code]))
-    return list(grouped.values())
-
-
-def _pricing_for_code(code, pricing):
-    """Return the nearest priced code, walking up the code hierarchy."""
-    normalized = _code(code)
-    candidate = normalized
-    while candidate:
-        if candidate in pricing:
-            return candidate, pricing[candidate]
-        if "." not in candidate:
-            break
-        candidate = candidate.rsplit(".", 1)[0]
-    return normalized, {}
-
-
-def _enrich(entries, pricing):
-    result = []
-    for item in _aggregate(entries):
-        pricing_code, priced = _pricing_for_code(item.get("original_code") or item["code"], pricing)
-        unit_price = priced.get("unit_price")
-        result.append({
-            **item,
-            "pricing_code": pricing_code,
-            "description": priced.get("description") or item.get("work_name") or MISSING_PRICE,
-            "unit": priced.get("unit") or item.get("unit") or "",
-            "plan_qty": priced.get("plan_qty", Decimal("0")),
-            "unit_price": unit_price,
-            "cost": item["volume"] * unit_price if unit_price is not None else None,
-        })
-    return sorted(result, key=lambda row: (row["building"], _code_sort(row["code"])))
+def _priced_ejo_rows(ejo_path, pricing_path, quantity_key):
+    pricing = load_pricing(pricing_path)
+    rows = []
+    for item in load_ejo(ejo_path):
+        price = pricing.get(item["code"], {}).get("unit_price")
+        rows.append({**item, "unit_price": price,
+                     "cost": item[quantity_key] * price if price is not None else None})
+    return sorted(rows, key=lambda row: _code_sort(row["code"]))
 
 
 def _code_sort(code):
@@ -218,90 +141,6 @@ def _style_data(sheet, first_row, last_row, numeric_columns=()):
 def _env_decimal(name, default="0"):
     value = _decimal(os.getenv(name, default))
     return value if value is not None else Decimal(default)
-
-
-def _previous_from_ks2(as_of_date, output_dir):
-    """Read cumulative quantities from the latest KS-2 ending on as_of_date."""
-    candidates = sorted(Path(output_dir).glob("КС-2_*.xlsx"), key=lambda path: path.stat().st_mtime, reverse=True)
-    for path in candidates:
-        try:
-            workbook = load_workbook(path, read_only=True, data_only=True)
-            if "_meta" not in workbook.sheetnames:
-                workbook.close()
-                continue
-            meta = workbook["_meta"]
-            if _as_date(meta["B1"].value) != as_of_date:
-                workbook.close()
-                continue
-            result = {}
-            for code, building, quantity in meta.iter_rows(min_row=3, min_col=1, max_col=3, values_only=True):
-                if code:
-                    result[(_code(code), str(building or "Не указано"))] = _decimal(quantity) or Decimal("0")
-            workbook.close()
-            return result
-        except (OSError, ValueError):
-            continue
-    return None
-
-
-def _previous_from_ejo(as_of_date, output_dir):
-    """Read cumulative quantity (column S) from yesterday's latest EJO."""
-    candidates = sorted(Path(output_dir).glob(f"ЕЖО_{as_of_date:%Y-%m-%d}_v*.xlsx"), reverse=True)
-    for path in candidates:
-        try:
-            workbook = load_workbook(path, read_only=True, data_only=True)
-            sheet = workbook[workbook.sheetnames[0]]
-            result = {}
-            for row in range(24, sheet.max_row + 1):
-                code = _code(sheet.cell(row, 3).value)
-                if code:
-                    result[(code, None)] = _decimal(sheet.cell(row, 19).value) or Decimal("0")
-            workbook.close()
-            return result
-        except OSError:
-            continue
-    return None
-
-
-def _previous_quantities(start, work_entries, output_dir, pricing):
-    """Resolve prior cumulative quantities: yesterday KS-2, EJO, then OJR."""
-    previous_date = start - timedelta(days=1)
-    previous = _previous_from_ks2(previous_date, output_dir)
-    if previous is not None:
-        return _normalize_previous(previous, pricing)
-    previous = _previous_from_ejo(previous_date, output_dir)
-    if previous is not None:
-        return _normalize_previous(previous, pricing)
-    if work_entries is None:
-        entries = fetch_work_log(end_date=previous_date)
-    else:
-        entries = [entry for entry in work_entries
-                   if entry.get("work_date") or entry.get("date")
-                   if _as_date(entry.get("work_date") or entry.get("date")) <= previous_date]
-    previous = {(item["code"], item["building"]): item["volume"] for item in _aggregate(entries)}
-    return _normalize_previous(previous, pricing)
-
-
-def _normalize_previous(previous, pricing):
-    """Collapse legacy code/building quantities onto their priced work code."""
-    normalized = defaultdict(Decimal)
-    for key, quantity in previous.items():
-        code = key[0] if isinstance(key, tuple) else key
-        pricing_code, _ = _pricing_for_code(code, pricing)
-        normalized[pricing_code] += quantity
-    return dict(normalized)
-
-
-def _previous_for_item(previous, item):
-    code = _code(item.get("pricing_code") or item["code"])
-    candidate = code
-    while candidate:
-        if candidate in previous:
-            return previous[candidate]
-        if "." not in candidate:
-            break
-        candidate = candidate.rsplit(".", 1)[0]
-    return Decimal("0")
 
 
 def _write_ks2_header(sheet, start, end, currency):
@@ -360,15 +199,12 @@ def _write_ks2_table_header(sheet):
     sheet.row_dimensions[12].height = 24
 
 
-def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_FILE, output_dir=OUTPUT_DIR):
+def generate_ks2(start_date, end_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, output_dir=OUTPUT_DIR):
     """Generate a 14-column KS-2 act for an inclusive reporting period."""
     start, end = _as_date(start_date), _as_date(end_date)
     if start > end:
         raise ValueError("Дата начала периода позже даты окончания")
-    entries = fetch_work_log(start, end) if work_entries is None else _filter_entries(work_entries, start, end)
-    pricing = load_pricing(pricing_path)
-    rows = _enrich(entries, pricing)
-    previous = _previous_quantities(start, work_entries, output_dir, pricing)
+    rows = _priced_ejo_rows(ejo_path, pricing_path, "monthly_qty")
     currency = os.getenv("KS2_CURRENCY", "сом")
 
     workbook = Workbook()
@@ -380,9 +216,9 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
     for item_number, item in enumerate(rows, 1):
         row_number = body_start + item_number - 1
         price = item["unit_price"]
-        prior_qty = _previous_for_item(previous, item)
-        current_qty = item["volume"]
-        total_qty = prior_qty + current_qty
+        prior_qty = item["previous_qty"]
+        current_qty = item["monthly_qty"]
+        total_qty = item["cumulative_qty"]
         contract_sum = item["plan_qty"] * price if price is not None else MISSING_PRICE
         prior_sum = prior_qty * price if price is not None else MISSING_PRICE
         current_sum = current_qty * price if price is not None else MISSING_PRICE
@@ -438,47 +274,23 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
     meta.append(("period_end", end.isoformat()))
     meta.append(("code", "building", "cumulative_quantity"))
     for item in rows:
-        meta.append((item["code"], item["building"], _previous_for_item(previous, item) + item["volume"]))
+        meta.append((item["code"], item["building"], item["cumulative_qty"]))
     path = Path(output_dir) / f"КС-2_{start:%Y-%m}_{end:%Y-%m}.xlsx"
     workbook.save(path)
     return str(path), summarize(rows)
 
 
-def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, output_dir=OUTPUT_DIR):
+def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, output_dir=OUTPUT_DIR):
     """Generate a performed-work-only cumulative KS-6 journal through a date."""
     as_of = _as_date(as_of_date)
-    entries = (fetch_work_log(end_date=as_of, include_corrections=True)
-               if work_entries is None else _filter_entries(work_entries, end_date=as_of))
-    pricing = load_pricing(pricing_path)
-    performed = {}
-    for entry in entries:
-        original_code = entry.get("vor_code") or entry.get("code")
-        code = _code(original_code)
-        volume = _decimal(entry.get("volume")) or Decimal("0")
-        if not code or volume == 0:
-            continue
-        item = performed.setdefault(code, {
-            "code": code,
-            "original_code": str(original_code).strip(),
-            "volume": Decimal("0"),
-            "work_name": entry.get("work_name"),
-            "unit": entry.get("unit"),
-            "phase": entry.get("schedule_phase_num") or entry.get("phase_num"),
-        })
-        item["volume"] += volume
-        item["work_name"] = item.get("work_name") or entry.get("work_name")
-        item["unit"] = item.get("unit") or entry.get("unit")
-        item["phase"] = item.get("phase") or entry.get("schedule_phase_num") or entry.get("phase_num")
-
+    rows = _priced_ejo_rows(ejo_path, pricing_path, "cumulative_qty")
     phase_rows = defaultdict(list)
-    for item in performed.values():
-        if item["volume"] <= 0:
-            continue
+    for item in rows:
         try:
-            phase = int(item.get("phase") or item["code"].split(".", 1)[0])
+            phase = int(item["code"].split(".", 1)[0])
         except (TypeError, ValueError):
             phase = 0
-        phase_rows[phase if 1 <= phase <= 6 else 0].append(item)
+        phase_rows[phase].append(item)
 
     workbook = Workbook()
     sheet = workbook.active
@@ -490,24 +302,23 @@ def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, outpu
     _setup_sheet(sheet, "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)", subtitle, columns)
     summary_rows = []
     row_number = 5
-    for phase in (*range(1, 7), 0):
+    for phase in sorted(phase_rows, key=lambda value: (value == 0, value)):
         items = phase_rows.get(phase)
         if not items:
             continue
         sheet.merge_cells(start_row=row_number, start_column=1, end_row=row_number, end_column=9)
-        phase_cell = sheet.cell(row_number, 1, f"Этап {phase}" if phase else "Вне этапов 1–6")
+        phase_cell = sheet.cell(row_number, 1, f"Этап {phase}" if phase else "Код без числовой фазы")
         phase_cell.font = Font(bold=True)
         phase_cell.fill = _SUBHEADER_FILL
         phase_cell.border = _BORDER
         row_number += 1
         for details in sorted(items, key=lambda value: _code_sort(value["code"])):
             code = details["code"]
-            _, priced = _pricing_for_code(details.get("original_code") or code, pricing)
-            plan = priced.get("plan_qty", Decimal("0"))
-            done = details["volume"]
-            price = priced.get("unit_price")
-            description = priced.get("description") or details.get("work_name") or MISSING_PRICE
-            unit = priced.get("unit") or details.get("unit") or ""
+            plan = details["plan_qty"]
+            done = details["cumulative_qty"]
+            price = details["unit_price"]
+            description = details["description"]
+            unit = details["unit"]
             values = [code, description, unit, price if price is not None else MISSING_PRICE,
                       plan, done, plan - done, plan * price if price is not None else MISSING_PRICE,
                       done * price if price is not None else MISSING_PRICE]
