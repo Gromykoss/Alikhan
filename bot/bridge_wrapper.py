@@ -56,15 +56,20 @@ def _drain_buffer(remote_jid):
     return matched
 
 # ── Helper: fake Evolution-style Response ─────────────────────────────────
+class _FakeResponse:
+    """Mimics urllib HTTPResponse as a context manager."""
+    __slots__ = ("status", "text", "headers")
+    def __init__(self, payload):
+        self.status = 200
+        self.text = json.dumps(payload)
+        self.headers = {"Content-Type": "application/json"}
+    def __enter__(self): return self
+    def __exit__(self, *_, **__): pass
+    def read(self): return self.text.encode()
+    def json(self): return json.loads(self.text)
+
 def _evo_response(payload):
-    """Return an object that looks enough like requests.Response for the caller."""
-    r = SimpleNamespace()
-    r.status_code = 200
-    r.text = json.dumps(payload)
-    r.json = lambda: payload
-    r.read = lambda: r.text.encode()
-    r.headers = {"Content-Type": "application/json"}
-    return r
+    return _FakeResponse(payload)
 
 # ── Monkey-patch requests.post ────────────────────────────────────────────
 _orig_requests_post = requests.post
