@@ -12,8 +12,8 @@ from datetime import datetime
 SIM_DATE = None  # was "2026-06-30" — closed
 
 # ── WhatsApp Groups ──
-SANDBOX   = "120363179621030401@g.us"   # Testing group
-PRODUCTION = "120363400682390076@g.us"  # Production group
+SANDBOX   = os.environ.get("WHATSAPP_SANDBOX", "")   # Testing group
+PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "")  # Production group
 
 # ── API URLs ──
 EVO_URL = "http://127.0.0.1:8080"

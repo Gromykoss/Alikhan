@@ -11,7 +11,7 @@ Alikhan Daily Snapshot — Data Gatherer for Codex/Grok Build CLI
   python3 gather_snapshot_data.py                     # промпт на stdout
   python3 gather_snapshot_data.py --save              # сохранить в /tmp/snapshot_prompt.txt
   python3 gather_snapshot_data.py --date 2026-07-15   # за конкретную дату
-  python3 gather_snapshot_data.py --date 2026-07-15 --chat-id 120363179621030401@g.us
+  python3 gather_snapshot_data.py --date 2026-07-15 --chat-id SANDBOX_GROUP_ID
 
 Затем передать в Codex CLI:
   python3 gather_snapshot_data.py --save && codex exec --dangerously-bypass-approvals-and-sandbox "$(cat /tmp/snapshot_prompt.txt)"
@@ -37,7 +37,7 @@ def get_db_conn():
     import subprocess
 
     # Resolve password same way as db.py
-    db_pass = "pass123"
+    db_pass = os.environ.get("DB_PASS", "")
     try:
         secrets_path = os.path.expanduser("~/.hermes/secrets.env")
         if os.path.exists(secrets_path):
@@ -268,7 +268,7 @@ def main():
     parser = argparse.ArgumentParser(description="Gather data and render daily snapshot prompt")
     parser.add_argument("--date", default=date.today().isoformat(),
                         help="Target date (YYYY-MM-DD), default: today")
-    parser.add_argument("--chat-id", default="120363179621030401@g.us",
+    parser.add_argument("--chat-id", default=os.environ.get("WHATSAPP_SANDBOX", ""),
                         help="WhatsApp chat ID for poll data (default: sandbox)")
     parser.add_argument("--save", action="store_true",
                         help="Save prompt to /tmp/snapshot_prompt.txt instead of stdout")

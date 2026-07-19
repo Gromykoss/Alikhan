@@ -9,7 +9,7 @@ sys.path.insert(0, "/home/hermes-workspace/Alikhan-migration/bot")
 # ── Simulate the bot's processing pipeline ──
 
 VOICE_TRIGGERS = ["голосом", "озвучь", "голос"]
-SANDBOX = "120363179621030401@g.us"
+SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 def is_qa(text):
     """Same logic as main_waha.py"""

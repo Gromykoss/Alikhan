@@ -259,7 +259,7 @@ systemctl --user restart hermes-whatsapp-bridge    # перезапуск мос
 
 **БД:**
 - PostgreSQL: `evolution-postgres` (172.22.0.3:5432)
-- База: evolution_db, пользователь: evolution, пароль: pass123
+- База: evolution_db, пользователь: evolution, пароль: DB_PASS (из env)
 - bot_memory_messages.content — не UNIQUE (защита через SELECT)
 
 **Ключевые файлы сессии:**

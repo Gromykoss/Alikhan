@@ -137,7 +137,7 @@ def test_db_lookup():
     try:
         from db_lookup import lookup_facts, lookup_schedule
         from router import route
-        SANDBOX = "120363179621030401@g.us"
+        SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
         for query in VOICE_QUERIES:
             print(f"\n  Query: {query}", flush=True)
@@ -273,7 +273,7 @@ def test_e2e():
     """Simulate full pipeline: raw STT text → route → reply"""
     try:
         from router import route
-        SANDBOX = "120363179621030401@g.us"
+        SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
         # Simulate STT-typical outputs (with errors that Grok should have fixed)
         stt_simulations = [

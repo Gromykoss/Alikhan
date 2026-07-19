@@ -67,7 +67,7 @@ fi
 echo -n "4. DB connection (psycopg2): "
 if python3 -c "
 import psycopg2
-conn = psycopg2.connect(host='172.22.0.2', dbname='evolution_db', user='evolution', password='pass123', port=5432)
+conn = psycopg2.connect(host='172.22.0.2', dbname='evolution_db', user='evolution', password=os.environ.get('DB_PASS', ''), port=5432)
 conn.close()
 print('OK')
 " 2>/dev/null; then
