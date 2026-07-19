@@ -60,6 +60,39 @@ def test_generate_ks2_from_samples(tmp_path, monkeypatch):
     assert sheet.cell(labels["К оплате"], 10).value == 40205
 
 
+def test_generate_ks2_aggregates_codes_and_uses_parent_pricing(tmp_path):
+    entries = [
+        {"vor_code": "2.1.1.1", "work_name": "Детальная планировка", "unit": "м3", "volume": 4,
+         "building": "Общежитие", "work_date": date(2026, 6, 30)},
+        {"vor_code": "2.1.1", "work_name": "Планировка", "unit": "м3", "volume": 3,
+         "building": "общая", "work_date": date(2026, 7, 10)},
+        {"vor_code": "2.1.1", "work_name": "Планировка", "unit": "м3", "volume": 7,
+         "building": "Общежитие", "work_date": date(2026, 7, 11)},
+        {"vor_code": "2.1.2.1.1", "work_name": "Детальная разработка грунта", "unit": "м3", "volume": 1,
+         "building": "общая", "work_date": date(2026, 7, 12)},
+        {"vor_code": "2.1.2.1.1", "work_name": "Детальная разработка грунта", "unit": "м3", "volume": 2,
+         "building": "АБК", "work_date": date(2026, 7, 13)},
+    ]
+
+    path, summary = generate_ks2(date(2026, 7, 1), date(2026, 7, 31), entries, output_dir=tmp_path)
+
+    workbook = load_workbook(path, data_only=True)
+    sheet = workbook["КС-2"]
+    work_rows = [row for row in range(14, sheet.max_row + 1)
+                 if sheet.cell(row, 5).value == 600]
+    assert len(work_rows) == 1
+    row = work_rows[0]
+    assert sheet.cell(row, 7).value == 4
+    assert sheet.cell(row, 9).value == 10
+    assert sheet.cell(row, 11).value == 14
+    parent_price_rows = [row for row in range(14, sheet.max_row + 1)
+                         if sheet.cell(row, 5).value == 11800]
+    assert len(parent_price_rows) == 1
+    assert sheet.cell(parent_price_rows[0], 9).value == 3
+    assert summary["by_building"] == {"АБК": 35400, "Общежитие": 6000}
+    assert summary["missing_prices"] == []
+
+
 def test_generate_ks6_from_samples(tmp_path):
     path, summary = generate_ks6(date(2026, 7, 31), SAMPLES, output_dir=tmp_path)
     assert Path(path).name == "КС-6_2026-07.xlsx"

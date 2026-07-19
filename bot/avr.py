@@ -69,31 +69,33 @@ def load_pricing(path=PRICING_FILE):
     return pricing
 
 
-def fetch_work_log(start_date=None, end_date=None):
-    """Read positive factual volumes from OJR, optionally limited by dates."""
+def fetch_work_log(start_date=None, end_date=None, include_corrections=False):
+    """Read factual OJR volumes, optionally including negative corrections."""
     from db import get_conn
     import psycopg2.extras
 
     clauses = [
-        "volume > 0",
-        "COALESCE(category, 'объём') <> 'план'",
-        "LOWER(BTRIM(COALESCE(vor_code, ''))) <> 'общая'",
+        "w.volume <> 0" if include_corrections else "w.volume > 0",
+        "COALESCE(w.category, 'объём') <> 'план'",
+        "LOWER(BTRIM(COALESCE(w.vor_code, ''))) <> 'общая'",
     ]
     params = []
     if start_date is not None:
-        clauses.append("work_date >= %s::date")
+        clauses.append("w.work_date >= %s::date")
         params.append(_as_date(start_date))
     if end_date is not None:
-        clauses.append("work_date <= %s::date")
+        clauses.append("w.work_date <= %s::date")
         params.append(_as_date(end_date))
     conn = get_conn()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            """SELECT vor_code, work_name, unit, volume, building, work_date
-               FROM ojr_section3_work_log
+            """SELECT w.vor_code, w.work_name, w.unit, w.volume, w.building,
+                      w.work_date, sp.phase_num AS schedule_phase_num
+               FROM ojr_section3_work_log w
+               LEFT JOIN bot_schedule_phases sp ON sp.id = w.schedule_phase_id
                WHERE %s
-               ORDER BY work_date, building, vor_code""" % " AND ".join(clauses),
+               ORDER BY w.work_date, w.building, w.vor_code""" % " AND ".join(clauses),
             params,
         )
         return [dict(row) for row in cur.fetchall()]
@@ -127,27 +129,49 @@ def _filter_entries(entries, start_date=None, end_date=None):
 
 def _aggregate(entries):
     grouped = {}
+    buildings_by_code = defaultdict(set)
     for entry in entries:
         original_code = entry.get("vor_code") or entry.get("code")
         code = _code(original_code)
         volume = _decimal(entry.get("volume")) or Decimal("0")
         if not code or volume <= 0:
             continue
-        key = (code, str(entry.get("building") or "Не указано").strip())
-        item = grouped.setdefault(key, {"code": code, "original_code": str(original_code).strip(),
-                                        "building": key[1], "volume": Decimal("0"),
-                                        "work_name": entry.get("work_name"), "unit": entry.get("unit")})
+        building = str(entry.get("building") or "").strip()
+        if building and building.casefold() not in {"общая", "общий", "общие планы", "общий план"}:
+            buildings_by_code[code].add(building)
+        item = grouped.setdefault(code, {"code": code, "original_code": str(original_code).strip(),
+                                         "building": "Не указано", "volume": Decimal("0"),
+                                         "work_name": entry.get("work_name"), "unit": entry.get("unit")})
         item["volume"] += volume
+        item["work_name"] = item.get("work_name") or entry.get("work_name")
+        item["unit"] = item.get("unit") or entry.get("unit")
+    for code, item in grouped.items():
+        if buildings_by_code[code]:
+            item["building"] = ", ".join(sorted(buildings_by_code[code]))
     return list(grouped.values())
+
+
+def _pricing_for_code(code, pricing):
+    """Return the nearest priced code, walking up the code hierarchy."""
+    normalized = _code(code)
+    candidate = normalized
+    while candidate:
+        if candidate in pricing:
+            return candidate, pricing[candidate]
+        if "." not in candidate:
+            break
+        candidate = candidate.rsplit(".", 1)[0]
+    return normalized, {}
 
 
 def _enrich(entries, pricing):
     result = []
     for item in _aggregate(entries):
-        priced = pricing.get(item.get("original_code")) or pricing.get(item["code"], {})
+        pricing_code, priced = _pricing_for_code(item.get("original_code") or item["code"], pricing)
         unit_price = priced.get("unit_price")
         result.append({
             **item,
+            "pricing_code": pricing_code,
             "description": priced.get("description") or item.get("work_name") or MISSING_PRICE,
             "unit": priced.get("unit") or item.get("unit") or "",
             "plan_qty": priced.get("plan_qty", Decimal("0")),
@@ -239,29 +263,45 @@ def _previous_from_ejo(as_of_date, output_dir):
     return None
 
 
-def _previous_quantities(start, work_entries, output_dir):
+def _previous_quantities(start, work_entries, output_dir, pricing):
     """Resolve prior cumulative quantities: yesterday KS-2, EJO, then OJR."""
     previous_date = start - timedelta(days=1)
     previous = _previous_from_ks2(previous_date, output_dir)
     if previous is not None:
-        return previous
+        return _normalize_previous(previous, pricing)
     previous = _previous_from_ejo(previous_date, output_dir)
     if previous is not None:
-        return previous
+        return _normalize_previous(previous, pricing)
     if work_entries is None:
         entries = fetch_work_log(end_date=previous_date)
     else:
         entries = [entry for entry in work_entries
                    if entry.get("work_date") or entry.get("date")
                    if _as_date(entry.get("work_date") or entry.get("date")) <= previous_date]
-    return {(item["code"], item["building"]): item["volume"] for item in _aggregate(entries)}
+    previous = {(item["code"], item["building"]): item["volume"] for item in _aggregate(entries)}
+    return _normalize_previous(previous, pricing)
+
+
+def _normalize_previous(previous, pricing):
+    """Collapse legacy code/building quantities onto their priced work code."""
+    normalized = defaultdict(Decimal)
+    for key, quantity in previous.items():
+        code = key[0] if isinstance(key, tuple) else key
+        pricing_code, _ = _pricing_for_code(code, pricing)
+        normalized[pricing_code] += quantity
+    return dict(normalized)
 
 
 def _previous_for_item(previous, item):
-    exact = previous.get((item["code"], item["building"]))
-    if exact is not None:
-        return exact
-    return previous.get((item["code"], None), Decimal("0"))
+    code = _code(item.get("pricing_code") or item["code"])
+    candidate = code
+    while candidate:
+        if candidate in previous:
+            return previous[candidate]
+        if "." not in candidate:
+            break
+        candidate = candidate.rsplit(".", 1)[0]
+    return Decimal("0")
 
 
 def _write_ks2_header(sheet, start, end, currency):
@@ -326,8 +366,9 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
     if start > end:
         raise ValueError("Дата начала периода позже даты окончания")
     entries = fetch_work_log(start, end) if work_entries is None else _filter_entries(work_entries, start, end)
-    rows = _enrich(entries, load_pricing(pricing_path))
-    previous = _previous_quantities(start, work_entries, output_dir)
+    pricing = load_pricing(pricing_path)
+    rows = _enrich(entries, pricing)
+    previous = _previous_quantities(start, work_entries, output_dir, pricing)
     currency = os.getenv("KS2_CURRENCY", "сом")
 
     workbook = Workbook()
@@ -404,18 +445,40 @@ def generate_ks2(start_date, end_date, work_entries=None, pricing_path=PRICING_F
 
 
 def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, output_dir=OUTPUT_DIR):
-    """Generate a cumulative KS-6 journal from project start through as_of_date."""
+    """Generate a performed-work-only cumulative KS-6 journal through a date."""
     as_of = _as_date(as_of_date)
-    entries = fetch_work_log(end_date=as_of) if work_entries is None else _filter_entries(work_entries, end_date=as_of)
+    entries = (fetch_work_log(end_date=as_of, include_corrections=True)
+               if work_entries is None else _filter_entries(work_entries, end_date=as_of))
     pricing = load_pricing(pricing_path)
-    done_by_code = defaultdict(Decimal)
-    log_details = {}
-    for item in _aggregate(entries):
-        done_by_code[item["code"]] += item["volume"]
-        details = log_details.setdefault(item["code"], {})
-        details["work_name"] = details.get("work_name") or item.get("work_name")
-        details["unit"] = details.get("unit") or item.get("unit")
-        details["original_code"] = details.get("original_code") or item.get("original_code")
+    performed = {}
+    for entry in entries:
+        original_code = entry.get("vor_code") or entry.get("code")
+        code = _code(original_code)
+        volume = _decimal(entry.get("volume")) or Decimal("0")
+        if not code or volume == 0:
+            continue
+        item = performed.setdefault(code, {
+            "code": code,
+            "original_code": str(original_code).strip(),
+            "volume": Decimal("0"),
+            "work_name": entry.get("work_name"),
+            "unit": entry.get("unit"),
+            "phase": entry.get("schedule_phase_num") or entry.get("phase_num"),
+        })
+        item["volume"] += volume
+        item["work_name"] = item.get("work_name") or entry.get("work_name")
+        item["unit"] = item.get("unit") or entry.get("unit")
+        item["phase"] = item.get("phase") or entry.get("schedule_phase_num") or entry.get("phase_num")
+
+    phase_rows = defaultdict(list)
+    for item in performed.values():
+        if item["volume"] <= 0:
+            continue
+        try:
+            phase = int(item.get("phase") or item["code"].split(".", 1)[0])
+        except (TypeError, ValueError):
+            phase = 0
+        phase_rows[phase if 1 <= phase <= 6 else 0].append(item)
 
     workbook = Workbook()
     sheet = workbook.active
@@ -426,26 +489,35 @@ def generate_ks6(as_of_date, work_entries=None, pricing_path=PRICING_FILE, outpu
                 f"Накопительно по состоянию на {as_of:%d.%m.%Y}")
     _setup_sheet(sheet, "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)", subtitle, columns)
     summary_rows = []
-    all_codes = sorted(set(pricing) | set(done_by_code), key=_code_sort)
-    for row_number, code in enumerate(all_codes, 5):
-        details = log_details.get(code, {})
-        item = pricing.get(details.get("original_code")) or pricing.get(code, {})
-        plan = item.get("plan_qty", Decimal("0"))
-        done = done_by_code[code]
-        price = item.get("unit_price")
-        description = item.get("description") or details.get("work_name") or MISSING_PRICE
-        unit = item.get("unit") or details.get("unit") or ""
-        values = [code, description, unit, price if price is not None else MISSING_PRICE,
-                  plan, done, plan - done, plan * price if price is not None else MISSING_PRICE,
-                  done * price if price is not None else MISSING_PRICE]
-        for col, value in enumerate(values, 1):
-            sheet.cell(row_number, col, value)
-        if done > 0:
+    row_number = 5
+    for phase in (*range(1, 7), 0):
+        items = phase_rows.get(phase)
+        if not items:
+            continue
+        sheet.merge_cells(start_row=row_number, start_column=1, end_row=row_number, end_column=9)
+        phase_cell = sheet.cell(row_number, 1, f"Этап {phase}" if phase else "Вне этапов 1–6")
+        phase_cell.font = Font(bold=True)
+        phase_cell.fill = _SUBHEADER_FILL
+        phase_cell.border = _BORDER
+        row_number += 1
+        for details in sorted(items, key=lambda value: _code_sort(value["code"])):
+            code = details["code"]
+            _, priced = _pricing_for_code(details.get("original_code") or code, pricing)
+            plan = priced.get("plan_qty", Decimal("0"))
+            done = details["volume"]
+            price = priced.get("unit_price")
+            description = priced.get("description") or details.get("work_name") or MISSING_PRICE
+            unit = priced.get("unit") or details.get("unit") or ""
+            values = [code, description, unit, price if price is not None else MISSING_PRICE,
+                      plan, done, plan - done, plan * price if price is not None else MISSING_PRICE,
+                      done * price if price is not None else MISSING_PRICE]
+            for col, value in enumerate(values, 1):
+                sheet.cell(row_number, col, value)
+            _style_data(sheet, row_number, row_number, (4, 5, 6, 7, 8, 9))
             summary_rows.append({"code": code, "description": description, "building": "Все здания",
                                  "volume": done, "cost": done * price if price is not None else None,
                                  "unit_price": price})
-    last_row = 4 + len(all_codes)
-    _style_data(sheet, 5, last_row, (4, 5, 6, 7, 8, 9))
+            row_number += 1
     for col, width in enumerate((14, 58, 10, 18, 15, 21, 15, 22, 20), 1):
         sheet.column_dimensions[get_column_letter(col)].width = width
     path = Path(output_dir) / f"КС-6_{as_of:%Y-%m}.xlsx"
