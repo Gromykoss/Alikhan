@@ -78,33 +78,46 @@ def test_generate_ks2_from_ejo(tmp_path, monkeypatch):
     assert summary["missing_prices"] == ["9.9.9"]
 
 
-def test_generate_ks6_has_four_sections_and_every_ejo_row(tmp_path):
+def test_generate_ks6_has_one_grouped_table_and_every_ejo_row(tmp_path, monkeypatch):
     ejo_path = tmp_path / "ejo.xlsx"
     pricing_path = tmp_path / "pricing.xlsx"
     _write_ejo(ejo_path)
     _write_pricing(pricing_path)
+    monkeypatch.setenv("KS2_OBJECT", "Тестовый объект")
+    monkeypatch.setenv("KS2_CUSTOMER", "Тестовый заказчик")
+    monkeypatch.setenv("KS2_CONTRACTOR", "Тестовый подрядчик")
+    monkeypatch.setenv("KS2_ADVANCE_RETENTION_PERCENT", "10")
+    monkeypatch.setenv("KS2_WARRANTY_RETENTION_PERCENT", "5")
 
     path, summary = generate_ks6(date(2026, 7, 31), pricing_path, ejo_path, tmp_path)
 
     assert Path(path).name == "КС-6_2026-07.xlsx"
     workbook = load_workbook(path, data_only=True)
     sheet = workbook["КС-6"]
-    section_rows = {sheet.cell(row, 1).value: row for row in range(5, sheet.max_row + 1)
-                    if sheet.cell(row, 1).value in {
-                        "ВСЕ РАБОТЫ", "ВЫПОЛНЕНО С НАЧАЛА РАБОТ",
-                        "ЗА ОТЧЕТНЫЙ ПЕРИОД", "ОСТАТОК"}}
-    assert list(section_rows) == ["ВСЕ РАБОТЫ", "ВЫПОЛНЕНО С НАЧАЛА РАБОТ",
-                                  "ЗА ОТЧЕТНЫЙ ПЕРИОД", "ОСТАТОК"]
-    for section_row in section_rows.values():
-        assert [sheet.cell(section_row + 1, col).value for col in range(1, 7)] == [
-            "Код ВОР", "Наименование", "Ед.изм.", "Кол-во", "Расценка", "Сумма"]
-        codes = [sheet.cell(row, 1).value for row in range(section_row + 2, section_row + 7)]
-        assert codes == ["2.1.1", "2.1.2", "2.9.9", "7.1.1", "9.9.9"]
-    cumulative_row = section_rows["ВЫПОЛНЕНО С НАЧАЛА РАБОТ"] + 2
-    remaining_row = section_rows["ОСТАТОК"] + 2
-    assert sheet.cell(cumulative_row, 4).value == 14
-    assert sheet.cell(cumulative_row, 6).value == 8400
-    assert sheet.cell(remaining_row, 4).value == 993
-    assert sheet.cell(remaining_row, 6).value == 595800
+    assert sheet["A5"].value == "ОБЩИЙ ЖУРНАЛ УЧЁТА ВЫПОЛНЕННЫХ РАБОТ (КС-6)"
+    assert sheet["A6"].value == ("Объект: Тестовый объект | Заказчик: Тестовый заказчик | "
+                                  "Подрядчик: Тестовый подрядчик")
+    assert sheet["A7"].value == "Код ВОР"
+    assert sheet["C7"].value == "Все работы по смете\nЕд."
+    assert sheet["L7"].value == "ОСТАТОК\nСумма"
+    assert sheet.freeze_panes == "A8"
+    assert sheet.sheet_view.showGridLines is False
+    assert sheet.page_setup.orientation == "landscape"
+    assert [sheet.cell(row, 1).value for row in range(8, 13)] == [
+        "2.1.1", "2.1.2", "2.9.9", "7.1.1", "9.9.9"]
+    assert sheet["D8"].value == 1007
+    assert sheet["E8"].value == 600
+    assert sheet["F8"].value == 604200
+    assert sheet["G8"].value == 14
+    assert sheet["H8"].value == 8400
+    assert sheet["I8"].value == 10
+    assert sheet["J8"].value == 6000
+    assert sheet["K8"].value == 993
+    assert sheet["L8"].value == 595800
+    assert sheet["B13"].value == "ИТОГО"
+    assert sheet["J14"].value == 4730
+    assert sheet["J15"].value == 2365
+    assert sheet["J16"].value == 40205
+    assert sheet["D8"].number_format == '#,##0.00'
     assert summary["total"] == Decimal("49950")
     assert summary["missing_prices"] == ["2.9.9", "9.9.9"]
