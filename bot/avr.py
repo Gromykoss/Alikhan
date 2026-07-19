@@ -360,7 +360,7 @@ def generate_ks6(as_of_date, pricing_path=PRICING_FILE, ejo_path=EJO_FILE, outpu
 
     total_row = max(body_start, body_end + 1)
     sheet.cell(total_row, 2, "ИТОГО").font = Font(bold=True)
-    total_cols = (4, 6, 7, 8, 9, 10, 11, 12)  # skip C (ед.) and E (цена)
+    total_cols = (6, 8, 10, 12)  # F,H,J,L = сумма; skip кол-во D(4),G(7),I(9),K(11)
     for column in total_cols:
         total = sum((value for value in (_decimal(sheet.cell(row, column).value)
                                          for row in range(body_start, body_end + 1))
