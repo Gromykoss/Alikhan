@@ -164,6 +164,17 @@ def _patched_Request(url, data=None, headers=None, **kwargs):
 urllib.request.Request = _patched_Request
 
 def _patched_urlopen(req, **kwargs):
+    url = req.full_url if hasattr(req, 'full_url') else req.selector if hasattr(req, 'selector') else str(req)
+    if "/message/sendText/" in url:
+        try:
+            payload = json.loads(req.data.decode()) if req.data else {}
+            chat_id = payload.get("number") or payload.get("chatId")
+            text = payload.get("text", "")
+            if chat_id and text:
+                requests.post(f"{BRIDGE}/send", json={"chatId": chat_id, "message": text}, timeout=10)
+            return _evo_response({"status": "ok"})
+        except Exception as e:
+            return _evo_response({"status": "error", "message": str(e)})
     if getattr(req, "_is_media", False):
         try:
             payload = json.loads(req.data.decode()) if req.data else {}
