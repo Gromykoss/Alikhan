@@ -62,6 +62,16 @@ def get_conn():
 def save_message(chat_id, sender, role, content, message_type="text", file_name=None):
     conn = get_conn()
     cur = conn.cursor()
+    # Dedup: skip if same content+chat_id+sender within last 5 seconds
+    cur.execute("""
+        SELECT 1 FROM bot_memory_messages
+        WHERE chat_id = %s AND sender = %s AND content = %s
+          AND message_time >= NOW() - INTERVAL '5 seconds'
+        LIMIT 1
+    """, (chat_id, sender, content))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        return
     cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, file_name, message_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s)""",
         (chat_id, sender, role, message_type, content, file_name, datetime.utcnow()))

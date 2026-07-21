@@ -388,7 +388,56 @@ def incidents(date):
 
 
 def staff(date):
-    f = qa(date, 'персонал'); mp = {'атантай':'Атантай','майкадам':'Майкадам','наватек':'Наватек'}
+    """Read personnel from ojr_section1_personnel (primary) with legacy fallback."""
+    ds = date.strftime('%Y-%m-%d')
+    r = {}
+    mp = {'атантай':'Атантай','майкадам':'Майкадам','наватек':'Наватек',
+          'алтын-тас':'Алтын-Тас','айбикон':'АйБиКон'}
+    
+    # Primary: read from ojr_section1_personnel
+    try:
+        from db import get_conn
+        import psycopg2.extras
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT LOWER(organization_name) as org, LOWER(position) as pos, COUNT(*) as cnt
+            FROM ojr_section1_personnel
+            WHERE DATE(created_at) = %s::date AND is_active = TRUE
+            GROUP BY LOWER(organization_name), LOWER(position)
+        """, (ds,))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        if rows:
+            for row in rows:
+                org = row['org']
+                pos = row['pos']
+                cnt = row['cnt']
+                # Match org to known names
+                nm = None
+                for k, v in mp.items():
+                    if k in org or org in k:
+                        nm = v; break
+                if not nm:
+                    nm = org.title()
+                if nm not in r:
+                    r[nm] = {'t': 0, 'i': 0, 'w': 0}
+                is_itr = 'итр' in pos or 'инженер' in pos or 'рук' in pos
+                if is_itr:
+                    r[nm]['i'] += cnt
+                else:
+                    r[nm]['w'] += cnt
+                r[nm]['t'] += cnt
+            print(f"[STAFF OJR] {len(r)} orgs from ojr_section1_personnel", flush=True)
+            # Fill defaults
+            for n in ['Атантай','Майкадам','Наватек','Алтын-Тас']:
+                if n not in r: r[n] = {'t':0,'i':0,'w':0}
+            return r
+    except Exception as e:
+        print(f"[STAFF OJR ERR] {e}, falling back to legacy", flush=True)
+    
+    # Legacy fallback: bot_memory_facts
+    f = qa(date, 'персонал')
     r = {}
     for x in f:
         t = (x['fact'] or '').lower()

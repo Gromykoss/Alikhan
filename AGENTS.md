@@ -54,7 +54,11 @@
 
 ### Canonical files
 
-- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py` (запуск: `python3 main_waha.py &`)
+- Live bot: `systemctl --user {start,stop,restart,status} alikhan.service` (systemd, Restart=always)
+- Venv python: `/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3`
+- Env vars in unit file: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
+- **НЕ запускать вручную** (`python3 main_waha.py`) — только через systemd
+- Service unit: `/home/hermes-workspace/.config/systemd/user/alikhan.service`
 - Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
 - Hermes Bridge: `systemctl --user start hermes-whatsapp-bridge` (systemd, Restart=always, port 3000)
 - Bridge session: `~/.hermes/sessions/whatsapp/`
@@ -87,7 +91,8 @@
 
 - Do not restart `alikhan.service`, `alikhan-document-extractor.service`, or Evolution API
 - Do not send to production WhatsApp group `120363400682390076@g.us`
-- Do not change secrets, credentials, DB connection, production service units
+- Do not change secrets, credentials, DB connection
+- Restart only via `systemctl --user restart alikhan` — не pkill/manual python3
 
 ## Verification commands
 
@@ -147,12 +152,9 @@ WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s
 ```bash
 curl -s http://127.0.0.1:3000/health              # Hermes bridge health
 systemctl --user status hermes-whatsapp-bridge     # bridge systemd status
-pgrep -af 'bridge.js\|main_waha'                   # процессы
+systemctl --user status alikhan                    # alikhan bot status
+systemctl --user restart alikhan                   # перезапуск бота (после правок db.py/qa.py)
 tail -30 /tmp/alikhan.log                          # логи
-# Перезапуск бота
-pkill -f main_waha.py; cd /home/hermes-workspace/Alikhan-migration/bot && python3 main_waha.py &
-# Мост WhatsApp (systemd)
-systemctl --user restart hermes-whatsapp-bridge    # перезапуск моста
 ```
 
 ## Память проекта (PostgreSQL) — миграция на ОЖР (18.07.2026)
