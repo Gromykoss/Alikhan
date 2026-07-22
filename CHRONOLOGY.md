@@ -1,5 +1,23 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 20.07.2026 — Structured Vision Checklist: photo→ЕЖО structured mapping (T-137 #5)
+
+### Что было сделано
+- Создан `vision_checklist.py` (338 строк): structured JSON checklist вместо plain-text Grok vision описаний
+- CHECKLIST_SCHEMA с полями (weather, personnel_count, equipment, materials, progress, incidents, confidence scores)
+- `checklist_from_image(base64)` → Grok-4 structured output → parsed JSON
+- `checklist_to_ejo_map()` → прямое заполнение колонок ЕЖО + `ojr_photo_log` / `ojr_section3_work_log`
+- Значительное улучшение фото-анализа для ежедневного отчёта, снижение hallucination в fill_ejo
+- Интеграция в photo flow main_waha.py → ojr tables → ЕЖО generation
+
+### Файлы
+- `bot/vision_checklist.py` (новый модуль)
+- Обновления в `bot/main_waha.py` (photo handler integration)
+- Связанные правки в `fill_ejo.py` / `document_extractor.py`
+
+### Discord
+- #alikhan обсуждение архитектуры vision pipeline (T-137)
+
 ## 19.07.2026 — АВР: полный рефакторинг КС-6 + 837 расценок ВОР
 
 ### КС-6 — полная переделка
