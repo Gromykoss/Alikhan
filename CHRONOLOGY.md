@@ -168,6 +168,11 @@
 ### Коммит
 - `86d8439` — Alikhan v4 final
 
+## 2026-07-22 — WAHA альтернатива + проект idle
+
+- **12:00** — X Hotspot Radar: обнаружен WAHA — self-hosted WhatsApp HTTP API, альтернатива Evolution API для Alikhan-стека (T-159).
+- **22-23.07** — Проект idle. Бот остановлен (миграция с Evolution на Hermes Bridge завершена 15.07). Новых изменений кода нет. AGENTS.md memory violation (10-й repeat) — Hermes не прочитал основной AGENTS.md при старте сессии 21.07.
+
 ## 15.07.2026 — Миграция на Hermes Bridge
 
 ### Ключевое изменение
