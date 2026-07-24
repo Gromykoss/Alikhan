@@ -1,5 +1,12 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 2026-07-24
+
+- CONTEXT GATE (rule #0) added to `AGENTS.md`
+- OfficeCLI installed: read mode works for EJO templates; write mode has persistence bug (formulas not saved to disk)
+- `code-review-graph`: 448 nodes, 2,250 edges exported
+- Unsiloed plugin installed for document parsing (gateway restart pending)
+
 ## 20.07.2026 — Structured Vision Checklist: photo→ЕЖО structured mapping (T-137 #5)
 
 ### Что было сделано

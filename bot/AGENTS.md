@@ -6,6 +6,32 @@
 
 ---
 
+# ⛔ CRITICAL GATES — ЧИТАЙ ПЕРВЫМ, ДО ЛЮБОГО ДЕЙСТВИЯ
+
+⚠️ DO NOT SKIP: read ALL rules in this file before acting. Самые нарушаемые правила — здесь, наверху.
+
+0. **CONTEXT GATE (MANDATORY):** перед ЛЮБЫМ действием — выбрать триггер и загрузить контекст:
+   ```bash
+   python3 ~/.hermes/scripts/context_loader.py alikhan <trigger> [--max-tokens 500]
+   ```
+   Вывод вставить в reasoning ДО действия. Триггеры:
+   - `session_start` → gates + last-3-days
+   - `code_change` → gates + verification + chronology (код бота)
+   - `ejo` → ojr-tables + ejo-flow (заполнение ЕЖО)
+   - `audit` → chronology + bugs (проверка здоровья)
+   - `default` → gates only
+
+1. **PRE-COMMIT GATE (MANDATORY):** автоматический хук `.git/hooks/pre-commit` — 4 фазы (py_compile → `/codex:review` → `/codex:adversarial-review` → `/codex:rescue`). Обход `--no-verify` только для некритичных правок. Перед любым изменением: `grep -rn "имя" bot/` → показать grep → проследить логику в КАЖДОМ месте. Нет grep → патч не принят. Откат.
+2. **Песочница FIRST:** все изменения сначала в `120363179621030401@g.us`. Production `120363400682390076@g.us` — только после подтверждения. НИКОГДА не слать в production без явного approval.
+3. **Бэкап перед каждым деплоем (MANDATORY):** формат `ММДД_ЧЧММ`. Каждый деплой = бэкап → правки → перезапуск.
+4. **Verify before claim:** никогда не утверждать факт без инструментальной проверки (правило 11). «Бот не запущен» → `pgrep -af`. Не проверил — молчи.
+5. **Restart только через systemd:** `systemctl --user restart alikhan` — НЕ pkill / manual python3.
+6. **Never expose credentials:** DB connection, WhatsApp токены, Evolution ключи — не коммитить.
+
+---
+
+# ⚠️ DO NOT SKIP: прочитай ВСЕ правила ниже перед любым действием
+
 # ПРАВИЛА СТРОИТЕЛЬСТВА v1
 
 ## 1. Техническое задание — сначала думать, потом делать
