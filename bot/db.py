@@ -660,6 +660,14 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
     conn = get_conn()
     cur = conn.cursor()
     title_id = _get_active_title_id()
+    # Close end_date on previous open record for this org+position
+    cur.execute("""
+        UPDATE ojr_section1_personnel 
+        SET end_date = %s::date - INTERVAL '1 day', updated_at = NOW()
+        WHERE organization_name = %s 
+        AND position = %s 
+        AND end_date IS NULL
+    """, (date_str, org_name, position))
     cur.execute("""
         INSERT INTO ojr_section1_personnel
             (title_id, organization_type, organization_name, full_name,
@@ -721,8 +729,7 @@ def save_weather(date_str, weather_data):
         ON CONFLICT (weather_date) DO UPDATE
         SET temp_avg = EXCLUDED.temp_avg,
             wind_speed = EXCLUDED.wind_speed,
-            humidity_pct = EXCLUDED.humidity_pct,
-            updated_at = NOW()
+            humidity_pct = EXCLUDED.humidity_pct
     """, (title_id, date_str, temp, temp, temp, wind_speed,
           int(weather_data.get('h', '50').replace('%', '') or '50'),
           int(weather_data.get('p', '760').replace(' мм рт.ст.', '') or '760')))

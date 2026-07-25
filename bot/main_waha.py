@@ -629,7 +629,7 @@ def production_listener_loop():
                 # Photo — check _media metadata from bridge
                 media_meta = msg.get("_media")
                 if media_meta and media_meta.get("mediaType") == "image":
-                    cap = media_meta.get("fileName", "") or media_meta.get("caption", "")
+                    cap = media_meta.get("fileName", "") or media_meta.get("caption", "") or msg.get("conversation", "")
                     building = None
                     for tag in ["АБК", "Общежитие", "Галерея", "Общий план"]:
                         if tag.lower() in cap.lower():
@@ -643,10 +643,10 @@ def production_listener_loop():
                             cur2.execute(
                                 "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                                 (PRODUCTION, "user", "user", "image", mid,
-                                 json.dumps({"building": building or "без тег", "msg_id": mid}),
+                                 json.dumps({"building": building or "Общий план", "msg_id": mid}),
                                  datetime.now()))
                             conn2.commit()
-                            print(f"[PROD PHOTO] Saved: {building or 'без тег'} — {cap[:40]}", flush=True)
+                            print(f"[PROD PHOTO] Saved: {building or 'Общий план'} — {cap[:40]}", flush=True)
                             # ── Vision description ──
                             media_urls = media_meta.get("mediaUrls", [])
                             if media_urls:
@@ -785,7 +785,7 @@ while True:
             # Photo — check _media metadata from bridge (not Evolution imageMessage)
             media_meta = msg.get("_media")
             if media_meta and media_meta.get("mediaType") == "image":
-                caption = media_meta.get("fileName", "") or media_meta.get("caption", "")
+                caption = media_meta.get("fileName", "") or media_meta.get("caption", "") or msg.get("conversation", "")
                 building = None
                 for tag in ["АБК", "Общежитие", "Галерея", "Общий план"]:
                     if tag.lower() in caption.lower():
@@ -796,16 +796,16 @@ while True:
                     from db import get_conn as _getconn
                     conn = _getconn()
                     cur = conn.cursor()
+                    media_urls = media_meta.get("mediaUrls", [])
                     cur.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
                     if not cur.fetchone():
                         cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
                             VALUES (%s, %s, %s, %s, %s, %s, %s)""",
                             (SANDBOX, "user", "user", "image", mid,
-                             _json.dumps({"building": building or "без тег", "msg_id": mid}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                             _json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
                         conn.commit()
-                        print(f"[PHOTO] Saved: {building or 'без тег'} — {caption[:40]}", flush=True)
+                        print(f"[PHOTO] Saved: {building or 'Общий план'} — {caption[:40]}", flush=True)
                         # ── Vision description ──
-                        media_urls = media_meta.get("mediaUrls", [])
                         if media_urls:
                             try:
                                 img_path = media_urls[0]
@@ -1088,13 +1088,18 @@ while True:
             # ── POLL: Auto-detect foreman reply with VOR codes (while poll active) ──
             has_vor_codes = bool(re.search(r'\d+\.\d+\.\d+(?:\s*[=—–\-:\s]\s*\d+)', text))
             if has_vor_codes:
-                from poll import parse_poll_reply, get_poll_status as _get_poll_st2, build_poll_summary as _build_poll_sum2
+                from poll import parse_poll_reply, get_poll_status as _get_poll_st2
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 vor_result = parse_poll_reply(text, SANDBOX, today_str)
                 poll_notice = vor_result.get('message') or '\n'.join(vor_result.get('warnings', []))
                 if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0 or poll_notice:
-                    p_status2 = _get_poll_st2(SANDBOX, today_str)
-                    report = _build_poll_sum2(p_status2) if p_status2 else "✅ Данные приняты."
+                    # Build brief acknowledgment — NOT full summary
+                    lines = []
+                    for item in vor_result.get('codes_updated', []):
+                        lines.append(f"✅ {item['code']} = {item['actual_today']} {item.get('unit','м³')} ({item.get('building','')})")
+                    if vor_result.get('facts_saved', 0) > 0:
+                        lines.append(f"📋 +{vor_result['facts_saved']} фактов")
+                    report = '\n'.join(lines) if lines else "✅ Данные приняты."
                     if poll_notice:
                         report += f"\n\n{poll_notice}"
                     send_msg(SANDBOX, report)
@@ -1130,11 +1135,11 @@ while True:
                 else:
                     subprocess.run([sys.executable, "fill_ejo.py", today_str],
                         cwd=os.path.dirname(os.path.abspath(__file__)))
-                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
                     if files:
                         path = files[-1]
-                        if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{len(files)}.xlsx"):
-                            send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        if _send_document(SANDBOX, path, ejo_name):
+                            send_msg(SANDBOX, f"📊 ЕЖО отправлен")
                         else:
                             send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 continue
@@ -1144,16 +1149,17 @@ while True:
                                                 "формируй отчет", "сформируй отчет", "сделай отчет", "заполни отчет"]):
                 import glob as _glob
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                today_fmt = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d.%m.%y")
+                ejo_name = f"ЕЖО_{today_fmt}_АйБиКон.xlsx"
                 # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
                 if existing:
                     path = existing[-1]
                     with open(path, "rb") as f:
                         b64_enc = base64.b64encode(f.read()).decode()
-                    ver = len(existing)
-                    send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
-                        send_msg(SANDBOX, f"📊 ЕЖО v{ver} отправлен")
+                    send_msg(SANDBOX, f"📊 {ejo_name} уже существует. Отправляю.")
+                    if _send_document(SANDBOX, path, ejo_name):
+                        send_msg(SANDBOX, f"📊 ЕЖО отправлен")
                     else:
                         send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                     continue
@@ -1167,7 +1173,7 @@ while True:
                         send_msg(SANDBOX, "⚠️ Не все данные собраны. Сначала дособерите, потом «Алихан закончить опрос»")
                         continue
                     # Ready — close and generate
-                    send_msg(SANDBOX, "📊 Все данные есть. Формирую ЕЖО...")
+                    send_msg(SANDBOX, "📊 Формирую ЕЖО...")
                     p_id3, ejo_path3 = _close_poll(SANDBOX, today_str)
                     if ejo_path3:
                         if _send_document(SANDBOX, ejo_path3, f"ЕЖО_{today_str}.xlsx"):
@@ -1178,11 +1184,11 @@ while True:
                     # Direct EJO generation without poll
                     subprocess.run([sys.executable, "fill_ejo.py", today_str],
                         cwd=os.path.dirname(os.path.abspath(__file__)))
-                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                    files = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
                     if files:
                         path = files[-1]
-                        if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{len(files)}.xlsx"):
-                            send_msg(SANDBOX, f"📊 ЕЖО v{len(files)} отправлен")
+                        if _send_document(SANDBOX, path, ejo_name):
+                            send_msg(SANDBOX, f"📊 ЕЖО отправлен")
                         else:
                             send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
                 continue
