@@ -43,12 +43,28 @@ def get_active_phases(date):
 def calc_completion_pct(ws):
     """Calculate overall completion % across ALL work items (all sections).
     Weighted by plan_volume: sum(plan × completion_rate) / sum(plan) × 100.
-    Section 1 (ПСД) = 6% of total project, always 100% complete.
+    Section 1 (ПСД) weight = dynamic: sum(K for code 1.*) / sum(K for all rows).
     Other rows: rate = S/K (fact/plan), capped at 1.0.
     Column K(11) = план_всего (Кол-во), Column S(19) = факт_всего.
     Column C(3) = код работ.
     Returns percentage as integer (0-100)."""
-    PSED_WEIGHT = 0.06  # ПСД = 6% от общего проекта
+    # Dynamic PSED weight: sum of K for 1.* rows / sum of K for all rows
+    psed_k = 0.0
+    all_k = 0.0
+    for r in range(24, ws.max_row + 1):
+        cd = ws.cell(r, 3).value
+        if not cd:
+            continue
+        code = str(cd).strip()
+        k_val = ws.cell(r, 11).value
+        try:
+            k = float(k_val) if k_val else 0.0
+        except (ValueError, TypeError):
+            k = 0.0
+        all_k += k
+        if code.startswith('1.'):
+            psed_k += k
+    PSED_WEIGHT = psed_k / all_k if all_k > 0 else 0.06
     total_weighted = 0.0
     total_weight = 0.0
     for r in range(24, ws.max_row + 1):
@@ -205,6 +221,29 @@ def _hide_rows(ws):
     print(f"[HIDE ROWS] Hidden: {hidden_count}, Visible: {len(visible)} + {len(header_rows)} headers", flush=True)
 
 
+
+def _get_aibikon_from_ojr(date=None):
+    """B6: Read АйБиКон headcount from ojr_section1_personnel as fallback."""
+    try:
+        from db import get_conn
+        import psycopg2.extras
+        ds = date.strftime('%Y-%m-%d') if date else datetime.now().strftime('%Y-%m-%d')
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT COUNT(*) as cnt FROM ojr_section1_personnel 
+            WHERE LOWER(organization_name) = 'айбикон' 
+            AND start_date <= %s::date AND (end_date IS NULL OR end_date >= %s::date)
+        """, (ds, ds))
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if row and row.get('cnt', 0) > 0:
+            print(f"[TABEL] OJR fallback: {row['cnt']} АйБиКон from ojr_section1_personnel", flush=True)
+            return {'total': row['cnt'], 'by_prof': {}, 'is_fallback': True}
+    except Exception as e:
+        print(f"[TABEL OJR FALLBACK ERR] {e}", flush=True)
+    return None
+
 def get_aibikon_headcount(date=None):
     """Extract АйБиКон headcount from latest timesheet, grouped by profession.
     Returns dict: {'total': N, 'by_prof': {'профессия': кол-во, ...}}"""
@@ -218,6 +257,10 @@ def get_aibikon_headcount(date=None):
         row = cur.fetchone()
         cur.close(); conn.close()
         if not row or not row.get('tags'):
+            # Fallback B6: try ojr_section1_personnel before defaulting to 5
+            ojrt = _get_aibikon_from_ojr(date)
+            if ojrt is not None:
+                return ojrt
             return {'total': 5, 'by_prof': {}, 'is_fallback': True}
         tags = row['tags'] if isinstance(row['tags'], dict) else {}
         local_path = tags.get('local_path', '')
@@ -245,6 +288,9 @@ def get_aibikon_headcount(date=None):
                 except: pass
             if not found:
                 print("[TABEL] No timesheet found in cache", flush=True)
+                ojrt = _get_aibikon_from_ojr(date)
+                if ojrt is not None:
+                    return ojrt
                 return {'total': 5, 'by_prof': {}, 'is_fallback': True}
         
         # Find day-of-month column: column 5 = day 1
@@ -301,6 +347,12 @@ def get_aibikon_headcount(date=None):
         return {'total': max(total, 1), 'by_prof': by_prof, 'is_fallback': False}
     except Exception as e:
         print(f"[TABEL ERR] {e}", flush=True)
+        try:
+            ojrt = _get_aibikon_from_ojr(date)
+            if ojrt is not None:
+                return ojrt
+        except:
+            pass
         return {'total': 5, 'by_prof': {}, 'is_fallback': True}
 
 
@@ -363,7 +415,7 @@ def weather(date):
         except Exception as e:
             print(f"[WEATHER SAVE ERR] {e}", flush=True)
         return w
-    except: return {}
+    except: return {'t': '—', 'w': '—', 'h': '—', 'p': '—', 'v': '—'}
 
 
 def incidents(date):
@@ -472,6 +524,33 @@ def staff(date):
     return r
 
 
+
+def parse_plans_from_raw_messages(date, sandbox_id=SANDBOX):
+    """B7: Parse plan codes from raw WhatsApp messages for a given date.
+    Returns list of (code, volume) tuples."""
+    try:
+        from db import get_conn
+        from psycopg2.extras import RealDictCursor
+        import re as _re
+        conn = get_conn(); cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT content FROM bot_memory_messages 
+            WHERE chat_id = %s 
+            AND created_at::date = %s::date 
+            AND content ILIKE '%%план%%'
+            ORDER BY created_at DESC LIMIT 10
+        """, (sandbox_id, date.isoformat(),))
+        results = []
+        for row in cur.fetchall():
+            raw = (row['content'] or '').replace(',', '.')
+            for cd, vl in _re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, _re.I):
+                results.append((cd, float(vl)))
+        cur.close(); conn.close()
+        return results
+    except Exception as e:
+        print(f"[PLAN PARSE ERR] {e}", flush=True)
+        return []
+
 def volumes(date):
     """{code: vol}. Supports 3- and 4-part codes. Comma decimals.
     Reads from ojr_section3_work_log (primary) with legacy fallback."""
@@ -523,27 +602,8 @@ def volumes(date):
             dn[cd] = vl  # add/update for works
     
     # Fallback: parse plans from raw messages (Grok sometimes misses "Планы" in text)
-    try:
-        from db import get_conn as _gc
-        from psycopg2.extras import RealDictCursor
-        conn = _gc(); cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT content FROM bot_memory_messages 
-            WHERE chat_id = %s 
-            AND created_at::date = %s::date 
-            AND content ILIKE '%%план%%'
-            ORDER BY created_at DESC LIMIT 10
-        """, (SANDBOX, date.isoformat(),))
-        for row in cur.fetchall():
-            raw = (row['content'] or '').replace(',', '.')
-            # Find "Планы" or "план" followed by code = value
-            # e.g. "Планы  2.1.5 - 50" or "план 3.1.1 = 100"
-            plan_match = re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, re.I)
-            for cd, vl in plan_match:
-                pn[cd] = float(vl)
-        cur.close(); conn.close()
-    except Exception as e:
-        print(f"[PLAN PARSE ERR] {e}", flush=True)
+    for cd, vl in parse_plans_from_raw_messages(date):
+        pn[cd] = vl
     r = dict(pn); r.update(dn); return r, pn, dn  # (all codes, plans-only, works-only)
 
 
@@ -989,33 +1049,7 @@ def fill(date):
         
         # Hide completed/future rows — keep only active work visible
         if name == "Ежедневный отчет":
-            # Hide rows without today's work AND without monthly residual (U <= 0)
-            # Keep section/subsection headers visible (single-digit or X.Y format)
-            for r in range(24, 852):
-                L = ws.cell(r, 12).value
-                M = ws.cell(r, 13).value
-                if L is not None or M is not None:
-                    continue  # has work today — keep visible
-                code = ws.cell(r, 3).value
-                if not code:
-                    continue  # no code — could be header, keep visible
-                code_str = str(code).strip()
-                # Phase 8 has no sub-levels — hide entirely (no work + no residual)
-                # Section headers: "2", "3", "7" or subsection: "2.1", "3.3" — keep visible
-                parts = code_str.split('.')
-                if len(parts) <= 2 and not code_str.startswith('8'):
-                    continue
-                # Keep visible if in monthly plan AND has residual (O > 0 AND U > 0)
-                U = ws.cell(r, 21).value
-                O = ws.cell(r, 15).value
-                if U is not None and O is not None:
-                    try:
-                        if float(U) > 0 and float(O) > 0:
-                            continue
-                    except: pass
-                # Hide: no work today, no residual, 3rd+ level (or phase 8)
-                ws.row_dimensions[r].hidden = True
-            pass
+            _hide_rows(ws)
         
         if name == "Персонал и техника":
             sw(ws, 4, 1, df, True)
@@ -1173,24 +1207,8 @@ def fill(date):
                    (x.get('fact','') or '').lower().find('план') < 
                    ((x.get('fact','') or '').lower().find('=') if '=' in (x.get('fact','') or '') else len(x.get('fact',''))))]
             # Fallback: parse plans from raw messages (Grok sometimes misses "Планы")
-            try:
-                from db import get_conn as _gc2
-                from psycopg2.extras import RealDictCursor as _RDC
-                conn = _gc2(); cur = conn.cursor(cursor_factory=_RDC)
-                cur.execute("""
-                    SELECT content FROM bot_memory_messages 
-                    WHERE chat_id = %s 
-                    AND created_at::date = %s::date 
-                    AND content ILIKE '%%план%%'
-                    ORDER BY created_at DESC LIMIT 10
-                """, (SANDBOX, date.isoformat(),))
-                for row in cur.fetchall():
-                    raw = (row['content'] or '').replace(',', '.')
-                    for cd, vl in re.findall(r'(?:планы?)\s+(\d+\.\d+\.\d+(?:\.\d+)?)\s*[-=]\s*(\d+(?:\.\d+)?)', raw, re.I):
-                        pf.append(f"{cd} = {vl}")
-                cur.close(); conn.close()
-            except Exception as e:
-                print(f"[SHEET PLAN DB ERR] {e}", flush=True)
+            for cd, vl in parse_plans_from_raw_messages(date):
+                pf.append(f"{cd} = {vl}")
             for p in pf:
                 txt = p.replace(',', '.')
                 m = re.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)\s*=\s*(\d+(?:\.\d+)?)', txt)
@@ -1252,9 +1270,11 @@ def fill(date):
 if __name__ == "__main__":
     d = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else datetime.now()
     ds = d.strftime("%Y-%m-%d")
-    # Guard: skip if EJO already exists for this date
+    # Guard: skip if EJO already exists for this date (unless --force)
     existing = sorted(glob.glob(f"/tmp/ЕЖО_{ds}_v*.xlsx"))
-    if existing:
-        print(f"⚠️ ЕЖО за {ds} уже существует (v{len(existing)}). Пропускаю.", file=sys.stderr)
+    if existing and '--force' not in sys.argv:
+        print(f"⚠️ ЕЖО за {ds} уже существует (v{len(existing)}). Используй --force для перезаписи.", file=sys.stderr)
         sys.exit(0)
+    if existing:
+        print(f"⚠️ Перезаписываю существующий ЕЖО за {ds}", flush=True)
     fill(d)

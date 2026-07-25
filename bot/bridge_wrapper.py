@@ -198,21 +198,50 @@ def _patched_urlopen(req, **kwargs):
             return _evo_response({"status": "error", "message": str(e)})
 
     if getattr(req, "_is_media_download", False):
-        try:
-            import base64 as _b64
-            payload = json.loads(req.data.decode()) if req.data else {}
-            media = payload.get("message", {}).get("message", {}).get("_media", {})
-            media_urls = media.get("mediaUrls", [])
+        import base64 as _b64
+        payload = json.loads(req.data.decode()) if req.data else {}
+        msg = payload.get("message", {})
+        # B1: Bridge format — message.message._media.mediaUrls
+        bridge_media = msg.get("message", {}).get("_media", {})
+        if bridge_media:
+            media_urls = bridge_media.get("mediaUrls", [])
             local_path = media_urls[0] if media_urls else None
             if local_path and os.path.exists(local_path):
-                with open(local_path, "rb") as f:
-                    return _evo_response({
-                        "base64": _b64.b64encode(f.read()).decode(),
-                        "fileName": media.get("fileName", ""),
-                        "mimetype": media.get("mimetype", ""),
-                    })
-        except Exception:
-            pass
+                try:
+                    with open(local_path, "rb") as f:
+                        return _evo_response({
+                            "base64": _b64.b64encode(f.read()).decode(),
+                            "fileName": bridge_media.get("fileName", ""),
+                            "mimetype": bridge_media.get("mimetype", ""),
+                        })
+                except Exception:
+                    pass
+            return _evo_response({"base64": ""})
+        # B1: Evolution format — message.key.id → lookup in bot_memory_messages
+        msg_id = msg.get("key", {}).get("id")
+        if msg_id:
+            try:
+                import psycopg2.extras
+                from db import get_conn
+                conn = get_conn()
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cur.execute(
+                    "SELECT tags->>'local_path' as lp FROM bot_memory_messages WHERE content = %s ORDER BY created_at DESC LIMIT 1",
+                    (msg_id,)
+                )
+                row = cur.fetchone()
+                cur.close(); conn.close()
+                if row and row.get('lp'):
+                    local_path = row['lp']
+                    if os.path.exists(local_path):
+                        with open(local_path, "rb") as f:
+                            return _evo_response({
+                                "base64": _b64.b64encode(f.read()).decode(),
+                                "fileName": os.path.basename(local_path),
+                                "mimetype": "",
+                            })
+            except Exception as e:
+                print(f"[B1 MEDIA DB LOOKUP ERR] {e}", flush=True)
         return _evo_response({"base64": ""})
 
     return _orig_urlopen(req, **kwargs)
