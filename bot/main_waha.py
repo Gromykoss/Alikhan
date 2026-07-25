@@ -260,6 +260,7 @@ def _update_template_from_correction(b64_data, fname):
     """When user sends a corrected ЕЖО .xlsx, use it as new template."""
     import glob as _glob, base64 as _b64
     from openpyxl import load_workbook
+    from openpyxl.utils import get_column_letter
     TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
     # Save corrected file
@@ -269,7 +270,7 @@ def _update_template_from_correction(b64_data, fname):
     print(f"[TEMPLATE] Received corrected: {fname} ({os.path.getsize(corrected_path)} bytes)", flush=True)
 
     # Find latest auto-generated ЕЖО (by modification time)
-    auto_files = sorted(_glob.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
+    auto_files = sorted(_glob.glob("/tmp/ЕЖО_*_АйБиКон.xlsx"), key=os.path.getmtime, reverse=True)
     if not auto_files:
         # No auto-generated yet — use as initial template
         import shutil
@@ -289,15 +290,15 @@ def _update_template_from_correction(b64_data, fname):
     # Build code→(row, values) maps
     def build_code_map(ws):
         cmap = {}
-        for r in range(24, ws.max_row + 1):
+        for r in range(1, ws.max_row + 1):
             code = ws.cell(r, 3).value
-            if not code: continue
-            code = str(code).strip()
+            code = str(code).strip() if code else ''
+            key = code if code else f"R{r}"
             vals = {'row': r}
             # Capture ALL columns (1 to max_column) for full comparison
             for c in range(1, ws.max_column + 1):
                 vals[c] = ws.cell(r, c).value
-            cmap[code] = vals
+            cmap[key] = vals
         return cmap
 
     cmap_c = build_code_map(ws_c)
@@ -316,7 +317,7 @@ def _update_template_from_correction(b64_data, fname):
             except (ValueError, TypeError):
                 continue
             if vc_f is not None and va_f is not None and abs(vc_f - va_f) > 0.01:
-                diffs.append(f"  {code} col{c}: авто={va_f} → правка={vc_f}")
+                diffs.append(f"  R{vc.get('row')} {get_column_letter(c)} ({code}): {va_f} → {vc_f}")
 
     wb_corr.close(); wb_auto.close()
 
@@ -333,7 +334,7 @@ def _update_template_from_correction(b64_data, fname):
     # Extract date from filename (e.g., "27.06.2026" or "06.07.26") or fall back to today
     m = _re.search(r'(\d{2})\.(\d{2})\.(\d{4})', fname)
     if not m:
-        m = _re.search(r'(\d{2})\.(\d{2})\.(\d{2})\b', fname)
+        m = _re.search(r'(\d{2})\.(\d{2})\.(\d{2})', fname)
         if m:
             # 2-digit year → assume 20xx
             date_str = f"20{m.group(3)}-{m.group(2)}-{m.group(1)}"
@@ -344,7 +345,8 @@ def _update_template_from_correction(b64_data, fname):
     dated_path = f"/tmp/ЕЖО_template_{date_str}.xlsx"
     shutil.copy(corrected_path, dated_path)
     # Save as dated ЕЖО so yesterday_cum() finds correct cumulative values (overwrite)
-    ejo_path = f"/tmp/ЕЖО_{date_str}_v1.xlsx"
+    ejo_fmt = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d.%m.%y")
+    ejo_path = f"/tmp/ЕЖО_{ejo_fmt}_АйБиКон.xlsx"
     shutil.copy(corrected_path, ejo_path)
 
     summary = f"📎 Правки приняты ({len(diffs)} отличий). Шаблон обновлён."
@@ -887,7 +889,8 @@ while True:
                     print(f"[DOC] Updated local_path: {fname}", flush=True)
                 cur.close(); conn.close()
                 # If this is a corrected ЕЖО, update template
-                if fname and 'ЕЖО' in fname and fname.endswith('.xlsx'):
+                # WhatsApp обрезает кириллицу в имени файла (ЕЖО → _____) — проверяем только расширение .xlsx
+                if fname and fname.endswith('.xlsx'):
                     try:
                         _update_template_from_correction(b64, fname)
                     except Exception as ex:
@@ -955,7 +958,7 @@ while True:
                     from openpyxl import load_workbook
                     import glob as _glob2
                     src = TEMPLATE_PATH
-                    auto_files = sorted(_glob2.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
+                    auto_files = sorted(_glob2.glob("/tmp/ЕЖО_*_АйБиКон.xlsx"), key=os.path.getmtime, reverse=True)
                     if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE_PATH):
                         src = auto_files[0]
                     wb = load_workbook(src)
@@ -965,7 +968,7 @@ while True:
                         if ws.row_dimensions[r].hidden:
                             ws.row_dimensions[r].hidden = False
                             unhidden += 1
-                    out_path = f"/tmp/ЕЖО_раскрытый_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+                    out_path = f"/tmp/ЕЖО_раскрытый_{datetime.now().strftime('%d.%m.%y_%H%M')}.xlsx"
                     wb.save(out_path)
                     wb.close()
                     send_msg(SANDBOX, f"📂 Отчёт раскрыт: {unhidden} строк.\nЗаполните столбец O (месячный план) и пришлите обратно.")
@@ -1031,8 +1034,9 @@ while True:
                 import glob as _glob
                 from poll import close_poll, build_poll_summary, get_poll_status
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                today_fmt = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d.%m.%y")
                 # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
                 if existing:
                     path = existing[-1]
                     with open(path, "rb") as f:
@@ -1111,8 +1115,10 @@ while True:
                                                 "отчет принудительно", "отчет все равно"]):
                 import glob as _glob
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+                today_fmt = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d.%m.%y")
+                ejo_name = f"ЕЖО_{today_fmt}_АйБиКон.xlsx"
                 # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_str}_v*.xlsx"))
+                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
                 if existing:
                     path = existing[-1]
                     with open(path, "rb") as f:
