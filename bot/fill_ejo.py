@@ -21,12 +21,7 @@ from data_sources import (
 
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
-EVO = "http://127.0.0.1:8080"
-try:
-    from secret_config import get_evo_key
-    KEY = get_evo_key(required=True)
-except Exception:
-    KEY = ""
+from bridge_wrapper import EVO, KEY
 
 
 def calc_completion_pct(ws):
