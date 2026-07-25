@@ -405,7 +405,8 @@ def get_photos(date):
             ))
         cur.close()
         print(f"[DS PHOTOS] counts={ct}, files={len(files)}", flush=True)
-        return PhotoData(counts=ct, files=files)
+        if files:
+            return PhotoData(counts=ct, files=files)
     except Exception as e:
         print(f"[DS PHOTOS ERR] {e}, falling back to legacy", flush=True)
 
@@ -427,8 +428,20 @@ def get_photos(date):
             ct[b] = row['n']
         elif b:
             ct['Общий план'] += row['n']
+    # Get file list from bot_memory_messages
+    cur.execute(
+        "SELECT COALESCE(tags->>'building','Общий план') as b, content as msg_id, tags->>'local_path' as lp "
+        "FROM bot_memory_messages "
+        "WHERE message_type='image' AND DATE(created_at)=%s AND tags->>'local_path' IS NOT NULL",
+        (ds,)
+    )
+    for row in cur.fetchall():
+        b = row['b'] or 'Общий план'
+        if b in ('без тег', 'без тега'):
+            b = 'Общий план'
+        files.append(PhotoFile(building=b, msg_id=row.get('msg_id','') or '', local_path=row.get('lp','') or ''))
     cur.close()
-    return PhotoData(counts=ct, files=[])
+    return PhotoData(counts=ct, files=files)
 
 
 def get_aibikon_headcount(date=None):
