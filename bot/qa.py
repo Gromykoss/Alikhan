@@ -7,10 +7,7 @@ v2.1 (2026-07-18): RAG fixes from P1P2 report
 """
 import sys, os, re, time, json as _json
 from datetime import datetime
-from secret_config import get_evo_key
-
-EVO = "http://127.0.0.1:8080"
-KEY = get_evo_key(required=True)
+from bridge_wrapper import EVO, KEY
 SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -465,25 +462,29 @@ def parse_qa(gid, text, date_str=None):
                 # Save to ojr_materials
                 save_material(gid, today, f, building=b if b != 'общая' else None)
                 count += 1
-            elif c in ('бетонирование', 'монтаж', 'земляные работы', 'техника', 'план', 'объём'):
-                # These go to work_log — try to extract VOR code if present
+            elif c == 'техника':
+                # Equipment goes to bot_memory_facts, NOT work_log
+                cur.execute(
+                    "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (gid, today, b if b != 'общая' else 'общая', 'техника', f, 'qa'))
+                count += 1
+            elif c in ('план', 'объём'):
+                # These go to work_log — extract VOR code, require volume > 0
                 import re as _re2
                 vor_match = _re2.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)', f)
                 if vor_match:
                     vor_code = vor_match.group(1)
                     vol_match = _re2.search(r'(\d+(?:[.,]\d+)?)', f)
                     volume = float(vol_match.group(1).replace(',', '.')) if vol_match else 0
-                    save_work_log(gid, today, vor_code, b, volume,
-                                  category=c, created_by='qa')
-                else:
-                    save_work_log(gid, today, b, b, 0,
-                                  work_name=f, category=c, created_by='qa')
+                    if volume > 0:
+                        save_work_log(gid, today, vor_code, b, volume,
+                                      category=c, created_by='qa')
+                    # volume=0 with VOR code — skip, not a real work
+                # No VOR code — skip, don't save to work_log
                 count += 1
             else:
-                # Fallback: save as general work_log entry
-                save_work_log(gid, today, b, b, 0,
-                              work_name=f, category=c, created_by='qa')
-                count += 1
+                # Unknown category (бетонирование, монтаж, земляные работы etc.) — don't save to work_log
+                pass
 
         # Fallback: if nothing was saved, try simple "нет" patterns
         if count == 0:
@@ -502,7 +503,8 @@ def parse_qa(gid, text, date_str=None):
                             from db import save_personnel
                             save_personnel(gid, today, 'айбикон', 'айбикон', 'Сотрудник', sync_source='qa')
                         else:
-                            save_work_log(gid, today, b, b, 0, work_name=f, category=c, created_by='qa')
+                            # Unknown category — skip, don't save to work_log
+                            continue
                         count += 1
 
         conn.commit()

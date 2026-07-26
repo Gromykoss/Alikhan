@@ -16,9 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db import get_conn
 import psycopg2.extras
 
-EVO = "http://127.0.0.1:8080"
-from secret_config import get_evo_key
-KEY = get_evo_key(required=True)
+from bridge_wrapper import EVO, KEY
 from messaging import send_msg  # unified messaging (AUDIT-011)
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
@@ -80,7 +78,7 @@ def _get_work_items_from_template():
     import glob
 
     src = TEMPLATE
-    auto_files = sorted(glob.glob("/tmp/ЕЖО_20*_v*.xlsx"), key=os.path.getmtime, reverse=True)
+    auto_files = sorted(glob.glob("/tmp/ЕЖО_*_АйБиКон.xlsx"), key=os.path.getmtime, reverse=True)
     if auto_files and os.path.getmtime(auto_files[0]) > os.path.getmtime(TEMPLATE):
         src = auto_files[0]
 
@@ -106,8 +104,6 @@ def _get_work_items_from_template():
         if building_str in ('None', '', '—'):
             continue
         if monthly_plan <= 0:
-            continue
-        if ostatok <= 0:
             continue
 
         items.append({
@@ -152,9 +148,12 @@ def _get_qa_status(poll_date_str=None):
         """, (today,))
         photo_counts = {'АБК': 0, 'Общежитие': 0, 'Общий план': 0}
         for r in cur.fetchall():
-            bld = r.get('bld', '')
+            bld = r.get('bld', '') or ''
             if bld in photo_counts:
-                photo_counts[bld] = r['cnt']
+                photo_counts[bld] += r['cnt']
+            else:
+                # Unknown/null building → fallback to Общий план
+                photo_counts['Общий план'] += r['cnt']
         status['photo_counts'] = photo_counts
         cur.execute("SELECT count(*) as c FROM bot_memory_facts WHERE fact_date=%s AND source='qa' AND fact ILIKE '%%план%%'",
                      (today,))
@@ -465,9 +464,10 @@ def build_poll_summary(status):
     
     # Check if EJO already exists for this date — if so, poll is done
     today = status.get('poll', {}).get('poll_date', datetime.now().strftime("%Y-%m-%d"))
-    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
+    today_fmt = datetime.strptime(str(today)[:10], "%Y-%m-%d").strftime("%d.%m.%y")
+    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
     if existing:
-        return f"📊 ЕЖО за {today} уже готов (v{len(existing)}). Опрос закрыт."
+        return f"📊 ЕЖО за {today} уже готов. Опрос закрыт."
     
     lines = ["📊 **Сводка опроса:**\n"]
 
@@ -598,9 +598,10 @@ def close_poll(chat_id, poll_date_str=None):
 
     # Guard: skip if EJO already exists for today (prevents duplicate)
     import glob as _g
-    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
+    today_fmt = datetime.strptime(str(today)[:10], "%Y-%m-%d").strftime("%d.%m.%y")
+    existing = sorted(_g.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
     if existing:
-        print(f"[POLL] EJO already exists for {today} (v{len(existing)}). Skipping generation.", flush=True)
+        print(f"[POLL] EJO already exists for {today}. Skipping generation.", flush=True)
         return poll_id, existing[-1]
 
     # Generate EJO via fill_ejo.py
@@ -610,7 +611,7 @@ def close_poll(chat_id, poll_date_str=None):
 
     # Find the generated file
     import glob
-    files = sorted(glob.glob(f"/tmp/ЕЖО_{today}_v*.xlsx"))
+    files = sorted(glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
     ejo_path = files[-1] if files else None
 
     return poll_id, ejo_path

@@ -1,0 +1,4079 @@
+{
+  "built_at": "2026-07-26T00:15:25.947259+00:00",
+  "project": "alikhan",
+  "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
+  "stats": {
+    "nodes": 215,
+    "edges": 395,
+    "projects": 1,
+    "events": 13,
+    "bugs": 22,
+    "fixes": 13,
+    "api_quirks": 5,
+    "db_tables": 21,
+    "bot_components": 17,
+    "services": 3,
+    "templates": 4,
+    "decisions": 3,
+    "tasks": 2
+  },
+  "nodes": [
+    [
+      "project/alikhan",
+      {
+        "type": "project"
+      }
+    ],
+    [
+      "WhatsApp AI agent for ТЗРК Джеруй construction site (Python v5)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "/home/hermes-workspace/Alikhan-migration",
+      {
+        "type": ""
+      }
+    ],
+    [
+      "service/hermes-whatsapp-bridge",
+      {
+        "type": "service"
+      }
+    ],
+    [
+      "db_table/ojr_section3_work_log",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "bot_component/main_waha",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "decision/delegation-gate",
+      {
+        "type": "decision"
+      }
+    ],
+    [
+      "DeepSeek v4 Pro = orchestrator only; code via Codex CLI / Grok Build (25.07.2026)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "decision/ojr-migration",
+      {
+        "type": "decision"
+      }
+    ],
+    [
+      "DB restructured to 14 ОЖР tables per GOST RD-11-05-2007 (18.07.2026)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "2026-07-18",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "decision/hermes-bridge-migration",
+      {
+        "type": "decision"
+      }
+    ],
+    [
+      "Evolution API replaced by Hermes WhatsApp Bridge :3000 (15.07.2026)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "2026-07-15",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "bot_component/bridge_wrapper",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "Hermes WhatsApp bridge on :3000, systemd user unit Restart=always",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "~/.hermes/hermes-agent/scripts/whatsapp-bridge/bridge.js",
+      {
+        "type": "~"
+      }
+    ],
+    [
+      "service/alikhan",
+      {
+        "type": "service"
+      }
+    ],
+    [
+      "alikhan.service — main bot (main_waha.py via systemd)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "service/alikhan-document-extractor",
+      {
+        "type": "service"
+      }
+    ],
+    [
+      "document extractor HTTP on 127.0.0.1:8099",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "bot_component/document_extractor",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "group/sandbox",
+      {
+        "type": "group"
+      }
+    ],
+    [
+      "Sandbox WhatsApp group 120363179621030401@g.us — full bot access",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "group/production",
+      {
+        "type": "group"
+      }
+    ],
+    [
+      "Production WhatsApp group 120363400682390076@g.us — listen + weather only; never send without approval",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "test_target",
+      {
+        "type": "status"
+      }
+    ],
+    [
+      "protected",
+      {
+        "type": "status"
+      }
+    ],
+    [
+      "bot/main_waha.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot/bridge_wrapper.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/router",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/router.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/poll",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/poll.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/qa",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/qa.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/fill_ejo",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/fill_ejo.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot/document_extractor.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/avr",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/avr.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/vision_checklist",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/vision_checklist.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/db",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/db.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/db_lookup",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/db_lookup.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/db_memory",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/db_memory.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/messaging",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/messaging.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/handlers",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/handlers.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/daily_snapshot",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/daily_snapshot.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/stt",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/stt.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "bot_component/alerter",
+      {
+        "type": "bot_component"
+      }
+    ],
+    [
+      "bot/alerter.py",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "db_table/bot_memory_facts",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_weather",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_photo_log",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "template/ejo",
+      {
+        "type": "template"
+      }
+    ],
+    [
+      "template/ks2",
+      {
+        "type": "template"
+      }
+    ],
+    [
+      "template/ks6",
+      {
+        "type": "template"
+      }
+    ],
+    [
+      "Local document extraction service for PDF/MPP/XLSX → structured data",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "db_table/ojr_title_page",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section1_personnel",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section2_design_supervision",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section2_visits",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section4_construction_control",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section4_checks",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section5_asbuilt_docs",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_section6_gosstroynadzor",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_daily_summary",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_materials",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/ojr_incidents",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_memory_messages",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_schedule_phases",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_building_profiles",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_poll_state",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_calendar_events",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "db_table/bot_poll_residuals",
+      {
+        "type": "db_table"
+      }
+    ],
+    [
+      "Main ОЖР section 3 — work volumes (code, qty, building); source for ЕЖО view",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Intermediate QA facts layer before routing into ojr_* tables",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "deprecated",
+      {
+        "type": "status"
+      }
+    ],
+    [
+      "Daily weather via Open-Meteo (42.284, 72.765) → DB + Excel",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Site photos with date/work binding; building tag required for poll visibility",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "bot/templates/ЕЖО_шаблон.xlsx",
+      {
+        "type": "bot"
+      }
+    ],
+    [
+      "Daily work journal (ЕЖО): view over ojr_section3_work_log + weather + photos; N=100%, U=O−P",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "template/vor",
+      {
+        "type": "template"
+      }
+    ],
+    [
+      "report/templates/ВОР_с_расценками.xlsx",
+      {
+        "type": "report"
+      }
+    ],
+    [
+      "837 ВОР codes with prices (ФЕР-2020 × 0.75)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "АВР КС-2 monthly act — 14/15 columns including Код ВОР",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "АВР КС-6 cumulative journal — 4 grouped sections, 780+ rows",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "api_quirk/postgres-collation-warning",
+      {
+        "type": "api_quirk"
+      }
+    ],
+    [
+      "PostgreSQL collation WARNING spam; fix: UPDATE pg_catalog.pg_database SET datcollversion=NULL WHERE datname='evolution_db' (autocommit). psycopg2 options/SET do not work.",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "fix/postgres-datcollversion-null",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "UPDATE pg_catalog.pg_database SET datcollversion=NULL WHERE datname='evolution_db' with autocommit",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "api_quirk/bridge-photo-caption-empty",
+      {
+        "type": "api_quirk"
+      }
+    ],
+    [
+      "Hermes Bridge does not pass WhatsApp photo caption in media_meta; caption always empty. Real caption in msg.get('conversation','').",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "fix/caption-fallback-chain",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "main_waha.py ~632/~788: cap = media_meta.get('fileName') or media_meta.get('caption') or msg.get('conversation')",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "api_quirk/bridge-send-requires-real-jid",
+      {
+        "type": "api_quirk"
+      }
+    ],
+    [
+      "Bridge /send returns 500 unless real JID used (sandbox 120363179621030401@g.us)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "api_quirk/bridge-media-type-image",
+      {
+        "type": "api_quirk"
+      }
+    ],
+    [
+      "After Bridge migration photos arrive as _media.mediaType=='image', not Evolution imageMessage",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "fix/photo-detection-media",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Detect images via _media.mediaType == image; Grok vision writes tags description",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "api_quirk/log-stale-errors-look-fresh",
+      {
+        "type": "api_quirk"
+      }
+    ],
+    [
+      "Old errors in /tmp/alikhan.log look fresh — always verify /send directly; use grep -cv WARNING for real log volume",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "bug/photo-default-building-bez-teg",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "Photos saved with default building='без тег' are invisible in poll",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "fixed",
+      {
+        "type": "status"
+      }
+    ],
+    [
+      "2026-07-25",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "fix/building-default-obshchiy-plan",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Default building='Общий план' in main_waha.py + fallback in poll.py",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "bug/qa-technika-to-work-log",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "QA routes category='техника' to ojr_section3_work_log as volume=0",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "fix/qa-technika-to-memory-facts",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Dedicated elif branch inserts category=техника into bot_memory_facts instead of work_log",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Полный аудит и стабилизация (Hermes-driven)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-24/CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-24",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-20/Structured Vision Checklist: photo→ЕЖО structured",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-20",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Structured Vision Checklist: photo→ЕЖО structured mapping (T-137 #5)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-19/АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-19",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-19/КС-2 приведён к реальной 14-колоночной форме",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "КС-2 приведён к реальной 14-колоночной форме",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-19/Исправление кумулятивов ЕЖО",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Исправление кумулятивов ЕЖО",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-18/Миграция БД на структуру ОЖР (14 таблиц)",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Миграция БД на структуру ОЖР (14 таблиц)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-17/HermesBridge стабилизация: retry+backoff и systemd",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-17",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "HermesBridge стабилизация: retry+backoff и systemd",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-17/Фикс фото: _media + Grok vision description",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Фикс фото: _media + Grok vision description",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-16/ЕЖО v4: N=100%, планы из сырых сообщений, оформлен",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-16",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "ЕЖО v4: N=100%, планы из сырых сообщений, оформление 3-го листа",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-22/WAHA альтернатива + проект idle",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-22",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "WAHA альтернатива + проект idle",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-15/Миграция на Hermes Bridge",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Миграция на Hermes Bridge",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-24/daily-log",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "bug/AL-013",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "CHRONOLOGY.md",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "bug/AL-020",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "task/T-137",
+      {
+        "type": "task"
+      }
+    ],
+    [
+      "task/T-159",
+      {
+        "type": "task"
+      }
+    ],
+    [
+      "AGENTS.md",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "bug/memory-recurring-5",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "-",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "bug/AL-004",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "BUGS.md",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "bug/AL-005",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-006",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-007",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-008",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-009",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-010",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-011",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/BUG-AL-001",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/BUG-AL-002",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/BUG-AL-003",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-014",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-015",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-016",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-017",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-018",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-019",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "Мост в self-chat режиме — сообщения из групп не принимались 3 дня",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Миграция с Evolution на Bridge без проверки групп-чатов",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-004",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "`--mode bot` + `WHATSAPP_ALLOWED_USERS=\"*\"`",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Ollama таймаут 90с на каждом QA-парсинге",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "ask_grok() → ask_ollama() для текста без фото",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-005",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "parse_qa() → force_grok=True (минуя Ollama)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "QA-факты персонала без подрядчика (ИТР 1)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "is_qa() триггерится на «итр», Grok не требует contractor",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-006",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Валидация в parse_qa(): skip personnel без имени подрядчика",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Фото потеряны при смене режима моста",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "self-chat режим дропал все входящие из групп",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-007",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "+ mode bot (AL-004)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "active",
+      {
+        "type": "status"
+      }
+    ],
+    [
+      "Сообщения теряются при перезапуске бота",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Age gate 300с + seed из 326 ID при каждом старте",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-008",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Сохранять сообщения ДО age gate (уже частично), увеличить окно",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Старые факты (5160-5163) без подрядчика в БД",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Приняты до фикса AL-006",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-009",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Удалить id=5160 (блокировано: данные за 16.07 уже в отчёте)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Дубликат бота после перезапуска",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "pkill не убил старый PID автоматически",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-010",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Ручное убийство зомби",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Бот не логирует в /tmp/bot.log после фонового запуска",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "Перенаправление вывода потеряно при перезапуске",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "fix/al-011",
+      {
+        "type": "fix"
+      }
+    ],
+    [
+      "Явное `> /tmp/bot.log 2>&1`",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "MEMORY.md",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "RUNBOOK.md",
+      {
+        "type": "unknown"
+      }
+    ],
+    [
+      "INDEX.md",
+      {
+        "type": "unknown"
+      }
+    ]
+  ],
+  "edges": [
+    {
+      "source": "project/alikhan",
+      "target": "WhatsApp AI agent for ТЗРК Джеруй construction site (Python v5)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.99
+    },
+    {
+      "source": "project/alikhan",
+      "target": "/home/hermes-workspace/Alikhan-migration",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.99
+    },
+    {
+      "source": "project/alikhan",
+      "target": "service/hermes-whatsapp-bridge",
+      "predicate": "depends_on",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "project/alikhan",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "depends_on",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "project/alikhan",
+      "target": "bot_component/main_waha",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "project/alikhan",
+      "target": "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "project/alikhan",
+      "target": "CHRONOLOGY.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "project/alikhan",
+      "target": "AGENTS.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "project/alikhan",
+      "target": "BUGS.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "project/alikhan",
+      "target": "MEMORY.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "project/alikhan",
+      "target": "RUNBOOK.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "project/alikhan",
+      "target": "INDEX.md",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "Hermes WhatsApp bridge on :3000, systemd user unit Restart=always",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "~/.hermes/hermes-agent/scripts/whatsapp-bridge/bridge.js",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "Main ОЖР section 3 — work volumes (code, qty, building); source for ЕЖО view",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "bot_component/fill_ejo",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "bot/main_waha.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "bot_component/bridge_wrapper",
+      "predicate": "depends_on",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "bot_component/router",
+      "predicate": "depends_on",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/delegation-gate",
+      "target": "DeepSeek v4 Pro = orchestrator only; code via Codex CLI / Grok Build (25.07.2026)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "decision/delegation-gate",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "DB restructured to 14 ОЖР tables per GOST RD-11-05-2007 (18.07.2026)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "2026-07-18",
+      "predicate": "occurred_on",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/ojr-migration",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "Evolution API replaced by Hermes WhatsApp Bridge :3000 (15.07.2026)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "2026-07-15",
+      "predicate": "occurred_on",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "bot_component/bridge_wrapper",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "bot/bridge_wrapper.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "alikhan.service — main bot (main_waha.py via systemd)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "service/alikhan",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan-document-extractor",
+      "target": "document extractor HTTP on 127.0.0.1:8099",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "service/alikhan-document-extractor",
+      "target": "bot_component/document_extractor",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "service/alikhan-document-extractor",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan-document-extractor",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan-document-extractor",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "bot/document_extractor.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "Local document extraction service for PDF/MPP/XLSX → structured data",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/document_extractor",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "group/sandbox",
+      "target": "Sandbox WhatsApp group 120363179621030401@g.us — full bot access",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "group/sandbox",
+      "target": "test_target",
+      "predicate": "status_is",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "group/production",
+      "target": "Production WhatsApp group 120363400682390076@g.us — listen + weather only; never send without approval",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "group/production",
+      "target": "protected",
+      "predicate": "status_is",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/router",
+      "target": "bot/router.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/router",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/router",
+      "target": "bot_component/qa",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/router",
+      "target": "bot_component/poll",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/router",
+      "target": "bot_component/fill_ejo",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/router",
+      "target": "bot_component/avr",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/router",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/router",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/router",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/router",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "bot/poll.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "writes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "bot/qa.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "db_table/bot_memory_facts",
+      "predicate": "writes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "bot/fill_ejo.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "reads_from",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "db_table/ojr_weather",
+      "predicate": "reads_from",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "db_table/ojr_photo_log",
+      "predicate": "reads_from",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "template/ejo",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "bot/avr.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "template/ks2",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "template/ks6",
+      "predicate": "implements",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "bot_component/avr",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/vision_checklist",
+      "target": "bot/vision_checklist.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/vision_checklist",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/vision_checklist",
+      "target": "db_table/ojr_photo_log",
+      "predicate": "writes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/vision_checklist",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "writes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.8
+    },
+    {
+      "source": "bot_component/vision_checklist",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
+      "target": "bot/db.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/db",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/db",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db_lookup",
+      "target": "bot/db_lookup.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/db_lookup",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/db_lookup",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db_memory",
+      "target": "bot/db_memory.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/db_memory",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/messaging",
+      "target": "bot/messaging.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/messaging",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/handlers",
+      "target": "bot/handlers.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/handlers",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/daily_snapshot",
+      "target": "bot/daily_snapshot.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/daily_snapshot",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/stt",
+      "target": "bot/stt.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/stt",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bot_component/alerter",
+      "target": "bot/alerter.py",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bot_component/alerter",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "Intermediate QA facts layer before routing into ojr_* tables",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "routes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "Daily weather via Open-Meteo (42.284, 72.765) → DB + Excel",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_weather",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "Site photos with date/work binding; building tag required for poll visibility",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "template/ejo",
+      "target": "bot/templates/ЕЖО_шаблон.xlsx",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "template/ejo",
+      "target": "Daily work journal (ЕЖО): view over ojr_section3_work_log + weather + photos; N=100%, U=O−P",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "template/ejo",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ks2",
+      "target": "АВР КС-2 monthly act — 14/15 columns including Код ВОР",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "template/ks2",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "template/ks2",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "template/ks2",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "template/ks6",
+      "target": "АВР КС-6 cumulative journal — 4 grouped sections, 780+ rows",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_title_page",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_title_page",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_title_page",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_title_page",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section1_personnel",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section1_personnel",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section1_personnel",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section1_personnel",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section1_personnel",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_design_supervision",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section2_design_supervision",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_design_supervision",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_design_supervision",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_visits",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section2_visits",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_visits",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section2_visits",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_construction_control",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section4_construction_control",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_construction_control",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_construction_control",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_checks",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section4_checks",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_checks",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_checks",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section5_asbuilt_docs",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section5_asbuilt_docs",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section5_asbuilt_docs",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section5_asbuilt_docs",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section6_gosstroynadzor",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_section6_gosstroynadzor",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section6_gosstroynadzor",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section6_gosstroynadzor",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_daily_summary",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_daily_summary",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_daily_summary",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_daily_summary",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_daily_summary",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_materials",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_materials",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_materials",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_materials",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_incidents",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/ojr_incidents",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_incidents",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_incidents",
+      "target": "RUNBOOK.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_messages",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_memory_messages",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_messages",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_schedule_phases",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_schedule_phases",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_schedule_phases",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_building_profiles",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_building_profiles",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_poll_state",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_poll_state",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_calendar_events",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_calendar_events",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_poll_residuals",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "db_table/bot_poll_residuals",
+      "target": "deprecated",
+      "predicate": "status_is",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "db_table/bot_poll_residuals",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "replaced_by",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "db_table/bot_poll_residuals",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_poll_residuals",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "template/vor",
+      "target": "report/templates/ВОР_с_расценками.xlsx",
+      "predicate": "located_at",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "template/vor",
+      "target": "837 ВОР codes with prices (ФЕР-2020 × 0.75)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "api_quirk/postgres-collation-warning",
+      "target": "PostgreSQL collation WARNING spam; fix: UPDATE pg_catalog.pg_database SET datcollversion=NULL WHERE datname='evolution_db' (autocommit). psycopg2 options/SET do not work.",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "api_quirk/postgres-collation-warning",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "api_quirk/postgres-collation-warning",
+      "target": "fix/postgres-datcollversion-null",
+      "predicate": "fixed_by",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "fix/postgres-datcollversion-null",
+      "target": "UPDATE pg_catalog.pg_database SET datcollversion=NULL WHERE datname='evolution_db' with autocommit",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "api_quirk/bridge-photo-caption-empty",
+      "target": "Hermes Bridge does not pass WhatsApp photo caption in media_meta; caption always empty. Real caption in msg.get('conversation','').",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "api_quirk/bridge-photo-caption-empty",
+      "target": "bot_component/main_waha",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "api_quirk/bridge-photo-caption-empty",
+      "target": "fix/caption-fallback-chain",
+      "predicate": "fixed_by",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "fix/caption-fallback-chain",
+      "target": "main_waha.py ~632/~788: cap = media_meta.get('fileName') or media_meta.get('caption') or msg.get('conversation')",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "fix/caption-fallback-chain",
+      "target": "bot_component/main_waha",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "api_quirk/bridge-send-requires-real-jid",
+      "target": "Bridge /send returns 500 unless real JID used (sandbox 120363179621030401@g.us)",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "api_quirk/bridge-send-requires-real-jid",
+      "target": "service/hermes-whatsapp-bridge",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "api_quirk/bridge-media-type-image",
+      "target": "After Bridge migration photos arrive as _media.mediaType=='image', not Evolution imageMessage",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "api_quirk/bridge-media-type-image",
+      "target": "bot_component/main_waha",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "api_quirk/bridge-media-type-image",
+      "target": "fix/photo-detection-media",
+      "predicate": "fixed_by",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "fix/photo-detection-media",
+      "target": "Detect images via _media.mediaType == image; Grok vision writes tags description",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "api_quirk/log-stale-errors-look-fresh",
+      "target": "Old errors in /tmp/alikhan.log look fresh — always verify /send directly; use grep -cv WARNING for real log volume",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "Photos saved with default building='без тег' are invisible in poll",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "2026-07-25",
+      "predicate": "occurred_on",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "bot_component/poll",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "bot_component/main_waha",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bug/photo-default-building-bez-teg",
+      "target": "fix/building-default-obshchiy-plan",
+      "predicate": "fixed_by",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "fix/building-default-obshchiy-plan",
+      "target": "Default building='Общий план' in main_waha.py + fallback in poll.py",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "QA routes category='техника' to ojr_section3_work_log as volume=0",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "2026-07-25",
+      "predicate": "occurred_on",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "bot_component/qa",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.95
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "db_table/ojr_section3_work_log",
+      "predicate": "affects",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/qa-technika-to-work-log",
+      "target": "fix/qa-technika-to-memory-facts",
+      "predicate": "fixed_by",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "fix/qa-technika-to-memory-facts",
+      "target": "Dedicated elif branch inserts category=техника into bot_memory_facts instead of work_log",
+      "predicate": "described_as",
+      "source_file": "seed:domain",
+      "confidence": 0.98
+    },
+    {
+      "source": "fix/qa-technika-to-memory-facts",
+      "target": "db_table/bot_memory_facts",
+      "predicate": "writes_to",
+      "source_file": "seed:domain",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
+      "target": "2026-07-25",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
+      "target": "Полный аудит и стабилизация (Hermes-driven)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-24/CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      "target": "2026-07-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-24/CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      "target": "CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-24/CONTEXT GATE (rule #0) added to `AGENTS.md`",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-20/Structured Vision Checklist: photo→ЕЖО structured",
+      "target": "2026-07-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-20/Structured Vision Checklist: photo→ЕЖО structured",
+      "target": "Structured Vision Checklist: photo→ЕЖО structured mapping (T-137 #5)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-20/Structured Vision Checklist: photo→ЕЖО structured",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-19/АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      "target": "2026-07-19",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-19/АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      "target": "АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-19/АВР: полный рефакторинг КС-6 + 837 расценок ВОР",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-19/КС-2 приведён к реальной 14-колоночной форме",
+      "target": "2026-07-19",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-19/КС-2 приведён к реальной 14-колоночной форме",
+      "target": "КС-2 приведён к реальной 14-колоночной форме",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-19/КС-2 приведён к реальной 14-колоночной форме",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-19/Исправление кумулятивов ЕЖО",
+      "target": "2026-07-19",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-19/Исправление кумулятивов ЕЖО",
+      "target": "Исправление кумулятивов ЕЖО",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-19/Исправление кумулятивов ЕЖО",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-18/Миграция БД на структуру ОЖР (14 таблиц)",
+      "target": "2026-07-18",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-18/Миграция БД на структуру ОЖР (14 таблиц)",
+      "target": "Миграция БД на структуру ОЖР (14 таблиц)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-18/Миграция БД на структуру ОЖР (14 таблиц)",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-17/HermesBridge стабилизация: retry+backoff и systemd",
+      "target": "2026-07-17",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-17/HermesBridge стабилизация: retry+backoff и systemd",
+      "target": "HermesBridge стабилизация: retry+backoff и systemd",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-17/HermesBridge стабилизация: retry+backoff и systemd",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-17/Фикс фото: _media + Grok vision description",
+      "target": "2026-07-17",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-17/Фикс фото: _media + Grok vision description",
+      "target": "Фикс фото: _media + Grok vision description",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-17/Фикс фото: _media + Grok vision description",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-16/ЕЖО v4: N=100%, планы из сырых сообщений, оформлен",
+      "target": "2026-07-16",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-16/ЕЖО v4: N=100%, планы из сырых сообщений, оформлен",
+      "target": "ЕЖО v4: N=100%, планы из сырых сообщений, оформление 3-го листа",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-16/ЕЖО v4: N=100%, планы из сырых сообщений, оформлен",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-22/WAHA альтернатива + проект idle",
+      "target": "2026-07-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-22/WAHA альтернатива + проект idle",
+      "target": "WAHA альтернатива + проект idle",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-22/WAHA альтернатива + проект idle",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-15/Миграция на Hermes Bridge",
+      "target": "2026-07-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-15/Миграция на Hermes Bridge",
+      "target": "Миграция на Hermes Bridge",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-15/Миграция на Hermes Bridge",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-24/daily-log",
+      "target": "2026-07-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-24/daily-log",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "bug/AL-013",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-013",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-013",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-020",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-020",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-020",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "task/T-137",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "task/T-159",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/memory-recurring-5",
+      "target": "-",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/memory-recurring-5",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "Мост в self-chat режиме — сообщения из групп не принимались 3 дня",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "Миграция с Evolution на Bridge без проверки групп-чатов",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "fix/al-004",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-004",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "Ollama таймаут 90с на каждом QA-парсинге",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "ask_grok() → ask_ollama() для текста без фото",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "fix/al-005",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "QA-факты персонала без подрядчика (ИТР 1)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "is_qa() триггерится на «итр», Grok не требует contractor",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "fix/al-006",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-006",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "Фото потеряны при смене режима моста",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "self-chat режим дропал все входящие из групп",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "fix/al-007",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-007",
+      "target": "active",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "Сообщения теряются при перезапуске бота",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "Age gate 300с + seed из 326 ID при каждом старте",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "fix/al-008",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-008",
+      "target": "active",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "Старые факты (5160-5163) без подрядчика в БД",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "Приняты до фикса AL-006",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "fix/al-009",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-009",
+      "target": "active",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "Дубликат бота после перезапуска",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "pkill не убил старый PID автоматически",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "fix/al-010",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-010",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "Бот не логирует в /tmp/bot.log после фонового запуска",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "Перенаправление вывода потеряно при перезапуске",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "fix/al-011",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-011",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/BUG-AL-001",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/BUG-AL-001",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/BUG-AL-002",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/BUG-AL-002",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/BUG-AL-003",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/BUG-AL-003",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-014",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-014",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-015",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-015",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-016",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-016",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-017",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-017",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-018",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-018",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-019",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-019",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "fix/al-004",
+      "target": "`--mode bot` + `WHATSAPP_ALLOWED_USERS=\"*\"`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-005",
+      "target": "parse_qa() → force_grok=True (минуя Ollama)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-006",
+      "target": "Валидация в parse_qa(): skip personnel без имени подрядчика",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-007",
+      "target": "+ mode bot (AL-004)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-008",
+      "target": "Сохранять сообщения ДО age gate (уже частично), увеличить окно",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-009",
+      "target": "Удалить id=5160 (блокировано: данные за 16.07 уже в отчёте)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-010",
+      "target": "Ручное убийство зомби",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "fix/al-011",
+      "target": "Явное `> /tmp/bot.log 2>&1`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    }
+  ]
+}

@@ -3,10 +3,7 @@ import time, requests, json, sys, os, base64, tempfile, subprocess
 import re
 import urllib.request
 from datetime import datetime
-from secret_config import get_evo_key
-
-EVO = "http://127.0.0.1:8080"
-KEY = get_evo_key(required=True)
+from bridge_wrapper import EVO, KEY
 SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 sys.stdout.reconfigure(line_buffering=True)

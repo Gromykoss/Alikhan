@@ -191,18 +191,17 @@ def _get_aibikon_from_ojr(date=None):
 
 def yesterday_cum(date, code):
     yd = date - timedelta(days=1)
-    for v in range(10, 0, -1):
-        p = f"/tmp/ЕЖО_{yd.strftime('%Y-%m-%d')}_v{v}.xlsx"
-        if os.path.exists(p):
-            try:
-                wb = load_workbook(p, data_only=True); ws = wb[wb.sheetnames[0]]
-                for r in range(24, ws.max_row + 1):
-                    if str(ws.cell(r, 3).value) == code:
-                        pm = ws.cell(r, 16).value; pt = ws.cell(r, 19).value; wb.close()
-                        return (parse_number(pm), parse_number(pt))
-                wb.close()
-            except Exception:
-                pass
+    p = f"/tmp/ЕЖО_{yd.strftime('%d.%m.%y')}_АйБиКон.xlsx"
+    if os.path.exists(p):
+        try:
+            wb = load_workbook(p, data_only=True); ws = wb[wb.sheetnames[0]]
+            for r in range(24, ws.max_row + 1):
+                if str(ws.cell(r, 3).value) == code:
+                    pm = ws.cell(r, 16).value; pt = ws.cell(r, 19).value; wb.close()
+                    return (parse_number(pm), parse_number(pt))
+            wb.close()
+        except Exception:
+            pass
     return None
 
 
@@ -468,6 +467,10 @@ def fill(date):
             sw(ws, 853, 10, None)
             sw(ws, 853, 11, f"{pct}%", True)
             ws.cell(853, 11).fill = yellow_fill
+
+            # Clear L853-U853 (columns 12-21)
+            for c in range(12, 22):  # L-U
+                sw(ws, 853, c, None)
 
             # ── Photo report in rows 856-859 (using data_sources) ──
             building_cols = {'Общежитие': 2, 'АБК': 3, 'Галерея': 4, 'Общий план': 5, 'Общие планы': 5}
@@ -739,21 +742,19 @@ def fill(date):
                                 sw(ws, row, 6, ost, True)
                             break
 
-        ds = date.strftime("%Y-%m-%d"); v = 1
-    while os.path.exists(f"/tmp/ЕЖО_{ds}_v{v}.xlsx"):
-        v += 1
-    op = f"/tmp/ЕЖО_{ds}_v{v}.xlsx"
+        ds = date.strftime("%d.%m.%y")
+    op = f"/tmp/ЕЖО_{ds}_АйБиКон.xlsx"
     wb.save(op)
-    print(f"✅ {op} (v{v})")
+    print(f"✅ {op}")
     return op
 
 
 if __name__ == "__main__":
     d = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else datetime.now()
-    ds = d.strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"/tmp/ЕЖО_{ds}_v*.xlsx"))
+    ds = d.strftime("%d.%m.%y")
+    existing = sorted(glob.glob(f"/tmp/ЕЖО_{ds}_АйБиКон.xlsx"))
     if existing and '--force' not in sys.argv:
-        print(f"⚠️ ЕЖО за {ds} уже существует (v{len(existing)}). Используй --force для перезаписи.", file=sys.stderr)
+        print(f"⚠️ ЕЖО за {ds} уже существует. Используй --force для перезаписи.", file=sys.stderr)
         sys.exit(0)
     if existing:
         print(f"⚠️ Перезаписываю существующий ЕЖО за {ds}", flush=True)

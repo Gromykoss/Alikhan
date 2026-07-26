@@ -3,7 +3,7 @@ import os
 import subprocess
 
 import psycopg2, psycopg2.extras
-from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PASS = os.environ.get("DB_PASS", "")
 try:
@@ -74,7 +74,7 @@ def save_message(chat_id, sender, role, content, message_type="text", file_name=
         return
     cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, file_name, message_time)
         VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-        (chat_id, sender, role, message_type, content, file_name, datetime.utcnow()))
+        (chat_id, sender, role, message_type, content, file_name, datetime.now(timezone.utc)))
     conn.commit(); cur.close(); conn.close()
 
 def get_upcoming_events(chat_id, limit=5):
@@ -693,8 +693,10 @@ def save_work_log(chat_id, date_str, vor_code, building, volume, unit='м³',
             (title_id, work_date, vor_code, work_name, building, volume, unit,
              contractor, category, source_fact_id, source_poll_id, created_by, created_at, updated_at)
         VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-        ON CONFLICT (work_date, vor_code, building, category) DO UPDATE
+        ON CONFLICT (work_date, vor_code) DO UPDATE
         SET volume = EXCLUDED.volume,
+            category = EXCLUDED.category,
+            work_name = COALESCE(EXCLUDED.work_name, ojr_section3_work_log.work_name),
             updated_at = NOW()
     """, (title_id, date_str, vor_code, work_name, building, volume, unit,
           contractor, category, source_fact_id, source_poll_id, created_by))

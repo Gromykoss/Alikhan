@@ -44,15 +44,17 @@ def _fetch_and_buffer():
         pass
 
 def _drain_buffer(remote_jid):
-    """Return messages matching remote_jid from buffer, removing them."""
+    """Return messages matching remote_jid from buffer, removing them.
+    Uses exact == on full remoteJid (with @s.whatsapp.net / @g.us suffix)
+    to prevent message leaks between groups."""
     global _BUFFER
     if not remote_jid:
         # No filter — return all
         msgs = _BUFFER[:]
         _BUFFER = []
         return msgs
-    matched = [m for m in _BUFFER if remote_jid in m.get("chatId", "")]
-    _BUFFER = [m for m in _BUFFER if remote_jid not in m.get("chatId", "")]
+    matched = [m for m in _BUFFER if m.get("chatId", "") == remote_jid]
+    _BUFFER = [m for m in _BUFFER if m.get("chatId", "") != remote_jid]
     return matched
 
 # ── Helper: fake Evolution-style Response ─────────────────────────────────

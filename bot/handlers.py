@@ -8,12 +8,9 @@ import psycopg2.extras
 import requests
 
 import db
-from secret_config import get_secret
 from messaging import send_msg  # unified messaging (AUDIT-011)
+from bridge_wrapper import EVO
 
-# WAHA API
-WAHA_URL = "http://127.0.0.1:3000"
-WAHA_KEY = get_secret("WAHA_KEY", "WAHA_API_KEY")
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "qwen2.5:14b"  # installed model (verified 17.07.2026)
@@ -151,34 +148,12 @@ def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="i
     return ask_ollama(prompt, system=system, max_tokens=max_tokens)
 
 
-def _download_media_base64(message_id):
-    # WAHA media download
-    response = requests.get(
-        f"{WAHA_URL}/api/alikhan/messages/{message_id}/download",
-        headers={"X-Api-Key": WAHA_KEY},
-        timeout=120,
-    )
-    if response.status_code == 200 and response.content:
-        import base64 as b64
-        return b64.b64encode(response.content).decode()
-    return ""
-
 def _get_base64_evolution(quoted_message_id):
-    """Fetch base64 using Evolution API for a message by its ID"""
+    """Fetch base64 using Evolution API for a message by its ID.
+    Uses module-level evo_key (loaded once in _load_keys) — no duplicate secrets read."""
     import urllib.request, json
     import os
-    # Load EVO config
-    secrets = {}
-    try:
-        with open(os.path.expanduser('~/.hermes/secrets.env')) as f:
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    k, v = line.strip().split('=', 1)
-                    secrets[k] = v
-    except:
-        pass
-    evo_key = secrets.get('EVO_KEY', '')
-    evo_base = 'http://127.0.0.1:8080'
+    evo_base = EVO
     try:
         # First find the full message
         body = json.dumps({"where": {"key": {"id": quoted_message_id}}, "page": 1, "limit": 1}).encode()
@@ -604,6 +579,10 @@ def handle_who_are_you(group, sender, payload):
 
 def handle_ai(group, sender, payload):
     ctx = _ctx(group, sender, payload)
+    text = (ctx.get("userMessage") or ctx.get("text") or "").lower()
+    # B4 FIX: check for bot name before sending to Grok (prevents abuse)
+    if not re.search(r'[ао]л[еи][хгк]', text):
+        return  # not addressed to the bot — ignore
     send_msg(group, ask_grok(ctx.get("userMessage") or ctx.get("text") or ""))
 
 def handle_daily_snapshot(group, sender, payload):

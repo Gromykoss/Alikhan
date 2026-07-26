@@ -16,8 +16,8 @@ SANDBOX   = os.environ.get("WHATSAPP_SANDBOX", "")   # Testing group
 PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "")  # Production group
 
 # ── API URLs ──
-EVO_URL = "http://127.0.0.1:8080"
-WAHA_URL = "http://127.0.0.1:3000"
+EVO_URL = "http://127.0.0.1:3000"
+BRIDGE_URL = "http://127.0.0.1:3000"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "qwen2.5:14b"

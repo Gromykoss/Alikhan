@@ -723,7 +723,7 @@ def get_code_source():
     """
     TEMPLATE_PATH = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
     try:
-        files = sorted(glob.glob("/tmp/ЕЖО_20*_v*.xlsx"))
+        files = sorted(glob.glob("/tmp/ЕЖО_*_АйБиКон.xlsx"))
         for f in reversed(files):
             if f != TEMPLATE_PATH:
                 try:

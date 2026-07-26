@@ -18,6 +18,31 @@ def _safe_message_ts(m):
         return int(time.time())
 
 
+def _handle_vor_reply(text, chat_id):
+    """Handle VOR code replies during active poll. Returns True if VOR codes were found and processed."""
+    if not text:
+        return False
+    has_vor = bool(re.search(r'\d+\.\d+\.\d+(?:\s*[=—–\-:\s]\s*\d+)', text))
+    if not has_vor:
+        return False
+    from poll import parse_poll_reply
+    today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
+    vor_result = parse_poll_reply(text, chat_id, today_str)
+    poll_notice = vor_result.get('message') or '\n'.join(vor_result.get('warnings', []))
+    if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0 or poll_notice:
+        lines = []
+        for item in vor_result.get('codes_updated', []):
+            lines.append(f"✅ {item['code']} = {item['actual_today']} {item.get('unit','м³')} ({item.get('building','')})")
+        if vor_result.get('facts_saved', 0) > 0:
+            lines.append(f"📋 +{vor_result['facts_saved']} фактов")
+        report = '\n'.join(lines) if lines else "✅ Данные приняты."
+        if poll_notice:
+            report += f"\n\n{poll_notice}"
+        send_msg(chat_id, report)
+        return True
+    return False
+
+
 def generate_daily_snapshot(chat_id):
     """Query all today's data, build raw photo_block from DB, send only messages/works/facts to Ollama."""
     from datetime import date, timedelta
@@ -761,12 +786,8 @@ while True:
             mid = m["key"]["id"]
             if mid in seen:
                 continue
-            # Skip messages older than 15 seconds (brief dedup window on restart)
-            msg_ts = _safe_message_ts(m)
-            now_ts = int(time.time())
-            if now_ts - msg_ts > 15:
-                seen.add(mid)
-                continue
+            # B2 FIX: removed 15-second age gate — it dropped all messages on restart.
+            # Messages are now deduplicated via seen_ids (persisted SEEN_FILE).
             seen.add(mid)
             with open(SEEN_FILE, "w") as f:
                 json.dump(list(seen), f)
@@ -802,11 +823,27 @@ while True:
                     cur.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
                     if not cur.fetchone():
                         cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            RETURNING id""",
                             (SANDBOX, "user", "user", "image", mid,
                              _json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                        photo_msg_id = cur.fetchone()[0]
                         conn.commit()
                         print(f"[PHOTO] Saved: {building or 'Общий план'} — {caption[:40]}", flush=True)
+                        # ── Save to OJR photo log ──
+                        try:
+                            title_row = cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
+                            cur.execute("""
+                                INSERT INTO ojr_photo_log (title_id, photo_date, building, file_message_id, file_path, created_at)
+                                VALUES (%s, %s::date, %s, %s, %s, NOW())
+                            """, (title_row[0] if title_row else 1,
+                                  (datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")).strftime('%Y-%m-%d'),
+                                  building or 'Общий план',
+                                  photo_msg_id,
+                                  media_urls[0] if media_urls else None))
+                            conn.commit()
+                        except Exception as e:
+                            print(f"[PHOTO OJR ERR] {e}", flush=True)
                         # ── Vision description ──
                         if media_urls:
                             try:
@@ -823,6 +860,14 @@ while True:
                                             "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
                                             (_json.dumps({"description": desc.strip()}), mid))
                                         conn.commit()
+                                        # Update OJR photo log with AI description
+                                        try:
+                                            cur.execute(
+                                                "UPDATE ojr_photo_log SET ai_description = %s WHERE file_message_id = %s",
+                                                (desc.strip(), photo_msg_id))
+                                            conn.commit()
+                                        except Exception as e:
+                                            print(f"[PHOTO OJR DESC ERR] {e}", flush=True)
                                         print(f"[PHOTO DESC] {desc.strip()[:100]}", flush=True)
                                         # ── Escalation: low-confidence description ──
                                         import re
@@ -1035,19 +1080,6 @@ while True:
                 from poll import close_poll, build_poll_summary, get_poll_status
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 today_fmt = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d.%m.%y")
-                # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
-                if existing:
-                    path = existing[-1]
-                    with open(path, "rb") as f:
-                        b64_enc = base64.b64encode(f.read()).decode()
-                    ver = len(existing)
-                    send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    if _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
-                        send_msg(SANDBOX, f"📊 ЕЖО v{ver} отправлен")
-                    else:
-                        send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
-                    continue
                 status = get_poll_status(SANDBOX, today_str)
                 if status:
                     summary = build_poll_summary(status)
@@ -1090,24 +1122,8 @@ while True:
                 continue
 
             # ── POLL: Auto-detect foreman reply with VOR codes (while poll active) ──
-            has_vor_codes = bool(re.search(r'\d+\.\d+\.\d+(?:\s*[=—–\-:\s]\s*\d+)', text))
-            if has_vor_codes:
-                from poll import parse_poll_reply, get_poll_status as _get_poll_st2
-                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                vor_result = parse_poll_reply(text, SANDBOX, today_str)
-                poll_notice = vor_result.get('message') or '\n'.join(vor_result.get('warnings', []))
-                if vor_result.get('codes_updated') or vor_result.get('facts_saved', 0) > 0 or poll_notice:
-                    # Build brief acknowledgment — NOT full summary
-                    lines = []
-                    for item in vor_result.get('codes_updated', []):
-                        lines.append(f"✅ {item['code']} = {item['actual_today']} {item.get('unit','м³')} ({item.get('building','')})")
-                    if vor_result.get('facts_saved', 0) > 0:
-                        lines.append(f"📋 +{vor_result['facts_saved']} фактов")
-                    report = '\n'.join(lines) if lines else "✅ Данные приняты."
-                    if poll_notice:
-                        report += f"\n\n{poll_notice}"
-                    send_msg(SANDBOX, report)
-                    continue
+            if _handle_vor_reply(text, SANDBOX):
+                continue
 
             # Fill EJO FORCE — принудительно, без проверок
             if any(w in text.lower() for w in ["заполни ежо принудительно", "сформируй ежо принудительно",
@@ -1117,17 +1133,6 @@ while True:
                 today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
                 today_fmt = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d.%m.%y")
                 ejo_name = f"ЕЖО_{today_fmt}_АйБиКон.xlsx"
-                # Guard: skip if EJO already exists for today (prevents duplicate)
-                existing = sorted(_glob.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
-                if existing:
-                    path = existing[-1]
-                    with open(path, "rb") as f:
-                        b64_enc = base64.b64encode(f.read()).decode()
-                    ver = len(existing)
-                    send_msg(SANDBOX, f"📊 ЕЖО за {today_str} уже существует (v{ver}). Отправляю существующий.")
-                    if not _send_document(SANDBOX, path, f"ЕЖО_{today_str}_v{ver}.xlsx"):
-                        send_msg(SANDBOX, f"❌ Ошибка отправки ЕЖО")
-                    continue
                 from poll import get_poll_status as _get_poll_st4, close_poll as _close_poll2
                 p_status4 = _get_poll_st4(SANDBOX, today_str)
                 if p_status4 and p_status4['poll']['status'] == 'active':
@@ -1251,20 +1256,8 @@ while True:
                     print(f"[AVR ERR] {e}", flush=True)
                 continue
             if action == "RESIDUAL":
-                from poll import parse_poll_reply
-                today_str = SIM_DATE or datetime.now().strftime("%Y-%m-%d")
-                result = parse_poll_reply(text, SANDBOX, today_str)
-                poll_notice = result.get('message') or '\n'.join(result.get('warnings', []))
-                if result.get('codes_updated'):
-                    reply = f"✅ Принято: {len(result['codes_updated'])} кодов"
-                    for c in result['codes_updated']:
-                        reply += f"\n  • `{c['code']}`: {c['actual_today']}"
-                    if poll_notice:
-                        reply += f"\n\n{poll_notice}"
-                    send_msg(SANDBOX, reply)
-                elif poll_notice:
-                    send_msg(SANDBOX, poll_notice)
-                continue
+                if _handle_vor_reply(text, SANDBOX):
+                    continue
             if action in ("IGNORE", "CMD"):
                 continue
             if voice:

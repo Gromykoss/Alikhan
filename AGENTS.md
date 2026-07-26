@@ -4,13 +4,91 @@
 Бот: Python v5, Hermes WhatsApp bridge + xAI/Grok.
 Путь: /home/hermes-workspace/Alikhan-migration/bot/
 
+---
+
+# ⛔ CRITICAL GATES — ЧИТАЙ ПЕРВЫМ, ДО ЛЮБОГО ДЕЙСТВИЯ
+
+⚠️ DO NOT SKIP: read ALL rules in this file before acting. Самые нарушаемые правила — здесь, наверху.
+
+### ⛔ DELEGATION GATE — ПРАВИЛО №0 (MANDATORY — 25.07.2026, усилено 26.07)
+
+**Alikhan на DeepSeek v4 Pro — ОРКЕСТРАТОР, не исполнитель кода. Никаких исключений.**
+
+**SELF-CHECK перед КАЖДЫМ tool call:**
+> «Этот вызов: пишет код, патчит файл, или делает что-то что Codex/Grok Build может сделать?»
+> Если ДА → остановись. Делегируй через `delegate_task`.
+
+**Разрешено Alikhan напрямую (read-only + оркестрация):**
+- read_file, search_files, grep, session_search — анализ
+- delegate_task → Codex/Grok Build — исполнение
+- vision_analyze, terminal (только read-only: cat, ls, git status, grep)
+- systemctl status/logs, curl health-checks
+
+**⛔ Запрещено Alikhan напрямую (любой код/мутация):**
+- patch(), write_file() — ЗАПРЕЩЕНЫ
+- terminal с sed/awk/python/git commit/push/cp/mv/rm — ЗАПРЕЩЕНЫ
+- «мелкий патч», «хирургическая правка», «проверю сам» — не оправдания
+- pkill, systemctl restart, любые мутации процессов
+
+**Почему:** Codex/Grok Build включены в подписку → $0. DeepSeek output = $0.87/M. Каждый ручной patch — платные токены за работу, которую Codex делает бесплатно.
+
+**⛔ Нарушение = откат. Без предупреждений.**
+
+---
+
 ## Start here
 
 1. `skill_view("hermes-self-knowledge")` — 14 паттернов харнеса
 2. Прочитай `~/hermes-vault/30_Logs/Арсенал Hermes.md`
 3. Затем этот файл, потом `/home/hermes-workspace/Alikhan-migration/INDEX.md`
+4. **Запроси Knowledge Graph:** `python3 ~/Alikhan-migration/knowledge_graph/query_tool.py` — recurring bugs, quirks, architecture
+
+## 🧠 Knowledge Graph — shared memory (Anthropic Graph Engineering, 25.07.2026)
+
+**Проблема:** память агентов умирает с контекстным окном. Knowledge Graph — постоянная structured память по домену Alikhan (WhatsApp bot, PostgreSQL/ОЖР, Hermes Bridge, ЕЖО, poll/QA).
+
+**Файлы:**
+- `knowledge_graph/schema.py` — Pydantic-модели (Triple, Entity, Edge; типы: bugs, fixes, api_quirks, db_tables, bot_components, events)
+- `knowledge_graph/query_tool.py` — запросы к графу + `grounded_answer` (DeepSeek)
+- `knowledge_graph/maintenance.py` — Step 5: stale/duplicates/contradictions/decay → maintenance_report.json
+- `knowledge_graph/graph.json` — сам граф (seeded from MEMORY.md + AGENTS.md + CHRONOLOGY.md + BUGS.md)
+- `scripts/knowledge_graph.py` — пайплайн Extract → Resolve → Assemble (+ maintenance после rebuild)
+
+**Правила для всех агентов Alikhan:**
+
+1. **Session start / bug triage** — ПЕРЕД диагнозом запроси граф:
+   ```bash
+   python3 ~/Alikhan-migration/knowledge_graph/query_tool.py grounded_answer \
+     "What recurring bugs and API quirks affect the bot right now?"
+   ```
+
+2. **Перед фиксом в bot/** — проверь, что уже известно:
+   ```python
+   from knowledge_graph.query_tool import query_knowledge_graph
+   print(query_knowledge_graph("What fixes exist for poll / photo / QA?", center_entity="bot_component/poll"))
+   print(query_knowledge_graph("PostgreSQL and Bridge quirks", center_entity="api_quirk/postgres-collation-warning"))
+   ```
+
+3. **Любой агент** может вызвать:
+   ```bash
+   python3 ~/Alikhan-migration/knowledge_graph/query_tool.py query "..." [entity]
+   python3 ~/Alikhan-migration/knowledge_graph/query_tool.py grounded_answer "..." [entity]
+   ```
+
+4. **Rebuild:** cron каждые 6 часов (`311003b953c6`, `15 */6 * * *`, script `alikhan_knowledge_graph.py`, no_agent). Граф всегда свежий.
+   ```bash
+   python3 ~/Alikhan-migration/scripts/knowledge_graph.py
+   ```
+
+**Entity types (Alikhan domain — no X/Twitter):**
+`bug`, `fix`, `api_quirk`, `db_table`, `bot_component`, `event`, `service`, `decision`, `template`, `group`, `project`
+
+**Pipeline:**
+Extract (regex + curated seed from CHRONOLOGY + MEMORY + AGENTS + BUGS) → Resolve (aliases) → Assemble (NetworkX) → Query (subgraph serialization) → Grounded Answer (DeepSeek, every claim cites an edge) → Maintain (`maintenance.py` after each rebuild)
 
 ## Правила строительства
+
+### ⛔ PRE-COMMIT GATE (MANDATORY — все проекты)
 
 **Общие правила (все проекты):** `skill_view('build')`
 
@@ -57,13 +135,13 @@
 - Live bot: `systemctl --user {start,stop,restart,status} alikhan.service` (systemd, Restart=always)
 - Venv python: `/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3`
 - Env vars in unit file: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
-- **НЕ запускать вручную** (`python3 main_waha.py`) — только через systemd
+- **НЕ запускать вручную** — только через systemd (`systemctl --user restart alikhan`)
 - Service unit: `/home/hermes-workspace/.config/systemd/user/alikhan.service`
 - Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
 - Hermes Bridge: `systemctl --user start hermes-whatsapp-bridge` (systemd, Restart=always, port 3000)
 - Bridge session: `~/.hermes/sessions/whatsapp/`
 - Evolution API: остановлен (миграция на Hermes Bridge)
-- alikhan.service: остановлен (бот запускается напрямую)
+- alikhan.service: активен (`systemctl --user status alikhan`, Restart=always)
 - Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
 - Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
 - QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
@@ -242,7 +320,7 @@ tail -30 /tmp/alikhan.log                          # логи
 - `bridge_wrapper.py` — monkey-patch слой: перехватывает `requests.post` к Evolution API, транслирует в Bridge API
 - `main_waha.py` — не менялся, просто импортирует `from bridge_wrapper import *`
 - Evolution API Docker — остановлен
-- `alikhan.service` — остановлен (заменён прямым запуском `python3 main_waha.py`)
+- `alikhan.service` — активен (`systemctl --user status alikhan`)
 - Hermes Bridge: `node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &`
 
 **Что сделано:**

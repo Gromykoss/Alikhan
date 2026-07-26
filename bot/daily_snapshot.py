@@ -31,7 +31,7 @@ SECRETS = _load_secrets()
 EVO_KEY = SECRETS.get('EVO_KEY', '')
 EVO_DB_PASS = SECRETS.get('DB_PASS', os.environ.get('DB_PASS', ''))
 
-EVOLUTION_URL = "http://127.0.0.1:8080"
+from bridge_wrapper import EVO as EVOLUTION_URL
 SANDBOX_GROUP = os.environ.get("WHATSAPP_SANDBOX", "")
 
 def get_weather():

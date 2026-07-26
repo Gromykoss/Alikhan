@@ -6,6 +6,7 @@ Usage: python3 verify_ejo.py 2026-07-15
 """
 
 import sys
+from datetime import datetime
 from openpyxl import load_workbook
 from pathlib import Path
 
@@ -52,7 +53,8 @@ def main():
         sys.exit(1)
 
     date = sys.argv[1]
-    v1_path = Path(f"/tmp/ЕЖО_{date}_v1.xlsx")
+    date_dot = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m.%y")
+    v1_path = Path(f"/tmp/ЕЖО_{date_dot}_АйБиКон.xlsx")
     corr_path = Path(f"/tmp/corrected_ЕЖО_{date}.xlsx")
 
     if not v1_path.exists():
