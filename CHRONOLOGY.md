@@ -276,3 +276,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - `alikhan-monthly-template` — месячный план через «раскрой отчет»
 - **25.07.2026 15:24** — test: post-commit hook verification (`81410fb`)
 - **26.07.2026 04:13** — chore: auto-sync 26.07 (`65a1136`)
+- **26.07.2026 09:46** — chronology: 26.07 — 5 bugs fixed (ON CONFLICT, workers_count, photos, readiness, voice) (`fbcfaa9`)
