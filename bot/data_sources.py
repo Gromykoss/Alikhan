@@ -121,13 +121,13 @@ def _qa_legacy(date, cat=None):
         if cat:
             cur.execute(
                 "SELECT fact, category FROM bot_memory_facts "
-                "WHERE fact_date=%s AND source='qa' AND category=%s",
+                "WHERE fact_date=%s AND source IN ('qa', 'auto') AND category=%s",
                 (ds, cat)
             )
         else:
             cur.execute(
                 "SELECT fact, category FROM bot_memory_facts "
-                "WHERE fact_date=%s AND source='qa'",
+                "WHERE fact_date=%s AND source IN ('qa', 'auto')",
                 (ds,)
             )
         return cur.fetchall()
@@ -388,9 +388,8 @@ def get_photos(date):
                 ct['Общий план'] += row['n']
         # Get file list
         cur.execute(
-            "SELECT p.building as b, p.file_message_id as msg_id, m.content as fp "
+            "SELECT p.building as b, p.file_message_id as msg_id, p.file_path as fp "
             "FROM ojr_photo_log p "
-            "JOIN bot_memory_messages m ON p.file_message_id = m.id "
             "WHERE p.photo_date = %s::date",
             (ds,)
         )
@@ -582,13 +581,26 @@ def get_equipment(date):
     """Primary: QA facts 'техника'. Fallback: empty dict."""
     try:
         f = _qa_legacy(date, 'техника')
-        et = ' '.join(x.get('fact', '') for x in f).lower()
         equip = {'Самосвал': 0, 'Экскаватор': 0, 'Фронтальный погрузчик': 0, 'Каток': 0, 'Бетононасос': 0}
-        if 'нет' in et:
+        if not f:
+            print(f"[DS EQUIPMENT] no facts", flush=True)
+            return EquipmentData(items=equip)
+        # Check for negation (нет техники) across all facts
+        all_text = ' '.join(x.get('fact', '') for x in f).lower()
+        if 'нет' in all_text.split():
             print(f"[DS EQUIPMENT] all 0 (нет техники)", flush=True)
             return EquipmentData(items=equip)
-        for en in equip:
-            equip[en] = max(et.count(en.lower()[:5]), 0)
+        # Parse actual counts from each fact using regex (not substring counting)
+        for x in f:
+            fact = x.get('fact', '').lower()
+            for en in equip:
+                short = en.lower()[:5]
+                # Match "N экскаватор" or "экскаватор N" or "экскаватор - N"
+                m = re.search(rf'(\d+)\s*{re.escape(short)}|{re.escape(short)}\w*\s*[-–]?\s*(\d+)', fact)
+                if m:
+                    count = int(m.group(1) or m.group(2))
+                    # Take max across all matching facts (dedup)
+                    equip[en] = max(equip[en], count)
         print(f"[DS EQUIPMENT] {equip}", flush=True)
         return EquipmentData(items=equip)
     except Exception as e:

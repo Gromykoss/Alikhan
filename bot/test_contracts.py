@@ -45,7 +45,7 @@ def _top_level_imports(filepath):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_contract_bridge_wrapper_import():
-    """Контракт: fill_ejo.py импортирует EVO, KEY из bridge_wrapper (не хардкодит)."""
+    """Контракт: fill_ejo.py НЕ импортирует EVO/KEY из bridge_wrapper — фото читаются с диска напрямую (Evolution API мёртв)."""
     fill_ejo_path = os.path.join(os.path.dirname(__file__), 'fill_ejo.py')
     imports = _top_level_imports(fill_ejo_path)
 
@@ -59,13 +59,13 @@ def test_contract_bridge_wrapper_import():
             if name == 'KEY':
                 key_imported = True
 
-    assert evo_imported, (
-        "КОНТРАКТ НАРУШЕН: fill_ejo.py не импортирует EVO из bridge_wrapper. "
-        "EVO должен импортироваться из bridge_wrapper, а не хардкодиться."
+    assert not evo_imported, (
+        "КОНТРАКТ НАРУШЕН: fill_ejo.py импортирует EVO из bridge_wrapper. "
+        "Evolution API (getBase64FromMediaMessage) мёртв — фото должны читаться с диска через pf.local_path."
     )
-    assert key_imported, (
-        "КОНТРАКТ НАРУШЕН: fill_ejo.py не импортирует KEY из bridge_wrapper. "
-        "KEY должен импортироваться из bridge_wrapper, а не хардкодиться."
+    assert not key_imported, (
+        "КОНТРАКТ НАРУШЕН: fill_ejo.py импортирует KEY из bridge_wrapper. "
+        "Evolution API (getBase64FromMediaMessage) мёртв — фото должны читаться с диска через pf.local_path."
     )
 
 

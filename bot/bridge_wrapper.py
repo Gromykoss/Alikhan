@@ -227,21 +227,43 @@ def _patched_urlopen(req, **kwargs):
                 from db import get_conn
                 conn = get_conn()
                 cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                # Try legacy lookup: content = WhatsApp mid
                 cur.execute(
                     "SELECT tags->>'local_path' as lp FROM bot_memory_messages WHERE content = %s ORDER BY created_at DESC LIMIT 1",
                     (str(msg_id),)
                 )
                 row = cur.fetchone()
-                cur.close(); conn.close()
                 if row and row.get('lp'):
                     local_path = row['lp']
                     if os.path.exists(local_path):
+                        cur.close(); conn.close()
                         with open(local_path, "rb") as f:
                             return _evo_response({
                                 "base64": _b64.b64encode(f.read()).decode(),
                                 "fileName": os.path.basename(local_path),
                                 "mimetype": "",
                             })
+                # B2: ojr_photo_log fallback — file_message_id → file_path on disk
+                if str(msg_id).isdigit():
+                    cur.execute(
+                        "SELECT file_path FROM ojr_photo_log WHERE file_message_id = %s LIMIT 1",
+                        (int(msg_id),)
+                    )
+                    row2 = cur.fetchone()
+                else:
+                    row2 = None
+                cur.close(); conn.close()
+                if row2 and row2.get('file_path'):
+                    fp = row2['file_path']
+                    if os.path.exists(fp):
+                        with open(fp, "rb") as f:
+                            return _evo_response({
+                                "base64": _b64.b64encode(f.read()).decode(),
+                                "fileName": os.path.basename(fp),
+                                "mimetype": "",
+                            })
+                    else:
+                        print(f"[B2 OJR PHOTO] file not found on disk: {fp}", flush=True)
             except Exception as e:
                 print(f"[B1 MEDIA DB LOOKUP ERR] {e}", flush=True)
         return _evo_response({"base64": ""})

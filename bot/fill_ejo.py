@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """fill_ejo.py — ЕЖО: погода + QA-факты → 3 листа (новый формат без Фототчет)"""
-import sys, os, re, json, urllib.request, base64, glob
+import sys, os, re, json, glob
 from datetime import datetime, timedelta, date as dt_date
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter as _gcl
@@ -20,8 +20,6 @@ from data_sources import (
 )
 
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
-
-from bridge_wrapper import EVO, KEY
 
 
 def calc_completion_pct(ws):
@@ -541,26 +539,19 @@ def fill(date):
                 photo_col = PHOTO_COLS[idx]
                 photo_count[bld] = idx + 1
 
-                msg_id = pf.msg_id
-                if msg_id and KEY:
+                # Read photo directly from disk cache (Evolution API getBase64FromMediaMessage is dead)
+                local_path = pf.local_path
+                if local_path and os.path.exists(local_path):
                     try:
-                        req = urllib.request.Request(
-                            f"{EVO}/chat/getBase64FromMediaMessage/alikhan",
-                            data=json.dumps({"message": {"key": {"id": msg_id}}}).encode(),
-                            headers={"apikey": KEY, "Content-Type": "application/json"}
-                        )
-                        resp = urllib.request.urlopen(req, timeout=30)
-                        b64 = json.loads(resp.read().decode()).get("base64", "")
-                        if b64:
-                            import io, base64 as _b64
-                            img_data = _b64.b64decode(b64)
-                            img = XI(io.BytesIO(img_data))
-                            img.width = 355
-                            img.height = 267
-                            col_letter = chr(64 + photo_col)
-                            ws.add_image(img, f"{col_letter}{row_num}")
+                        img = XI(local_path)
+                        img.width = 355
+                        img.height = 267
+                        col_letter = chr(64 + photo_col)
+                        ws.add_image(img, f"{col_letter}{row_num}")
                     except Exception as ex:
-                        print(f"Photo err: {ex}", flush=True)
+                        print(f"Photo err: {ex} (path={local_path})", flush=True)
+                else:
+                    print(f"Photo skip: no local_path for {pf.building} (msg_id={pf.msg_id})", flush=True)
 
             # Restore saved non-photo images (logo)
             for img in saved_images:

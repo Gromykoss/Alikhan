@@ -667,13 +667,29 @@ def production_listener_loop():
                         conn2 = _gc(); cur2 = conn2.cursor()
                         cur2.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
                         if not cur2.fetchone():
+                            media_urls = media_meta.get("mediaUrls", [])
                             cur2.execute(
-                                "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                                "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                                 (PRODUCTION, "user", "user", "image", mid,
-                                 json.dumps({"building": building or "Общий план", "msg_id": mid}),
+                                 json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}),
                                  datetime.now()))
+                            photo_msg_id = cur2.fetchone()[0]
                             conn2.commit()
                             print(f"[PROD PHOTO] Saved: {building or 'Общий план'} — {cap[:40]}", flush=True)
+                            # ── Save to OJR photo log ──
+                            try:
+                                title_row = cur2.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
+                                cur2.execute("""
+                                    INSERT INTO ojr_photo_log (title_id, photo_date, building, file_message_id, file_path, created_at)
+                                    VALUES (%s, %s::date, %s, %s, %s, NOW())
+                                """, (title_row[0] if title_row else 1,
+                                      datetime.now().strftime('%Y-%m-%d'),
+                                      building or 'Общий план',
+                                      photo_msg_id,
+                                      media_urls[0] if media_urls else None))
+                                conn2.commit()
+                            except Exception as e:
+                                print(f"[PROD PHOTO OJR ERR] {e}", flush=True)
                             # ── Vision description ──
                             media_urls = media_meta.get("mediaUrls", [])
                             if media_urls:
@@ -691,7 +707,28 @@ def production_listener_loop():
                                                 "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
                                                 (json.dumps({"description": desc.strip()}), mid))
                                             conn2.commit()
+                                            # Update OJR photo log with AI description
+                                            try:
+                                                cur2.execute(
+                                                    "UPDATE ojr_photo_log SET ai_description = %s WHERE file_message_id = %s",
+                                                    (desc.strip(), photo_msg_id))
+                                                conn2.commit()
+                                            except Exception as e:
+                                                print(f"[PROD PHOTO OJR DESC ERR] {e}", flush=True)
                                             print(f"[PROD PHOTO DESC] {desc.strip()[:100]}", flush=True)
+                                            # ── Escalation: low-confidence description ──
+                                            low_conf_words = [
+                                                r'\bпредположител', r'\bвероятн', r'\bвозможн',
+                                                r'\bпохож', r'\bкажетс', r'\bвидим[оы]',
+                                                r'\bмонтаж.*(?:идет|ведет|производит)',
+                                                r'\b(?:идет|ведетс|производит).*работ',
+                                                r'\bпроцесс', r'\bактивн'
+                                            ]
+                                            low_conf = any(re.search(w, desc.lower()) for w in low_conf_words)
+                                            if low_conf:
+                                                send_msg(PRODUCTION,
+                                                    f"⚠️ Описание фото может быть неточным (проверьте):\n{desc.strip()[:200]}")
+                                                print(f"[PROD PHOTO ESCALATE] Low confidence: {desc.strip()[:80]}", flush=True)
                                 except Exception as e:
                                     print(f"[PROD PHOTO DESC ERR] {e}", flush=True)
                         conn2.close()

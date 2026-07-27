@@ -454,9 +454,15 @@ def parse_qa(gid, text, date_str=None):
                     position = 'Рабочий'
                 else:
                     position = 'Сотрудник'
-                print(f"[QA SAVE] → save_personnel: org='{org_name}' pos='{position}'", flush=True)
-                save_personnel(gid, today, org_name, org_name, position,
-                               sync_source='qa')
+                # Parse headcount from fact (e.g. "8 рабочих" → 8, "ИТР 1" → 1)
+                num_match = re.search(r'(\d+)', f)
+                n = int(num_match.group(1)) if num_match else 1
+                print(f"[QA SAVE] → save_personnel: org='{org_name}' pos='{position}' count={n}", flush=True)
+                # Insert N rows (one per person), with unique full_name to avoid ON CONFLICT
+                for i in range(n):
+                    unique_name = f"{org_name}-{position}-{i+1}" if n > 1 else org_name
+                    save_personnel(gid, today, org_name, unique_name, position,
+                                   sync_source='qa')
                 count += 1
             elif c in ('инцидент', 'incident'):
                 print(f"[QA SAVE] → save_incident", flush=True)
@@ -473,7 +479,9 @@ def parse_qa(gid, text, date_str=None):
                 # Equipment goes to bot_memory_facts, NOT work_log
                 print(f"[QA SAVE] → bot_memory_facts (техника)", flush=True)
                 cur.execute(
-                    "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) "
+                    "VALUES (%s, %s, %s, %s, %s, %s) "
+                    "ON CONFLICT (chat_id, fact_date, building, category, fact) DO NOTHING",
                     (gid, today, b if b != 'общая' else 'общая', 'техника', f, 'qa'))
                 count += 1
             elif c in ('план', 'объём'):

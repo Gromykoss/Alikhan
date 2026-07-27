@@ -32,6 +32,7 @@ _lock = threading.Lock()
 
 def mark_healthy(service):
     with _lock:
+        _health.setdefault(service, {'healthy': True, 'failures': 0, 'last_check': 0})
         _health[service]['healthy'] = True
         _health[service]['failures'] = 0
         _health[service]['last_check'] = time.time()
@@ -39,6 +40,7 @@ def mark_healthy(service):
 
 def mark_unhealthy(service):
     with _lock:
+        _health.setdefault(service, {'healthy': True, 'failures': 0, 'last_check': 0})
         _health[service]['failures'] += 1
         _health[service]['last_check'] = time.time()
         if _health[service]['failures'] >= 3:
@@ -47,6 +49,7 @@ def mark_unhealthy(service):
 
 def is_healthy(service):
     with _lock:
+        _health.setdefault(service, {'healthy': True, 'failures': 0, 'last_check': 0})
         return _health[service]['healthy']
 
 

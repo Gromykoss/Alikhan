@@ -2,5 +2,6 @@ __pycache__/
 *.py[cod]
 bot/bot.log
 bot/seen_ids.json
+bot/prod_seen_ids.json
 bot/__pycache__/
 docs/_discovery/
