@@ -229,7 +229,7 @@ def _patched_urlopen(req, **kwargs):
                 cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 cur.execute(
                     "SELECT tags->>'local_path' as lp FROM bot_memory_messages WHERE content = %s ORDER BY created_at DESC LIMIT 1",
-                    (msg_id,)
+                    (str(msg_id),)
                 )
                 row = cur.fetchone()
                 cur.close(); conn.close()

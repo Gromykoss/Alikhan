@@ -16,7 +16,7 @@ sys.stdout.reconfigure(line_buffering=True)
 ALLOWED_BUILDINGS = {'АБК', 'Общежитие', 'общая'}
 ALLOWED_CATEGORIES = {
     'персонал', 'техника', 'инцидент', 'бетонирование', 'монтаж',
-    'земляные работы', 'документация', 'план', 'объём'
+    'земляные работы', 'документация', 'материалы', 'план', 'объём'
 }
 ALLOWED_CONTRACTORS = ['айбикон', 'атантай', 'майкадам', 'наватек']
 
@@ -92,7 +92,7 @@ def validate_category(value):
         'монтажные работы': 'монтаж',
         'земляные': 'земляные работы', 'земля': 'земляные работы',
         'документы': 'документация', 'док-ты': 'документация',
-        'материалы': 'документация', 'план работ': 'план',
+        'план работ': 'план',
     }
     if v in fuzzy_map:
         return fuzzy_map[v]
@@ -400,6 +400,7 @@ def parse_qa(gid, text, date_str=None):
                 f = obj.get("fact", "")
 
                 if not b or not c or not f:
+                    print(f"[QA VALIDATE] Skipped empty fact: building={b!r} category={c!r} fact={f[:60]!r}", flush=True)
                     continue  # skip empty facts
 
                 # Personnel validation
@@ -408,6 +409,7 @@ def parse_qa(gid, text, date_str=None):
                     _audit_log('rejected_personnel', {'fact': f})
                     continue
 
+                print(f"[QA GROK FACT] raw_cat='{c_raw}' → validated='{c}' | building='{b}' | fact='{f[:80]}'", flush=True)
                 all_grok_facts.append((b, c, f))
 
         if all_grok_facts:
@@ -430,7 +432,9 @@ def parse_qa(gid, text, date_str=None):
             count += 1
 
         # Save validated Grok facts — route by category
+        print(f"[QA SAVE] Routing {len(all_grok_facts)} grok-validated facts to DB tables", flush=True)
         for b, c, f in all_grok_facts:
+            print(f"[QA SAVE] fact category='{c}' building='{b}' text='{f[:80]}'", flush=True)
             if c == 'персонал':
                 # Personnel facts are "Организация ИТР N" or "Организация N рабочих"
                 # Save to OJR personnel table
@@ -450,26 +454,31 @@ def parse_qa(gid, text, date_str=None):
                     position = 'Рабочий'
                 else:
                     position = 'Сотрудник'
+                print(f"[QA SAVE] → save_personnel: org='{org_name}' pos='{position}'", flush=True)
                 save_personnel(gid, today, org_name, org_name, position,
                                sync_source='qa')
                 count += 1
             elif c in ('инцидент', 'incident'):
+                print(f"[QA SAVE] → save_incident", flush=True)
                 save_incident(gid, today, 'incident', f,
                               severity='minor',
                               location=b if b != 'общая' else None)
                 count += 1
             elif c in ('документация', 'материалы'):
                 # Save to ojr_materials
+                print(f"[QA SAVE] → save_material: category='{c}'", flush=True)
                 save_material(gid, today, f, building=b if b != 'общая' else None)
                 count += 1
             elif c == 'техника':
                 # Equipment goes to bot_memory_facts, NOT work_log
+                print(f"[QA SAVE] → bot_memory_facts (техника)", flush=True)
                 cur.execute(
                     "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) VALUES (%s, %s, %s, %s, %s, %s)",
                     (gid, today, b if b != 'общая' else 'общая', 'техника', f, 'qa'))
                 count += 1
             elif c in ('план', 'объём'):
                 # These go to work_log — extract VOR code, require volume > 0
+                print(f"[QA SAVE] → план/объём → work_log", flush=True)
                 import re as _re2
                 vor_match = _re2.search(r'(\d+\.\d+\.\d+(?:\.\d+)?)', f)
                 if vor_match:
@@ -484,6 +493,7 @@ def parse_qa(gid, text, date_str=None):
                 count += 1
             else:
                 # Unknown category (бетонирование, монтаж, земляные работы etc.) — don't save to work_log
+                print(f"[QA SAVE] ⚠ UNKNOWN category='{c}' — NOT SAVED to DB", flush=True)
                 pass
 
         # Fallback: if nothing was saved, try simple "нет" patterns

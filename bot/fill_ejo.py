@@ -245,6 +245,13 @@ def set_fill(ws, r, c, theme, tint=0.0):
 
 def fill(date):
     wb = load_workbook(TEMPLATE, data_only=True)
+    # Read base K853 from template BEFORE any modification
+    base_k853_raw = wb["Ежедневный отчет"].cell(853, 11).value
+    try:
+        base_k853 = int(float(str(base_k853_raw).replace('%', '').strip())) if base_k853_raw else 0
+    except (ValueError, TypeError):
+        base_k853 = 0
+    print(f"[COMPLETION %] База из шаблона: {base_k853}%", flush=True)
     template_date = wb["Ежедневный отчет"].cell(6, 4).value
     if isinstance(template_date, datetime):
         template_date = template_date.strftime('%d.%m.%Y')
@@ -462,8 +469,9 @@ def fill(date):
                         cell.value = None
 
             # Write completion % to K853
-            pct = calc_completion_pct(ws)
-            print(f"[COMPLETION %] Вычислено: {pct}% → K853", flush=True)
+            new_pct = calc_completion_pct(ws)
+            pct = max(base_k853, new_pct)
+            print(f"[COMPLETION %] База: {base_k853}%, Вычислено: {new_pct}% → K853: {pct}%", flush=True)
             sw(ws, 853, 10, None)
             sw(ws, 853, 11, f"{pct}%", True)
             ws.cell(853, 11).fill = yellow_fill

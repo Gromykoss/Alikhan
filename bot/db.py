@@ -673,7 +673,7 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
             (title_id, organization_type, organization_name, full_name,
              position, phone, start_date, sync_source, created_at, updated_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s, NOW(), NOW())
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (title_id, organization_name, full_name, position, start_date) DO NOTHING
     """, (title_id, org_type, org_name, full_name, position,
           phone, date_str, sync_source))
     conn.commit()

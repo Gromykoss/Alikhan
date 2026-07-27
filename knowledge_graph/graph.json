@@ -1,13 +1,13 @@
 {
-  "built_at": "2026-07-26T00:15:25.947259+00:00",
+  "built_at": "2026-07-27T06:15:03.632623+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 215,
-    "edges": 395,
+    "nodes": 222,
+    "edges": 405,
     "projects": 1,
-    "events": 13,
-    "bugs": 22,
+    "events": 14,
+    "bugs": 23,
     "fixes": 13,
     "api_quirks": 5,
     "db_tables": 21,
@@ -15,7 +15,7 @@
     "services": 3,
     "templates": 4,
     "decisions": 3,
-    "tasks": 2
+    "tasks": 4
   },
   "nodes": [
     [
@@ -751,6 +751,24 @@
       }
     ],
     [
+      "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-26",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "ОЖР-миграция: персонал/фото/готовность (production-цикл)",
+      {
+        "type": "description"
+      }
+    ],
+    [
       "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
       {
         "type": "event"
@@ -937,7 +955,7 @@
       }
     ],
     [
-      "bug/AL-013",
+      "bug/AL-023",
       {
         "type": "bug"
       }
@@ -949,9 +967,27 @@
       }
     ],
     [
+      "bug/AL-013",
+      {
+        "type": "bug"
+      }
+    ],
+    [
       "bug/AL-020",
       {
         "type": "bug"
+      }
+    ],
+    [
+      "task/T-115",
+      {
+        "type": "task"
+      }
+    ],
+    [
+      "task/T-116",
+      {
+        "type": "task"
       }
     ],
     [
@@ -967,15 +1003,21 @@
       }
     ],
     [
-      "AGENTS.md",
-      {
-        "type": "unknown"
-      }
-    ],
-    [
       "bug/memory-recurring-5",
       {
         "type": "bug"
+      }
+    ],
+    [
+      "- **ON CONFLICT без constraint** — `db",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "AGENTS.md",
+      {
+        "type": "unknown"
       }
     ],
     [
@@ -1529,13 +1571,6 @@
     },
     {
       "source": "bot_component/main_waha",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bot_component/main_waha",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1735,6 +1770,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -1995,6 +2037,13 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.95
+    },
+    {
+      "source": "bot_component/qa",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "bot_component/qa",
@@ -3222,6 +3271,27 @@
       "confidence": 0.9
     },
     {
+      "source": "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
+      "target": "2026-07-26",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
+      "target": "ОЖР-миграция: персонал/фото/готовность (production-цикл)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
       "target": "2026-07-25",
       "predicate": "occurred_on",
@@ -3488,6 +3558,20 @@
       "confidence": 0.8
     },
     {
+      "source": "bug/AL-023",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-023",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "bug/AL-013",
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
@@ -3528,6 +3612,20 @@
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
       "confidence": 0.92
+    },
+    {
+      "source": "task/T-115",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "task/T-116",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
     },
     {
       "source": "task/T-137",
@@ -3542,6 +3640,20 @@
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
       "confidence": 0.88
+    },
+    {
+      "source": "bug/memory-recurring-5",
+      "target": "- **ON CONFLICT без constraint** — `db",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/memory-recurring-5",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "bug/memory-recurring-5",

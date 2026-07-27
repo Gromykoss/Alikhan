@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-26T00:15:25.957522+00:00",
-  "graph_built_at": "2026-07-26T00:15:25.947259+00:00",
+  "generated_at": "2026-07-27T06:15:03.645807+00:00",
+  "graph_built_at": "2026-07-27T06:15:03.632623+00:00",
   "graph_stats": {
-    "nodes": 215,
-    "edges": 395,
+    "nodes": 222,
+    "edges": 405,
     "projects": 1,
-    "events": 13,
-    "bugs": 22,
+    "events": 14,
+    "bugs": 23,
     "fixes": 13,
     "api_quirks": 5,
     "db_tables": 21,
@@ -14,7 +14,7 @@
     "services": 3,
     "templates": 4,
     "decisions": 3,
-    "tasks": 2
+    "tasks": 4
   },
   "checks": {
     "stale_nodes": [],
