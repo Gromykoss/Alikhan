@@ -278,3 +278,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **26.07.2026 04:13** — chore: auto-sync 26.07 (`65a1136`)
 - **26.07.2026 09:46** — chronology: 26.07 — 5 bugs fixed (ON CONFLICT, workers_count, photos, readiness, voice) (`fbcfaa9`)
 - **26.07.2026 15:05** — war-story: день сурка — трёхуровневый контур безопасности (26.07.2026) (`0b7e52e`)
+- **27.07.2026 03:47** — security: replace hardcoded Gmail credentials with env vars (INCIDENT #2 fix) (`3480a1b`)
+- **27.07.2026 04:03** — security: remove exposed xAI key and Gmail password (`7c9c6aa`)
