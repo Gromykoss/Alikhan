@@ -735,7 +735,8 @@ def production_listener_loop():
 
                             # ── Save to OJR photo log ──
                             try:
-                                title_row = cur2.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
+                                cur2.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+                                title_row = cur2.fetchone()
                                 cur2.execute("""
                                     INSERT INTO ojr_photo_log (title_id, photo_date, building, file_message_id, file_path, created_at)
                                     VALUES (%s, %s::date, %s, %s, %s, NOW())
@@ -965,7 +966,8 @@ while True:
 
                         # ── Save to OJR photo log ──
                         try:
-                            title_row = cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
+                            cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+                            title_row = cur.fetchone()
                             cur.execute("""
                                 INSERT INTO ojr_photo_log (title_id, photo_date, building, file_message_id, file_path, created_at)
                                 VALUES (%s, %s::date, %s, %s, %s, NOW())
