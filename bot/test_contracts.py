@@ -325,3 +325,144 @@ def test_contract_on_conflict_columns():
         "Каждый ON CONFLICT должен указывать целевые колонки, например: "
         "ON CONFLICT (col1, col2)."
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 11: save_work_log ON CONFLICT = uq_ojr_work_log
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_work_log_on_conflict_matches_unique():
+    """Контракт: ON CONFLICT work_log = (work_date, vor_code, building, category)."""
+    db_path = os.path.join(os.path.dirname(__file__), 'db.py')
+    with open(db_path, 'r') as f:
+        source = f.read()
+    assert 'ON CONFLICT (work_date, vor_code, building, category)' in source, (
+        "КОНТРАКТ НАРУШЕН: save_work_log ON CONFLICT должен совпадать с "
+        "uq_ojr_work_log (work_date, vor_code, building, category)."
+    )
+    assert 'ON CONFLICT (work_date, vor_code) DO UPDATE' not in source, (
+        "КОНТРАКТ НАРУШЕН: старый ON CONFLICT (work_date, vor_code) всё ещё в db.py."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 12: get_staff uses start_date/end_date window
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_get_staff_active_window():
+    """Контракт: get_staff primary query — start_date/end_date window, не created_at."""
+    ds_path = os.path.join(os.path.dirname(__file__), 'data_sources.py')
+    with open(ds_path, 'r') as f:
+        source = f.read()
+    # Extract get_staff function body (rough)
+    start = source.find('def get_staff')
+    end = source.find('\ndef get_volumes', start)
+    body = source[start:end] if end > start else source[start:start+3000]
+    assert 'start_date <=' in body or 'start_date<=' in body, (
+        "КОНТРАКТ НАРУШЕН: get_staff должен фильтровать по start_date <= d."
+    )
+    assert 'end_date IS NULL' in body, (
+        "КОНТРАКТ НАРУШЕН: get_staff должен учитывать end_date IS NULL."
+    )
+    # Primary must NOT use DATE(created_at) as the only window
+    primary_chunk = body.split('Fallback')[0] if 'Fallback' in body else body
+    assert 'DATE(created_at)' not in primary_chunk, (
+        "КОНТРАКТ НАРУШЕН: primary get_staff всё ещё использует DATE(created_at)."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 13: materials category not remapped to documentation
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_materials_category():
+    """Контракт: ALLOWED_CATEGORIES has материалы; validate_category keeps it."""
+    from qa import ALLOWED_CATEGORIES, validate_category
+    assert 'материалы' in ALLOWED_CATEGORIES
+    assert validate_category('материалы') == 'материалы'
+    assert validate_category('материал') == 'материалы'
+    assert validate_category('поставки') == 'материалы'
+    # documentation stays documentation
+    assert validate_category('документация') == 'документация'
+    assert validate_category('документы') == 'документация'
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 14: normalize_org_name + save_personnel workers_count signature
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_normalize_org_and_personnel_api():
+    """Контракт: canonical org names + save_personnel accepts workers_count."""
+    import inspect
+    from db import normalize_org_name, save_personnel
+    assert normalize_org_name('майкадам') == 'Майкадам'
+    assert normalize_org_name('Майкадам') == 'Майкадам'
+    assert normalize_org_name('атантай') == 'Атантай'
+    assert normalize_org_name('наватек') == 'Наватек'
+    assert normalize_org_name('алтын-тас') == 'Алтын-Тас'
+    assert normalize_org_name('айбикон') == 'АйБиКон'
+    sig = inspect.signature(save_personnel)
+    assert 'workers_count' in sig.parameters, (
+        "КОНТРАКТ НАРУШЕН: save_personnel должен принимать workers_count."
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 15: photo handlers write local_path into tags
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_photo_tags_local_path_written():
+    """Контракт: main_waha photo paths always set tags.local_path from media."""
+    path = os.path.join(os.path.dirname(__file__), 'main_waha.py')
+    with open(path, 'r') as f:
+        source = f.read()
+    assert '_resolve_media_local_path' in source, (
+        "КОНТРАКТ НАРУШЕН: нужен _resolve_media_local_path helper."
+    )
+    assert source.count('tags_photo["local_path"]') >= 2 or source.count("tags_photo['local_path']") >= 2 or \
+           'tags_photo["local_path"]' in source or 'if local_path:' in source, (
+        "КОНТРАКТ НАРУШЕН: local_path должен писаться в tags_photo."
+    )
+    # Both sandbox and prod should reference helper
+    assert source.count('_resolve_media_local_path') >= 3
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Тест 16: personnel multi-insert end_date race guard
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_contract_personnel_no_multi_insert_close_race():
+    """Контракт: QA must not multi-insert N workers; save_personnel must exclude same-day slot on close.
+
+    Race (Worker A hole): for i in range(n): save_personnel(...) closed ALL open
+    org+position rows before each insert → only last of N survived end_date IS NULL.
+    """
+    import re
+    qa_path = os.path.join(os.path.dirname(__file__), 'qa.py')
+    db_path = os.path.join(os.path.dirname(__file__), 'db.py')
+    with open(qa_path, 'r') as f:
+        qa = f.read()
+    with open(db_path, 'r') as f:
+        db = f.read()
+
+    # parse_qa personnel path must use workers_count=N, not for i in range(n)
+    # Find the main save_personnel call site after num_match
+    assert 'workers_count=max(1, n)' in qa or 'workers_count=max(1,n)' in qa, (
+        "КОНТРАКТ НАРУШЕН: parse_qa должен писать workers_count=max(1, n) одной строкой."
+    )
+    # Forbid the old multi-insert pattern near save_personnel
+    assert 'for i in range(n):' not in qa and 'for i in range(max(1, n))' not in qa, (
+        "КОНТРАКТ НАРУШЕН: multi-insert for i in range(n) save_personnel всё ещё в qa.py."
+    )
+
+    # save_personnel close must exclude the same full_name + start_date slot
+    start = db.find('def save_personnel')
+    end = db.find('\ndef save_work_log', start)
+    body = db[start:end] if end > start else db[start:start + 4000]
+    assert 'start_date = %s::date' in body or "start_date = %s::date" in body, (
+        "КОНТРАКТ НАРУШЕН: close UPDATE должен исключать same-day slot."
+    )
+    assert 'AND NOT (' in body or 'AND NOT(' in body, (
+        "КОНТРАКТ НАРУШЕН: close UPDATE должен иметь NOT (same full_name + start_date)."
+    )
+    assert 'full_name' in body and 'end_date' in body

@@ -92,8 +92,13 @@ def validate_category(value):
         'монтажные работы': 'монтаж',
         'земляные': 'земляные работы', 'земля': 'земляные работы',
         'документы': 'документация', 'док-ты': 'документация',
+        'материал': 'материалы', 'материалы': 'материалы',
+        'поставка': 'материалы', 'поставки': 'материалы',
         'план работ': 'план',
     }
+    # Never map materials → documentation (explicit category)
+    if v in ('материалы', 'материал', 'поставка', 'поставки'):
+        return 'материалы'
     if v in fuzzy_map:
         return fuzzy_map[v]
     # Hallucinated category — reject
@@ -115,8 +120,8 @@ def _parse_no_patterns(text):
     """Simple 'no X' patterns that Grok can't parse."""
     t = text.lower()
     patterns = [
-        (r'материалов?\s*нет', 'общая|документация|Поставок материалов нет'),
-        (r'поставок?\s*нет', 'общая|документация|Поставок материалов нет'),
+        (r'материалов?\s*нет', 'общая|материалы|Поставок материалов нет'),
+        (r'поставок?\s*нет', 'общая|материалы|Поставок материалов нет'),
         (r'техник[аи]?\s*нет', 'общая|техника|Техники нет'),
         (r'происшествий?\s*нет', 'общая|инцидент|Происшествий нет'),
         (r'инцидентов?\s*нет', 'общая|инцидент|Происшествий нет'),
@@ -126,6 +131,40 @@ def _parse_no_patterns(text):
         if re.search(pat, t):
             lines.append(fact)
     return '\n'.join(lines)
+
+
+def _parse_personnel_fallback(text):
+    """Regex personnel extractor for Grok/pipe failure.
+
+    Returns list of (org_name, position, count) tuples.
+    Handles: «Майкадам ИТР 1, рабочих 6», «Атантай 8 рабочих», «айбикон итр 2».
+    """
+    t = text.lower().replace('ё', 'е')
+    results = []
+    for org in ALLOWED_CONTRACTORS:
+        o = re.escape(org)
+        for m in re.finditer(rf'{o}\s+итр\s*(\d+)|{o}\s+(\d+)\s*итр', t, re.I):
+            n = next((int(g) for g in m.groups() if g), None)
+            if n:
+                results.append((org, 'ИТР', n))
+        for m in re.finditer(rf'{o}\s+(\d+)\s*рабоч|{o}\s*рабоч\w*\s*(\d+)', t, re.I):
+            n = next((int(g) for g in m.groups() if g), None)
+            if n:
+                results.append((org, 'Рабочий', n))
+        m = re.search(rf'{o}\s+итр\s*(\d+)[,\s]+рабоч\w*\s*(\d+)', t, re.I)
+        if m:
+            results.append((org, 'ИТР', int(m.group(1))))
+            results.append((org, 'Рабочий', int(m.group(2))))
+        m2 = re.search(rf'{o}\s+(\d+)\s*итр[,\s]+(\d+)\s*рабоч', t, re.I)
+        if m2:
+            results.append((org, 'ИТР', int(m2.group(1))))
+            results.append((org, 'Рабочий', int(m2.group(2))))
+    best = {}
+    for org, pos, n in results:
+        key = (org, pos)
+        if key not in best or n > best[key]:
+            best[key] = n
+    return [(o, p, n) for (o, p), n in best.items()]
 
 
 # ─── VOR code extraction ─────────────────────────────────────────────────────
@@ -224,7 +263,7 @@ def _build_qa_prompt(user_text):
 Верни ТОЛЬКО JSON-массив объектов, без пояснений, без markdown.
 
 Каждый объект:
-{{"building": "АБК"|"Общежитие"|"общая", "category": "персонал"|"техника"|"инцидент"|"бетонирование"|"монтаж"|"земляные работы"|"документация", "fact": "текст факта"}}
+{{"building": "АБК"|"Общежитие"|"общая", "category": "персонал"|"техника"|"инцидент"|"бетонирование"|"монтаж"|"земляные работы"|"документация"|"материалы"|"план"|"объём", "fact": "текст факта"}}
 
 ПРАВИЛА:
 1. ИТР и рабочие — РАЗНЫЕ факты. «Атантай ИТР 1, рабочих 6» → ДВА объекта.
@@ -246,7 +285,7 @@ def _build_qa_prompt(user_text):
 ПРИМЕР 3:
 Текст: «Документация: получен акт скрытых работ по АБК. Материалы: доставка арматуры 10т.»
 Ответ:
-[{{"building":"АБК","category":"документация","fact":"акт скрытых работ"}},{{"building":"общая","category":"документация","fact":"арматура 10т"}}]
+[{{"building":"АБК","category":"документация","fact":"акт скрытых работ"}},{{"building":"общая","category":"материалы","fact":"арматура 10т"}}]
 
 ТЕКСТ ПРОРАБА:
 {user_text}
@@ -374,7 +413,7 @@ def parse_qa(gid, text, date_str=None):
 
             # Step 4: Process Grok results with validation
             if grok_result is None:
-                # All retries failed — try pipe fallback
+                # All retries failed — try pipe fallback + personnel regex on original chunk
                 if grok_raw and grok_raw.strip():
                     print(f"[QA Grok] All retries failed, falling back to pipe format", flush=True)
                     _audit_log('grok_all_retries_failed', {'text_preview': chunk[:100]})
@@ -390,6 +429,13 @@ def parse_qa(gid, text, date_str=None):
                                 print(f"[QA VALIDATE] Rejected incomplete personnel: '{f}' — no contractor", flush=True)
                                 continue
                             all_grok_facts.append((b, c, f))
+                # Always try personnel regex on original user chunk when Grok JSON failed
+                for org_name, position, n in _parse_personnel_fallback(chunk):
+                    fact = f"{org_name} {position} {n}" if position != 'Рабочий' else f"{org_name} {n} рабочих"
+                    if position == 'ИТР':
+                        fact = f"{org_name} ИТР {n}"
+                    all_grok_facts.append(('общая', 'персонал', fact))
+                    print(f"[QA PIPE FALLBACK] personnel from text: {fact}", flush=True)
                 continue
 
             # Valid JSON list — validate each fact
@@ -458,11 +504,13 @@ def parse_qa(gid, text, date_str=None):
                 num_match = re.search(r'(\d+)', f)
                 n = int(num_match.group(1)) if num_match else 1
                 print(f"[QA SAVE] → save_personnel: org='{org_name}' pos='{position}' count={n}", flush=True)
-                # Insert N rows (one per person), with unique full_name to avoid ON CONFLICT
-                for i in range(n):
-                    unique_name = f"{org_name}-{position}-{i+1}" if n > 1 else org_name
-                    save_personnel(gid, today, org_name, unique_name, position,
-                                   sync_source='qa')
+                # ONE row per org+position+day with workers_count=N.
+                # Multi-insert loop previously raced: save_personnel closed ALL
+                # open org+position rows before EACH insert, so insert #2 set
+                # end_date=today-1 on insert #1 → get_staff counted only 1 of N.
+                slot_name = f"{org_name}-{position}" if position else org_name
+                save_personnel(gid, today, org_name, slot_name, position,
+                               sync_source='qa', workers_count=max(1, n))
                 count += 1
             elif c in ('инцидент', 'incident'):
                 print(f"[QA SAVE] → save_incident", flush=True)
@@ -504,8 +552,17 @@ def parse_qa(gid, text, date_str=None):
                 print(f"[QA SAVE] ⚠ UNKNOWN category='{c}' — NOT SAVED to DB", flush=True)
                 pass
 
-        # Fallback: if nothing was saved, try simple "нет" patterns
+        # Fallback: if nothing was saved — personnel regex + simple "нет" patterns
+        # (covers Grok JSON fail / empty pipe where workers count still must be stored)
         if count == 0:
+            from db import save_personnel
+            for org_name, position, n in _parse_personnel_fallback(text):
+                print(f"[QA FALLBACK] personnel org='{org_name}' pos='{position}' count={n}", flush=True)
+                # Single row + workers_count (same anti-race as main path)
+                slot_name = f"{org_name}-{position}" if position else org_name
+                save_personnel(gid, today, org_name, slot_name, position,
+                               sync_source='qa', workers_count=max(1, n))
+                count += 1
             for line in _parse_no_patterns(text).split("\n"):
                 parts = [p.strip() for p in line.strip().split("|", 2)]
                 if len(parts) >= 3:
@@ -518,8 +575,10 @@ def parse_qa(gid, text, date_str=None):
                         elif c in ('документация', 'материалы'):
                             save_material(gid, today, f, building=b if b != 'общая' else None)
                         elif c == 'персонал':
-                            from db import save_personnel
-                            save_personnel(gid, today, 'айбикон', 'айбикон', 'Сотрудник', sync_source='qa')
+                            # Prefer parsed counts; generic single row only if no regex hit
+                            if not _parse_personnel_fallback(text):
+                                save_personnel(gid, today, 'АйБиКон', 'АйБиКон', 'Сотрудник',
+                                               sync_source='qa', workers_count=1)
                         else:
                             # Unknown category — skip, don't save to work_log
                             continue

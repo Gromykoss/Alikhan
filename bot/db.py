@@ -654,28 +654,156 @@ def _get_active_title_id():
     return row[0] if row else 1
 
 
+# Canonical organization names for ОЖР / ЕЖО
+_ORG_CANON = {
+    'майкадам': 'Майкадам',
+    'атантай': 'Атантай',
+    'наватек': 'Наватек',
+    'алтын-тас': 'Алтын-Тас',
+    'алтынтас': 'Алтын-Тас',
+    'алтын тас': 'Алтын-Тас',
+    'айбикон': 'АйБиКон',
+    'ай би кон': 'АйБиКон',
+    'aibicon': 'АйБиКон',
+}
+
+
+def normalize_org_name(org_name):
+    """Normalize contractor/org name to canonical Russian form."""
+    if not org_name:
+        return org_name
+    raw = str(org_name).strip()
+    key = raw.lower().replace('ё', 'е')
+    if key in _ORG_CANON:
+        return _ORG_CANON[key]
+    for k, v in _ORG_CANON.items():
+        if k in key or key in k:
+            return v
+    return raw
+
+
+def _ensure_personnel_schema(cur):
+    """Idempotent schema guards for ojr_section1_personnel.
+
+    - workers_count column (exists in prod; safe IF NOT EXISTS)
+    - UNIQUE for safe upserts (skipped if duplicates already present)
+    """
+    cur.execute("""
+        ALTER TABLE ojr_section1_personnel
+        ADD COLUMN IF NOT EXISTS workers_count INTEGER
+    """)
+    # Unique needed for upserts — only create if absent and data is clean.
+    cur.execute("""
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uq_ojr_personnel_open_slot'
+    """)
+    if cur.fetchone():
+        return
+    try:
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_ojr_personnel_slot
+            ON ojr_section1_personnel
+                (title_id, organization_name, full_name, position, start_date)
+        """)
+    except Exception as e:
+        # Duplicates in live data — skip unique; INSERT without conflict target.
+        print(f"[DB] personnel unique skip: {e}", flush=True)
+
+
 def save_personnel(chat_id, date_str, org_name, full_name, position,
-                   org_type='contractor', phone=None, sync_source='qa'):
-    """Save personnel fact to ojr_section1_personnel."""
+                   org_type='contractor', phone=None, sync_source='qa',
+                   workers_count=None):
+    """Save personnel fact to ojr_section1_personnel.
+
+    organization_name is normalized to canonical form before UPDATE/INSERT.
+    end_date close is case-insensitive on organization_name.
+
+    Close semantics (CRITICAL — multi-insert / same-day re-entry):
+    - Prefer ONE row per (org, position, start_date) with workers_count=N.
+    - Close other open rows for same org+position EXCEPT the row we are
+      about to upsert (same full_name + same start_date). This prevents
+      the qa loop race where insert #2 closed insert #1 with end_date=today-1.
+    - Also closes prior-day open rows (start_date < date_str).
+    """
     conn = get_conn()
     cur = conn.cursor()
+    try:
+        _ensure_personnel_schema(cur)
+    except Exception as e:
+        print(f"[DB] personnel schema ensure: {e}", flush=True)
     title_id = _get_active_title_id()
-    # Close end_date on previous open record for this org+position
+    org_name = normalize_org_name(org_name)
+    full_name = full_name if full_name else org_name
+    # workers_count: explicit arg, else 1 for a single person row
+    wc = int(workers_count) if workers_count is not None else None
+
+    # Close other open records for this org+position, but NEVER the slot we
+    # are writing now (same full_name + start_date). Without this exclusion,
+    # parse_qa multi-insert for "Рабочие 8" closed rows 1..7 with end_date=
+    # today-1 and get_staff counted only 1 worker.
     cur.execute("""
-        UPDATE ojr_section1_personnel 
+        UPDATE ojr_section1_personnel
         SET end_date = %s::date - INTERVAL '1 day', updated_at = NOW()
-        WHERE organization_name = %s 
-        AND position = %s 
-        AND end_date IS NULL
-    """, (date_str, org_name, position))
+        WHERE LOWER(organization_name) = LOWER(%s)
+          AND LOWER(position) = LOWER(%s)
+          AND end_date IS NULL
+          AND is_active = TRUE
+          AND NOT (
+              LOWER(COALESCE(full_name, '')) = LOWER(%s)
+              AND start_date = %s::date
+          )
+    """, (date_str, org_name, position, full_name, date_str))
+
+    # Prefer upsert when unique index exists; plain INSERT otherwise.
     cur.execute("""
-        INSERT INTO ojr_section1_personnel
-            (title_id, organization_type, organization_name, full_name,
-             position, phone, start_date, sync_source, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s, NOW(), NOW())
-        ON CONFLICT (title_id, organization_name, full_name, position, start_date) DO NOTHING
-    """, (title_id, org_type, org_name, full_name, position,
-          phone, date_str, sync_source))
+        SELECT 1 FROM pg_indexes
+        WHERE indexname = 'uq_ojr_personnel_slot'
+    """)
+    has_unique = cur.fetchone() is not None
+
+    if has_unique:
+        cur.execute("""
+            INSERT INTO ojr_section1_personnel
+                (title_id, organization_type, organization_name, full_name,
+                 position, phone, start_date, sync_source, workers_count,
+                 created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s, %s, NOW(), NOW())
+            ON CONFLICT (title_id, organization_name, full_name, position, start_date)
+            DO UPDATE SET
+                workers_count = COALESCE(EXCLUDED.workers_count, ojr_section1_personnel.workers_count),
+                end_date = NULL,
+                is_active = TRUE,
+                updated_at = NOW(),
+                sync_source = EXCLUDED.sync_source
+        """, (title_id, org_type, org_name, full_name, position,
+              phone, date_str, sync_source, wc))
+    else:
+        # No matching UNIQUE in DB — try revive same-day slot first, else INSERT.
+        # Avoids unbounded accumulation when live dups block unique index create.
+        cur.execute("""
+            UPDATE ojr_section1_personnel
+            SET workers_count = COALESCE(%s, workers_count),
+                end_date = NULL,
+                is_active = TRUE,
+                updated_at = NOW(),
+                sync_source = %s,
+                phone = COALESCE(%s, phone)
+            WHERE title_id = %s
+              AND LOWER(organization_name) = LOWER(%s)
+              AND LOWER(COALESCE(full_name, '')) = LOWER(%s)
+              AND LOWER(position) = LOWER(%s)
+              AND start_date = %s::date
+              AND is_active = TRUE
+        """, (wc, sync_source, phone, title_id, org_name, full_name, position, date_str))
+        if cur.rowcount == 0:
+            cur.execute("""
+                INSERT INTO ojr_section1_personnel
+                    (title_id, organization_type, organization_name, full_name,
+                     position, phone, start_date, sync_source, workers_count,
+                     created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::date, %s, %s, NOW(), NOW())
+            """, (title_id, org_type, org_name, full_name, position,
+                  phone, date_str, sync_source, wc))
     conn.commit()
     cur.close()
     conn.close()
@@ -684,19 +812,29 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
 def save_work_log(chat_id, date_str, vor_code, building, volume, unit='м³',
                   work_name=None, contractor=None, category='объём',
                   source_fact_id=None, source_poll_id=None, created_by='qa'):
-    """Save work volume fact to ojr_section3_work_log."""
+    """Save work volume fact to ojr_section3_work_log.
+
+    Conflict target must match uq_ojr_work_log:
+      UNIQUE (work_date, vor_code, building, category)
+    """
     conn = get_conn()
     cur = conn.cursor()
     title_id = _get_active_title_id()
+    building = building or 'общая'
+    category = category or 'объём'
     cur.execute("""
         INSERT INTO ojr_section3_work_log
             (title_id, work_date, vor_code, work_name, building, volume, unit,
              contractor, category, source_fact_id, source_poll_id, created_by, created_at, updated_at)
         VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-        ON CONFLICT (work_date, vor_code) DO UPDATE
+        ON CONFLICT (work_date, vor_code, building, category) DO UPDATE
         SET volume = EXCLUDED.volume,
-            category = EXCLUDED.category,
             work_name = COALESCE(EXCLUDED.work_name, ojr_section3_work_log.work_name),
+            unit = COALESCE(EXCLUDED.unit, ojr_section3_work_log.unit),
+            contractor = COALESCE(EXCLUDED.contractor, ojr_section3_work_log.contractor),
+            source_fact_id = COALESCE(EXCLUDED.source_fact_id, ojr_section3_work_log.source_fact_id),
+            source_poll_id = COALESCE(EXCLUDED.source_poll_id, ojr_section3_work_log.source_poll_id),
+            created_by = EXCLUDED.created_by,
             updated_at = NOW()
     """, (title_id, date_str, vor_code, work_name, building, volume, unit,
           contractor, category, source_fact_id, source_poll_id, created_by))

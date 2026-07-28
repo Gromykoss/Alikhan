@@ -232,6 +232,15 @@ def test_smoke_poll_single_process():
         count = len(lines)
     else:
         lines = [l for l in result.stdout.strip().split('\n') if l.strip()]
+        # Exclude the current test shell / pytest command that may contain 'main_waha' in argv
+        lines = [
+            l for l in lines
+            if 'main_waha.py' in l
+            and 'pytest' not in l
+            and 'pgrep' not in l
+            and 'py_compile' not in l
+            and '/usr/bin/bash' not in l
+        ]
         count = len(lines)
 
     if count == 0:

@@ -8,6 +8,35 @@ sys.stdout.reconfigure(line_buffering=True)
 from config import SIM_DATE, SANDBOX as _SANDBOX, PRODUCTION as _PRODUCTION, TEMPLATE_PATH, EJO_TMP_DIR, EJO_START_ROW
 from messaging import send_msg, send_voice, send_document as _send_document
 
+
+def _resolve_media_local_path(media_meta):
+    """Return first existing local path from bridge media metadata, or None."""
+    if not media_meta:
+        return None
+    candidates = []
+    urls = media_meta.get("mediaUrls") or media_meta.get("media_urls") or []
+    if isinstance(urls, str):
+        urls = [urls]
+    candidates.extend(urls)
+    for key in ("localPath", "local_path", "path", "filePath", "file_path"):
+        v = media_meta.get(key)
+        if v:
+            candidates.append(v)
+    for c in candidates:
+        if not c:
+            continue
+        c = str(c)
+        if c.startswith("file://"):
+            c = c[7:]
+        if os.path.exists(c):
+            return c
+    # Return first candidate even if missing (still write tags for backfill)
+    for c in candidates:
+        if c:
+            return str(c)[7:] if str(c).startswith("file://") else str(c)
+    return None
+
+
 def _safe_message_ts(m):
     try:
         ts = m.get("messageTimestamp")
@@ -667,11 +696,17 @@ def production_listener_loop():
                         conn2 = _gc(); cur2 = conn2.cursor()
                         cur2.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
                         if not cur2.fetchone():
-                            media_urls = media_meta.get("mediaUrls", [])
+                            media_urls = media_meta.get("mediaUrls") or media_meta.get("media_urls") or []
+                            if isinstance(media_urls, str):
+                                media_urls = [media_urls]
+                            local_path = _resolve_media_local_path(media_meta) or (media_urls[0] if media_urls else None)
+                            tags_photo = {"building": building or "Общий план", "msg_id": mid}
+                            if local_path:
+                                tags_photo["local_path"] = local_path
                             cur2.execute(
                                 "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                                 (PRODUCTION, "user", "user", "image", mid,
-                                 json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}),
+                                 json.dumps(tags_photo),
                                  datetime.now()))
                             photo_msg_id = cur2.fetchone()[0]
                             # ── Grok Vision filter: is this a construction site? ──
@@ -708,15 +743,19 @@ def production_listener_loop():
                                       datetime.now().strftime('%Y-%m-%d'),
                                       building or 'Общий план',
                                       photo_msg_id,
-                                      media_urls[0] if media_urls else None))
+                                      local_path or (media_urls[0] if media_urls else None)))
                                 conn2.commit()
                             except Exception as e:
                                 print(f"[PROD PHOTO OJR ERR] {e}", flush=True)
                             # ── Vision description ──
-                            media_urls = media_meta.get("mediaUrls", [])
-                            if media_urls:
+                            media_urls = media_meta.get("mediaUrls") or media_meta.get("media_urls") or []
+                            if isinstance(media_urls, str):
+                                media_urls = [media_urls]
+                            if not local_path:
+                                local_path = _resolve_media_local_path(media_meta) or (media_urls[0] if media_urls else None)
+                            if local_path or media_urls:
                                 try:
-                                    img_path = media_urls[0]
+                                    img_path = local_path or media_urls[0]
                                     if os.path.exists(img_path):
                                         with open(img_path, "rb") as f:
                                             b64 = base64.b64encode(f.read()).decode()
@@ -725,15 +764,22 @@ def production_listener_loop():
                                             "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                             image_base64=b64, max_tokens=200)
                                         if desc and "ошиб" not in desc.lower():
+                                            tag_upd = {"description": desc.strip()}
+                                            if local_path:
+                                                tag_upd["local_path"] = local_path
                                             cur2.execute(
                                                 "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
-                                                (json.dumps({"description": desc.strip()}), mid))
+                                                (json.dumps(tag_upd), mid))
                                             conn2.commit()
                                             # Update OJR photo log with AI description
                                             try:
                                                 cur2.execute(
                                                     "UPDATE ojr_photo_log SET ai_description = %s WHERE file_message_id = %s",
                                                     (desc.strip(), photo_msg_id))
+                                                if local_path:
+                                                    cur2.execute(
+                                                        "UPDATE ojr_photo_log SET file_path = COALESCE(file_path, %s) WHERE file_message_id = %s",
+                                                        (local_path, photo_msg_id))
                                                 conn2.commit()
                                             except Exception as e:
                                                 print(f"[PROD PHOTO OJR DESC ERR] {e}", flush=True)
@@ -878,14 +924,20 @@ while True:
                     from db import get_conn as _getconn
                     conn = _getconn()
                     cur = conn.cursor()
-                    media_urls = media_meta.get("mediaUrls", [])
+                    media_urls = media_meta.get("mediaUrls") or media_meta.get("media_urls") or []
+                    if isinstance(media_urls, str):
+                        media_urls = [media_urls]
+                    local_path = _resolve_media_local_path(media_meta) or (media_urls[0] if media_urls else None)
                     cur.execute("SELECT 1 FROM bot_memory_messages WHERE content = %s", (mid,))
                     if not cur.fetchone():
+                        tags_photo = {"building": building or "Общий план", "msg_id": mid}
+                        if local_path:
+                            tags_photo["local_path"] = local_path
                         cur.execute("""INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at)
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             RETURNING id""",
                             (SANDBOX, "user", "user", "image", mid,
-                             _json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
+                             _json.dumps(tags_photo), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
                         photo_msg_id = cur.fetchone()[0]
                         # ── Grok Vision filter: is this a construction site? ──
                         is_construction = True  # default if filter fails or no image
@@ -921,14 +973,16 @@ while True:
                                   (datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")).strftime('%Y-%m-%d'),
                                   building or 'Общий план',
                                   photo_msg_id,
-                                  media_urls[0] if media_urls else None))
+                                  local_path or (media_urls[0] if media_urls else None)))
                             conn.commit()
                         except Exception as e:
                             print(f"[PHOTO OJR ERR] {e}", flush=True)
                         # ── Vision description ──
-                        if media_urls:
+                        if not local_path:
+                            local_path = _resolve_media_local_path(media_meta) or (media_urls[0] if media_urls else None)
+                        if local_path or media_urls:
                             try:
-                                img_path = media_urls[0]
+                                img_path = local_path or media_urls[0]
                                 if os.path.exists(img_path):
                                     with open(img_path, "rb") as f:
                                         b64 = base64.b64encode(f.read()).decode()
@@ -937,15 +991,22 @@ while True:
                                         "Опиши что видно на фото строительной площадки: состояние конструкций, наличие техники, материалов, людей. Не предполагай что работы ведутся — опиши только наблюдаемое состояние. 1-2 предложения на русском.",
                                         image_base64=b64, max_tokens=200)
                                     if desc and "ошиб" not in desc.lower():
+                                        tag_upd = {"description": desc.strip()}
+                                        if local_path:
+                                            tag_upd["local_path"] = local_path
                                         cur.execute(
                                             "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE content = %s",
-                                            (_json.dumps({"description": desc.strip()}), mid))
+                                            (_json.dumps(tag_upd), mid))
                                         conn.commit()
                                         # Update OJR photo log with AI description
                                         try:
                                             cur.execute(
                                                 "UPDATE ojr_photo_log SET ai_description = %s WHERE file_message_id = %s",
                                                 (desc.strip(), photo_msg_id))
+                                            if local_path:
+                                                cur.execute(
+                                                    "UPDATE ojr_photo_log SET file_path = COALESCE(file_path, %s) WHERE file_message_id = %s",
+                                                    (local_path, photo_msg_id))
                                             conn.commit()
                                         except Exception as e:
                                             print(f"[PHOTO OJR DESC ERR] {e}", flush=True)

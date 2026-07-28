@@ -214,8 +214,33 @@ def get_incidents(date):
         return IncidentCount(count=str(len(f)))
 
 
+def _canon_org(org):
+    """Map free-form org name to ЕЖО key (Майкадам / Атантай / …)."""
+    try:
+        from db import normalize_org_name
+        return normalize_org_name(org)
+    except Exception:
+        mp = {
+            'атантай': 'Атантай', 'майкадам': 'Майкадам', 'наватек': 'Наватек',
+            'алтын-тас': 'Алтын-Тас', 'алтынтас': 'Алтын-Тас',
+            'айбикон': 'АйБиКон',
+        }
+        key = (org or '').lower().replace('ё', 'е').strip()
+        if key in mp:
+            return mp[key]
+        for k, v in mp.items():
+            if k in key or key in k:
+                return v
+        return (org or '').title()
+
+
 def get_staff(date):
-    """Primary: ojr_section1_personnel. Fallback: bot_memory_facts."""
+    """Primary: ojr_section1_personnel active window. Fallback: bot_memory_facts.
+
+    Window: start_date <= d AND (end_date IS NULL OR end_date >= d) AND is_active.
+    Count: SUM(workers_count) when filled and >0, else COUNT(*).
+    Org names normalized to canonical keys.
+    """
     ds = date.strftime('%Y-%m-%d')
     mp = {
         'атантай': 'Атантай', 'майкадам': 'Майкадам', 'наватек': 'Наватек',
@@ -223,32 +248,41 @@ def get_staff(date):
     }
     r: dict[str, StaffOrg] = {}
 
-    # Primary: ojr_section1_personnel
+    # Primary: ojr_section1_personnel (active on date, not created_at day)
     try:
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT LOWER(organization_name) as org, LOWER(position) as pos, COUNT(*) as cnt "
+            "SELECT LOWER(organization_name) as org, LOWER(position) as pos, "
+            "       COUNT(*) as cnt, "
+            "       COALESCE(SUM(CASE WHEN workers_count IS NOT NULL AND workers_count > 0 "
+            "                         THEN workers_count ELSE 0 END), 0) as wc_sum, "
+            "       COALESCE(SUM(CASE WHEN workers_count IS NOT NULL AND workers_count > 0 "
+            "                         THEN 1 ELSE 0 END), 0) as wc_rows "
             "FROM ojr_section1_personnel "
-            "WHERE DATE(created_at) = %s::date AND is_active = TRUE "
+            "WHERE start_date <= %s::date "
+            "  AND (end_date IS NULL OR end_date >= %s::date) "
+            "  AND is_active = TRUE "
             "GROUP BY LOWER(organization_name), LOWER(position)",
-            (ds,)
+            (ds, ds)
         )
         rows = cur.fetchall()
         cur.close()
         if rows:
             raw: dict[str, dict[str, int]] = {}
             for row in rows:
-                org = row['org']
-                pos = row['pos']
-                cnt = row['cnt']
-                nm = None
-                for k, v in mp.items():
-                    if k in org or org in k:
-                        nm = v
-                        break
-                if not nm:
-                    nm = org.title()
+                org = row['org'] or ''
+                pos = row['pos'] or ''
+                # Prefer SUM(workers_count) if any rows carry it; else COUNT(*)
+                wc_sum = int(row.get('wc_sum') or 0)
+                wc_rows = int(row.get('wc_rows') or 0)
+                cnt_rows = int(row.get('cnt') or 0)
+                if wc_rows > 0 and wc_sum > 0:
+                    # rows with workers_count contribute their sum; plain rows add 1 each
+                    cnt = wc_sum + max(0, cnt_rows - wc_rows)
+                else:
+                    cnt = cnt_rows
+                nm = _canon_org(org)
                 if nm not in raw:
                     raw[nm] = {'t': 0, 'i': 0, 'w': 0}
                 is_itr = 'итр' in pos or 'инженер' in pos or 'рук' in pos
@@ -259,7 +293,7 @@ def get_staff(date):
                 raw[nm]['t'] += cnt
             for nm, v in raw.items():
                 r[nm] = StaffOrg(total=v['t'], itr=v['i'], workers=v['w'])
-            print(f"[DS STAFF] {len(r)} orgs from ojr_section1_personnel", flush=True)
+            print(f"[DS STAFF] {len(r)} orgs from ojr_section1_personnel (window {ds})", flush=True)
             # Fill defaults for known subs
             for n in ['Атантай', 'Майкадам', 'Наватек', 'Алтын-Тас']:
                 if n not in r:
