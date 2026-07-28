@@ -1,13 +1,13 @@
 {
-  "built_at": "2026-07-27T06:15:03.632623+00:00",
+  "built_at": "2026-07-28T00:15:13.194728+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 222,
-    "edges": 405,
+    "nodes": 225,
+    "edges": 415,
     "projects": 1,
     "events": 14,
-    "bugs": 23,
+    "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
     "db_tables": 21,
@@ -1135,6 +1135,24 @@
       }
     ],
     [
+      "bug/AL-021",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-022",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "bug/AL-024",
+      {
+        "type": "bug"
+      }
+    ],
+    [
       "Мост в self-chat режиме — сообщения из групп не принимались 3 дня",
       {
         "type": "description"
@@ -1676,6 +1694,13 @@
     },
     {
       "source": "decision/hermes-bridge-migration",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
       "target": "MEMORY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
@@ -1721,6 +1746,13 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
       "confidence": 0.85
     },
     {
@@ -2407,6 +2439,13 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
       "confidence": 0.88
     },
     {
@@ -3572,6 +3611,13 @@
       "confidence": 0.85
     },
     {
+      "source": "bug/AL-023",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
       "source": "bug/AL-013",
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
@@ -4126,6 +4172,48 @@
     },
     {
       "source": "bug/AL-019",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-021",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-021",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-022",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-022",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-024",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-024",
       "target": "project/alikhan",
       "predicate": "affects",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",

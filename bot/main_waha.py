@@ -674,8 +674,30 @@ def production_listener_loop():
                                  json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}),
                                  datetime.now()))
                             photo_msg_id = cur2.fetchone()[0]
+                            # ── Grok Vision filter: is this a construction site? ──
+                            is_construction = True  # default if filter fails or no image
+                            if media_urls:
+                                try:
+                                    img_path = media_urls[0]
+                                    if os.path.exists(img_path):
+                                        with open(img_path, "rb") as _fimg:
+                                            b64_filter = base64.b64encode(_fimg.read()).decode()
+                                        from handlers import ask_grok_raw as _grok_filter
+                                        filter_resp = _grok_filter(
+                                            "Это фото сделано на строительной площадке? Строительная площадка — это место где есть здания, конструкции, краны, строительные материалы, рабочие, котлован, фундамент, опалубка, арматура. Если на фото автомобиль из салона, еда, ключи, документы на столе, люди в офисе, природа без стройки — ответь 'нет'. Ответь только 'да' или 'нет'.",
+                                            image_base64=b64_filter, max_tokens=10)
+                                        is_construction = 'да' in (filter_resp or '').lower() and 'нет' not in (filter_resp or '').lower()[:5]
+                                        if not is_construction:
+                                            print(f"[PROD PHOTO FILTER] Rejected non-construction photo: {cap[:60]}", flush=True)
+                                except Exception as _fe:
+                                    print(f"[PROD PHOTO FILTER ERR] {_fe}, proceeding with save", flush=True)
+
+                            if not is_construction:
+                                cur2.close(); conn2.close()
+                                continue
                             conn2.commit()
                             print(f"[PROD PHOTO] Saved: {building or 'Общий план'} — {cap[:40]}", flush=True)
+
                             # ── Save to OJR photo log ──
                             try:
                                 title_row = cur2.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
@@ -865,8 +887,30 @@ while True:
                             (SANDBOX, "user", "user", "image", mid,
                              _json.dumps({"building": building or "Общий план", "msg_id": mid, "local_path": media_urls[0] if media_urls else None}), datetime.now() if not SIM_DATE else datetime.strptime(SIM_DATE, "%Y-%m-%d")))
                         photo_msg_id = cur.fetchone()[0]
+                        # ── Grok Vision filter: is this a construction site? ──
+                        is_construction = True  # default if filter fails or no image
+                        if media_urls:
+                            try:
+                                img_path = media_urls[0]
+                                if os.path.exists(img_path):
+                                    with open(img_path, "rb") as _fimg:
+                                        b64_filter = base64.b64encode(_fimg.read()).decode()
+                                    from handlers import ask_grok_raw as _grok_filter
+                                    filter_resp = _grok_filter(
+                                        "Это фото сделано на строительной площадке? Строительная площадка — это место где есть здания, конструкции, краны, строительные материалы, рабочие, котлован, фундамент, опалубка, арматура. Если на фото автомобиль из салона, еда, ключи, документы на столе, люди в офисе, природа без стройки — ответь 'нет'. Ответь только 'да' или 'нет'.",
+                                        image_base64=b64_filter, max_tokens=10)
+                                    is_construction = 'да' in (filter_resp or '').lower() and 'нет' not in (filter_resp or '').lower()[:5]
+                                    if not is_construction:
+                                        print(f"[PHOTO FILTER] Rejected non-construction photo: {caption[:60]}", flush=True)
+                            except Exception as _fe:
+                                print(f"[PHOTO FILTER ERR] {_fe}, proceeding with save", flush=True)
+
+                        if not is_construction:
+                            cur.close(); conn.close()
+                            continue
                         conn.commit()
                         print(f"[PHOTO] Saved: {building or 'Общий план'} — {caption[:40]}", flush=True)
+
                         # ── Save to OJR photo log ──
                         try:
                             title_row = cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1").fetchone()
@@ -922,8 +966,10 @@ while True:
                                             print(f"[PHOTO ESCALATE] Low confidence: {desc.strip()[:80]}", flush=True)
                             except Exception as e:
                                 print(f"[PHOTO DESC ERR] {e}", flush=True)
+                        cur.close(); conn.close()
                     else:
                         print(f"[PHOTO] Skip duplicate: {mid[:12]}...", flush=True)
+                        cur.close(); conn.close()
                 except Exception as e:
                     print(f"[PHOTO ERR] {e}", flush=True)
                 continue

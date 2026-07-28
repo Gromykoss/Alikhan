@@ -18,7 +18,7 @@ import requests
 import psycopg2.extras
 from openpyxl import load_workbook
 
-from db import get_conn, save_weather as _save_weather, get_daily_incidents, get_daily_works
+from db import get_conn, save_weather as _save_weather, get_daily_incidents, get_daily_works, get_daily_materials
 from config import SANDBOX
 
 
@@ -609,7 +609,43 @@ def get_equipment(date):
 
 
 def get_materials(date):
-    """Primary: QA facts (all categories + 'документация'). Fallback: empty list."""
+    """Primary: ojr_materials (OJR). Fallback: bot_memory_facts (legacy)."""
+    ds = date.strftime('%Y-%m-%d')
+
+    # Primary: ojr_materials
+    try:
+        daily_mats = get_daily_materials(ds)
+        if daily_mats:
+            parsed: list[MaterialItem] = []
+            for row in daily_mats:
+                name = row.get('material_name', 'Материал')
+                qty_raw = row.get('quantity')
+                unit = row.get('unit', '') or ''
+                qty_str = str(qty_raw) if qty_raw is not None else ''
+
+                if qty_str:
+                    parsed.append(MaterialItem(name=name, qty=qty_str, unit=unit))
+                else:
+                    # Try to parse quantity from material_name (e.g. "Поставки материалов ТСП - 199м2")
+                    m = re.search(
+                        r'(\d+(?:[.,]\d+)?)\s*(м[2²³]|м3|м2|т|шт|кг|кв\.?\s*м|пог\.?\s*м)',
+                        name, re.I
+                    )
+                    if m:
+                        qty_str = m.group(1).replace(',', '.')
+                        unit = m.group(2)
+                        name_clean = re.sub(r'\s*[-–—=]\s*\d+(?:[.,]\d+)?.*$', '', name).strip()
+                        parsed.append(MaterialItem(name=name_clean or name, qty=qty_str, unit=unit))
+                    else:
+                        parsed.append(MaterialItem(name=name, qty=qty_str or '—', unit=unit))
+
+            print(f"[DS MATERIALS] {len(parsed)} from ojr_materials", flush=True)
+            if parsed:
+                return MaterialData(items=parsed)
+    except Exception as e:
+        print(f"[DS MATERIALS OJR ERR] {e}, falling back to legacy", flush=True)
+
+    # Fallback: bot_memory_facts (legacy)
     try:
         mat_facts = [f['fact'] for f in _qa_legacy(date, 'документация')]
         all_qa = _qa_legacy(date)
@@ -628,7 +664,7 @@ def get_materials(date):
         parsed: list[MaterialItem] = []
         for fact in mat_facts:
             m = re.search(
-                r'(?:материал[:\s]*)?(.+?)\s*[-=]\s*(\d+(?:[.,]\d+)?)\s*(м[2³]|м3|т|шт|кг|кв\.м)',
+                r'(?:материал[:\s]*)?(.+?)\s*[-=]\s*(\d+(?:[.,]\d+)?)\s*(м[2²³]|м3|т|шт|кг|кв\.м)',
                 fact, re.I
             )
             if m:
@@ -637,14 +673,14 @@ def get_materials(date):
                 unit = m.group(3)
                 parsed.append(MaterialItem(name=name, qty=qty, unit=unit))
             else:
-                m2 = re.search(r'(\d+(?:[.,]\d+)?)\s*(м[2³]|м3|т|шт|кг)', fact, re.I)
+                m2 = re.search(r'(\d+(?:[.,]\d+)?)\s*(м[2²³]|м3|т|шт|кг)', fact, re.I)
                 if m2:
                     name = re.sub(r'\s*[-=]\s*\d+(?:[.,]\d+)?.*$', '', fact).strip()
                     name = re.sub(r'^\d+[.)]\s*', '', name).strip().capitalize()
                     qty = m2.group(1).replace(',', '.')
                     unit = m2.group(2)
                     parsed.append(MaterialItem(name=name or 'Материал', qty=qty, unit=unit))
-        print(f"[DS MATERIALS] {len(parsed)} items", flush=True)
+        print(f"[DS MATERIALS] {len(parsed)} items from legacy", flush=True)
         return MaterialData(items=parsed)
     except Exception as e:
         print(f"[DS MATERIALS ERR] {e}", flush=True)

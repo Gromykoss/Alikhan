@@ -319,7 +319,7 @@ bridge_wrapper.py ────────────────────�
 | `get_photos(date)` | `PhotoData` | `ojr_photo_log` | `bot_memory_messages` |
 | `get_aibikon_headcount(date)` | `dict` | Табель (xlsx) | `ojr_section1_personnel` |
 | `get_equipment(date)` | `EquipmentData` | `bot_memory_facts` («техника») | empty dict |
-| `get_materials(date)` | `MaterialData` | `bot_memory_facts` | empty list |
+| `get_materials(date)` | `MaterialData` | `ojr_materials` | `bot_memory_facts` |
 | `get_active_phases(date)` | `ActivePhases` | `bot_schedule_phases` | `{3,4,5,6,7}` |
 | `get_plans_from_messages(date, sandbox_id)` | `PlanData` | `bot_memory_messages` | empty dict |
 | `get_code_source()` | `CodeSource \| None` | Последний ЕЖО xlsx | `None` |

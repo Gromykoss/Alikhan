@@ -285,3 +285,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **27.07.2026 04:08** — chore: CHRONOLOGY final 27.07 (`2742775`)
 - **27.07.2026 04:25** — smoke test (`27e4240`)
 - **27.07.2026 09:51** — fix: photo lookup (str msg_id), QA materials category, K853 from template, ON CONFLICT columns (27.07) (`ec519e2`)
+- **27.07.2026 10:48** — fix: production photo handler parity, graceful KeyError guard, qa ON CONFLICT columns — Diamond round 4 APPROVED (27.07) (`3652ccc`)
