@@ -288,3 +288,20 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **27.07.2026 10:48** — fix: production photo handler parity, graceful KeyError guard, qa ON CONFLICT columns — Diamond round 4 APPROVED (27.07) (`3652ccc`)
 - **28.07.2026 04:04** — chore: auto-sync 28.07 (`4f4a5fc`)
 - **28.07.2026 09:43** — fix(ejo): ON CONFLICT, personnel window, local_path, multi-insert race (28.07) (`4d6985e`)
+## 28.07.2026 — CHRONOLOGY nightly summary
+
+### Статус систем (23:10 UTC)
+- **alikhan.service:** активен с 10:12 UTC (не перезапускался после фикса 10:18)
+- **Hermes Bridge:** активен 3д13ч, стабилен, но 405-реконнекты (4 за последний час)
+- **ЕЖО:** сгенерирован и отправлен 28.07.26 в песочницу
+- **Бот:** 13ч аптайм, memory 25 MB
+
+### ⚠️ КРИТИЧЕСКОЕ НАБЛЮДЕНИЕ
+- **Бот НЕ перезапущен после фикса `01edd49`** (10:18). Код на диске — новый, код в памяти процесса — старый.
+- Ошибка `'NoneType' object has no attribute 'fetchone'` (фото → ojr_photo_log) **всё ещё активна** — процесс запущен в 10:12, до фикса.
+- Требуется перезапуск: `systemctl --user restart alikhan` (PROD-уровень, только после approval)
+
+### Коммиты за день
+- **28.07.2026 04:04** — chore: auto-sync 28.07 (`4f4a5fc`)
+- **28.07.2026 09:43** — fix(ejo): ON CONFLICT, personnel window, local_path, multi-insert race (28.07) (`4d6985e`)
+- **28.07.2026 10:18** — fix(photo): psycopg2 execute().fetchone breaks ojr_photo_log insert (`01edd49`)
