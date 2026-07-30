@@ -6,9 +6,11 @@ v2.1 (2026-07-18): RAG fixes from P1P2 report
   - Retry + audit log for Grok failures
 """
 import sys, os, re, time, json as _json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from bridge_wrapper import EVO, KEY
 SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -29,7 +31,7 @@ def _audit_log(entry_type, data):
     """Log parsing attempts to /tmp/alikhan_qa_audit.log for post-hoc analysis."""
     try:
         entry = {
-            'ts': datetime.now().isoformat(),
+            'ts': datetime.now(BISHKEK_TZ).isoformat(),
             'type': entry_type,
             **data
         }
@@ -464,7 +466,7 @@ def parse_qa(gid, text, date_str=None):
         # Step 5: Save everything to DB — route by category to OJR tables
         conn = get_conn()
         cur = conn.cursor()
-        today = date_str or datetime.now().strftime("%Y-%m-%d")
+        today = date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
         count = 0
 
         # Import OJR helpers

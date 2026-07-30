@@ -3,7 +3,7 @@ import os
 import subprocess
 
 import psycopg2, psycopg2.extras
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 DB_PASS = os.environ.get("DB_PASS", "")
 try:
@@ -13,6 +13,8 @@ try:
                 DB_PASS = line.strip().split('=', 1)[1]
 except:
     pass
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 def _valid_ip(value):
     try:
@@ -536,7 +538,7 @@ def get_schedule(building=None, status=None):
 def get_active_phases(today=None):
     from datetime import date
     if today is None:
-        today = date.today()
+        today = datetime.now(BISHKEK_TZ).date()
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
@@ -552,7 +554,7 @@ def get_active_phases(today=None):
 def get_upcoming_phases(today=None, days=30):
     from datetime import date, timedelta
     if today is None:
-        today = date.today()
+        today = datetime.now(BISHKEK_TZ).date()
     end = today + timedelta(days=days)
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -569,7 +571,7 @@ def get_upcoming_phases(today=None, days=30):
 def check_delays(today=None):
     from datetime import date
     if today is None:
-        today = date.today()
+        today = datetime.now(BISHKEK_TZ).date()
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""

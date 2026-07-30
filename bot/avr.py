@@ -1,10 +1,12 @@
 """Generate KS-2 acceptance acts and KS-6 cumulative work journals."""
 
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 import os
 from pathlib import Path
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -169,7 +171,7 @@ def _write_ks2_header(sheet, start, end, currency):
     sheet["A8"].font = Font(bold=True)
     sheet["A8"].alignment = Alignment(horizontal="center")
     sheet.merge_cells("A9:O9")
-    sheet["A9"] = (f"Дата составления: {date.today():%d.%m.%Y}    "
+    sheet["A9"] = (f"Дата составления: {datetime.now(BISHKEK_TZ).date():%d.%m.%Y}    "
                    f"Отчётный период: с {start:%d.%m.%Y} по {end:%d.%m.%Y}")
     sheet["A9"].alignment = Alignment(horizontal="center")
 

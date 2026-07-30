@@ -12,6 +12,7 @@ import json
 import glob
 import urllib.request
 from datetime import datetime, timedelta
+from datetime import timezone
 from typing import NamedTuple
 
 import requests
@@ -20,6 +21,8 @@ from openpyxl import load_workbook
 
 from db import get_conn, save_weather as _save_weather, get_daily_incidents, get_daily_works, get_daily_materials
 from config import SANDBOX
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -482,7 +485,7 @@ def get_aibikon_headcount(date=None):
     
     Возвращает dict (не NamedTuple) для обратной совместимости с aibikon['total'], aibikon['by_prof'].
     """
-    ds = date.strftime('%Y-%m-%d') if date else datetime.now().strftime('%Y-%m-%d')
+    ds = date.strftime('%Y-%m-%d') if date else datetime.now(BISHKEK_TZ).strftime('%Y-%m-%d')
     try:
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -531,7 +534,7 @@ def get_aibikon_headcount(date=None):
         if date:
             day = date.day
         else:
-            day = datetime.now().day
+            day = datetime.now(BISHKEK_TZ).day
         day_col = 5 + day - 1
 
         PROF_MAP = {
@@ -592,7 +595,7 @@ def get_aibikon_headcount(date=None):
 def _aibikon_ojr_fallback(date=None):
     """Fallback: read АйБиКон headcount from ojr_section1_personnel."""
     try:
-        ds = date.strftime('%Y-%m-%d') if date else datetime.now().strftime('%Y-%m-%d')
+        ds = date.strftime('%Y-%m-%d') if date else datetime.now(BISHKEK_TZ).strftime('%Y-%m-%d')
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(

@@ -1,6 +1,8 @@
 """DB lookup module: fact_lookup + weather API"""
 import json, urllib.request
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 def lookup_facts(chat_id, text):
     """Returns (db_reply, weather_reply) — each may be None."""
@@ -36,7 +38,7 @@ def lookup_facts(chat_id, text):
     if any(w in text.lower() for w in factual_words):
         try:
             from db_memory import fact_lookup
-            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_str = datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
             cat_filter = None
             if any(w in text.lower() for w in ["рабочих", "персонал", "сколько человек", "итр", "инженер"]):
                 cat_filter = "персонал"

@@ -9,7 +9,7 @@ poll.py — модуль управления опросом остатков р
 """
 
 import sys, os, re, json, urllib.request, base64
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +19,8 @@ import psycopg2.extras
 from bridge_wrapper import EVO, KEY
 from messaging import send_msg  # unified messaging (AUDIT-011)
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 # ── DB ──
 
@@ -119,7 +121,7 @@ def _get_work_items_from_template():
 
 def _get_qa_status(poll_date_str=None):
     """Get QA data status for the current poll date from OJR tables."""
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
     try:
         from db import get_ojr_qa_status
         return get_ojr_qa_status(today)
@@ -168,7 +170,7 @@ def start_poll(chat_id, poll_date_str=None):
     """Start a poll: create DB record, check status, send questionnaire."""
     ensure_poll_table()
 
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
 
     conn = get_conn()
     cur = conn.cursor()
@@ -270,7 +272,7 @@ def build_poll_message(work_items, qa_status):
 
 def _format_qa_facts_by_category(category, poll_date_str=None):
     """Get a short summary of QA facts by category from OJR tables."""
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
     try:
         from db import get_conn as _gc2
         conn2 = _gc2()
@@ -308,7 +310,7 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
 
     Returns: dict with updates made
     """
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
     result = {'codes_updated': [], 'facts_saved': 0, 'warnings': []}
 
     # 1. Find current active poll
@@ -422,7 +424,7 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
 
 def get_poll_status(chat_id, poll_date_str=None):
     """Get current poll status — what's collected and what's missing."""
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -463,7 +465,7 @@ def build_poll_summary(status):
     import glob as _g
     
     # Check if EJO already exists for this date — if so, poll is done
-    today = status.get('poll', {}).get('poll_date', datetime.now().strftime("%Y-%m-%d"))
+    today = status.get('poll', {}).get('poll_date', datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d"))
     today_fmt = datetime.strptime(str(today)[:10], "%Y-%m-%d").strftime("%d.%m.%y")
     existing = sorted(_g.glob(f"/tmp/ЕЖО_{today_fmt}_АйБиКон.xlsx"))
     if existing:
@@ -547,7 +549,7 @@ def close_poll(chat_id, poll_date_str=None):
     Close the active poll and auto-fill any remaining missing data.
     Returns: (poll_id, ejo_file_path)
     """
-    today = poll_date_str or datetime.now().strftime("%Y-%m-%d")
+    today = poll_date_str or datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
 
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
