@@ -403,21 +403,18 @@ def fill(date):
                 prev_p = parse_val(ws.cell(r, 16).value)
                 prev_s = parse_val(ws.cell(r, 19).value)
                 yesterday = yesterday_cum(date, cs)
-                if template_has_today:
-                    pass
-                elif yesterday is not None:
+                if yesterday is not None:
                     prev_p, prev_s = yesterday
 
                 sw(ws, r, 12, v, True)
                 sw(ws, r, 13, v, True)
                 sw(ws, r, 14, 1, True)
                 ws.cell(row=r, column=14).number_format = '0%'
-                daily_increment = 0 if template_has_today else v
-                cum_p = round(prev_p + daily_increment, 2)
+                cum_p = round(prev_p + v, 2)
                 sw(ws, r, 16, cum_p, True)
                 if mp:
                     sw(ws, r, 17, round(cum_p / float(mp), 2), True)
-                cum_s = round(prev_s + daily_increment, 2)
+                cum_s = round(prev_s + v, 2)
                 sw(ws, r, 19, cum_s, True)
                 if tp:
                     sw(ws, r, 20, round(cum_s / float(tp), 2), True)

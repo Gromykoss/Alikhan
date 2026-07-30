@@ -409,3 +409,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **30.07.2026 08:11** — fix: Бишкек UTC+6 вместо UTC для дат + оператор 996557261164 (`5338c27`)
 - **30.07.2026 08:22** — fix: UTC→Бишкек (+6) в whatsapp_commands.py и fill_ejo.py (`1d6c689`)
 - **30.07.2026 08:25** — fix: навык ЕЖО + config.py → Бишкек (+6) (`98b7d71`)
+- **30.07.2026 08:34** — fix: UTC→Бишкек (+6) — data_sources, poll, qa, db, avr, db_lookup (`b6b3ccf`)

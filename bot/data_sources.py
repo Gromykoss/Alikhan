@@ -240,8 +240,9 @@ def _canon_org(org):
 def get_staff(date):
     """Primary: ojr_section1_personnel active window. Fallback: bot_memory_facts.
 
-    Window: start_date <= d AND (end_date IS NULL OR end_date >= d) AND is_active.
-    Count: SUM(workers_count) when filled and >0, else COUNT(*).
+    Window: start_date <= d AND (end_date IS NULL OR end_date >= d).
+    Dedup: for each (org, position) take the row with LATEST start_date.
+    Count: prefers workers_count when > 0, else counts 1 per row.
     Org names normalized to canonical keys.
     """
     ds = date.strftime('%Y-%m-%d')
@@ -251,22 +252,20 @@ def get_staff(date):
     }
     r: dict[str, StaffOrg] = {}
 
-    # Primary: ojr_section1_personnel (active on date, not created_at day)
+    # Primary: ojr_section1_personnel (active on date, dedup by latest start_date)
     try:
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT LOWER(organization_name) as org, LOWER(position) as pos, "
-            "       COUNT(*) as cnt, "
-            "       COALESCE(SUM(CASE WHEN workers_count IS NOT NULL AND workers_count > 0 "
-            "                         THEN workers_count ELSE 0 END), 0) as wc_sum, "
-            "       COALESCE(SUM(CASE WHEN workers_count IS NOT NULL AND workers_count > 0 "
-            "                         THEN 1 ELSE 0 END), 0) as wc_rows "
+            "SELECT DISTINCT ON (LOWER(organization_name), LOWER(position)) "
+            "       LOWER(organization_name) as org, LOWER(position) as pos, "
+            "       COALESCE(workers_count, 1) as wc, "
+            "       start_date "
             "FROM ojr_section1_personnel "
             "WHERE start_date <= %s::date "
             "  AND (end_date IS NULL OR end_date >= %s::date) "
-            "  AND is_active = TRUE "
-            "GROUP BY LOWER(organization_name), LOWER(position)",
+            "ORDER BY LOWER(organization_name), LOWER(position), start_date DESC, "
+            "         COALESCE(workers_count, 0) DESC NULLS LAST",
             (ds, ds)
         )
         rows = cur.fetchall()
@@ -276,24 +275,18 @@ def get_staff(date):
             for row in rows:
                 org = row['org'] or ''
                 pos = row['pos'] or ''
-                # Prefer SUM(workers_count) if any rows carry it; else COUNT(*)
-                wc_sum = int(row.get('wc_sum') or 0)
-                wc_rows = int(row.get('wc_rows') or 0)
-                cnt_rows = int(row.get('cnt') or 0)
-                if wc_rows > 0 and wc_sum > 0:
-                    # rows with workers_count contribute their sum; plain rows add 1 each
-                    cnt = wc_sum + max(0, cnt_rows - wc_rows)
-                else:
-                    cnt = cnt_rows
+                wc = int(row.get('wc') or 1)
+                if wc <= 0:
+                    wc = 1
                 nm = _canon_org(org)
                 if nm not in raw:
                     raw[nm] = {'t': 0, 'i': 0, 'w': 0}
                 is_itr = 'итр' in pos or 'инженер' in pos or 'рук' in pos
                 if is_itr:
-                    raw[nm]['i'] += cnt
+                    raw[nm]['i'] += wc
                 else:
-                    raw[nm]['w'] += cnt
-                raw[nm]['t'] += cnt
+                    raw[nm]['w'] += wc
+                raw[nm]['t'] += wc
             for nm, v in raw.items():
                 r[nm] = StaffOrg(total=v['t'], itr=v['i'], workers=v['w'])
             print(f"[DS STAFF] {len(r)} orgs from ojr_section1_personnel (window {ds})", flush=True)
