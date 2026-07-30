@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """fill_ejo.py — ЕЖО: погода + QA-факты → 3 листа (новый формат без Фототчет)"""
 import sys, os, re, json, glob
-from datetime import datetime, timedelta, date as dt_date
+from datetime import datetime, timedelta, date as dt_date, timezone
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter as _gcl
 from openpyxl.cell.cell import MergedCell
@@ -18,6 +18,8 @@ from data_sources import (
     PhotoFile, PhotoData, EquipmentData, MaterialItem, MaterialData,
     ActivePhases, PlanData, CodeSource,
 )
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
@@ -87,7 +89,7 @@ def _hide_rows(ws):
     - Phase ACTIVE (end_date >= today) + has work → show all 3rd/4th rows
     """
     phase_ends = get_phase_end_dates()
-    today = dt_date.today()
+    today = datetime.now(BISHKEK_TZ).date()
 
     def _code_lvl(code_str):
         parts = code_str.strip().split('.')
@@ -169,7 +171,7 @@ def _get_aibikon_from_ojr(date=None):
     try:
         from db import get_conn
         import psycopg2.extras
-        ds = date.strftime('%Y-%m-%d') if date else datetime.now().strftime('%Y-%m-%d')
+        ds = date.strftime('%Y-%m-%d') if date else datetime.now(BISHKEK_TZ).strftime('%Y-%m-%d')
         conn = get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("""
@@ -749,7 +751,7 @@ def fill(date):
 
 
 if __name__ == "__main__":
-    d = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else datetime.now()
+    d = datetime.strptime(sys.argv[1], "%Y-%m-%d") if len(sys.argv) > 1 else datetime.now(BISHKEK_TZ)
     ds = d.strftime("%d.%m.%y")
     existing = sorted(glob.glob(f"/tmp/ЕЖО_{ds}_АйБиКон.xlsx"))
     if existing and '--force' not in sys.argv:
