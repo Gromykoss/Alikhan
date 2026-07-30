@@ -1,10 +1,10 @@
 {
-  "built_at": "2026-07-30T00:15:59.461765+00:00",
+  "built_at": "2026-07-30T06:15:22.835649+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
     "nodes": 232,
-    "edges": 411,
+    "edges": 413,
     "projects": 1,
     "events": 17,
     "bugs": 26,
@@ -2261,6 +2261,13 @@
     },
     {
       "source": "bot_component/avr",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "bot_component/avr",
       "target": "INDEX.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
@@ -2663,6 +2670,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "template/ks2",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.8
     },
     {

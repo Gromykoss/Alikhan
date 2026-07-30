@@ -73,13 +73,15 @@ BUILDINGS = ['АБК', 'Общежитие', 'Галерея']
 # ── Helpers ──
 
 def today_str():
-    """Return today's date string, respecting SIM_DATE if set."""
+    """Return today's date string in Bishkek (UTC+6), respecting SIM_DATE if set."""
     if SIM_DATE:
         return SIM_DATE
-    return datetime.now().strftime("%Y-%m-%d")
+    from datetime import timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=6))).strftime("%Y-%m-%d")
 
 def today_date():
-    """Return today as date object, respecting SIM_DATE."""
+    """Return today as date object in Bishkek (UTC+6), respecting SIM_DATE."""
     if SIM_DATE:
         return datetime.strptime(SIM_DATE, "%Y-%m-%d").date()
-    return datetime.now().date()
+    from datetime import timezone, timedelta
+    return datetime.now(timezone(timedelta(hours=6))).date()
