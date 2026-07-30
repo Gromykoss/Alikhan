@@ -654,13 +654,18 @@ def fill(date):
                     sw(ws, sr, 6, None, True)
                 print(f"[MATERIALS] Parsed {len(parsed_materials)} material items from QA", flush=True)
             else:
-                # No new material data — preserve existing template values
-                for row in range(13, 23):
+                # No new material data — clear ALL material cells
+                # Supply status rows (8-10) + main list rows (14-25)
+                for row in list(range(8, 13)) + list(range(14, 25)):
+                    for c in [1, 2, 3, 4, 5, 6, 7, 8]:
+                        sw(ws, row, c, None, True)
+                # Also clear yellow instruction cells
+                for row in range(8, 25):
                     for c in [2, 3, 4, 5, 6, 7, 8]:
                         cell = ws.cell(row=row, column=c)
                         if yellow(cell):
                             sw(ws, row, c, None, True)
-                print(f"[MATERIALS] No new material data — preserving template values", flush=True)
+                print(f"[MATERIALS] No new material data — cleared all material cells", flush=True)
 
             for cr in ['F6', 'H6', 'F13']:
                 ci = ord(cr[0]) - ord('A') + 1
