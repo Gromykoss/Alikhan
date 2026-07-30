@@ -6,6 +6,18 @@
 Ролевая модель: admin > operator > viewer.
 """
 import sys, os, json, time, requests, re, base64, traceback
+from datetime import datetime, timezone, timedelta
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
+
+
+def bishkek_date_str():
+    return datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
+
+
+def bishkek_date():
+    return datetime.now(BISHKEK_TZ).date()
+
 
 BRIDGE = "http://127.0.0.1:3000"
 SANDBOX = "120363179621030401@g.us"
@@ -230,7 +242,7 @@ def handle_sandbox_command(text: str, chat_id: str, msg: dict | None = None):
         log(f"CMD: fill_ejo force={force}")
 
         import subprocess
-        today = time.strftime("%Y-%m-%d")
+        today = bishkek_date_str()
         venv = "/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3"
 
         result = subprocess.run(
@@ -323,7 +335,7 @@ m._expand_template(m.SANDBOX)
         from avr import format_summary, generate_ks2, generate_ks6
         from db import get_conn
 
-        report_day = date.today()
+        report_day = bishkek_date()
         year = report_day.year
 
         if "весь период" in t:
@@ -420,7 +432,7 @@ def handle_qa(text: str, chat_id: str):
     log(f"QA [{chat_id[-12:]}]: '{text[:80]}'")
     try:
         from qa import parse_qa
-        today = time.strftime("%Y-%m-%d")
+        today = bishkek_date_str()
         facts = parse_qa(text, chat_id, today)
         if facts and chat_id == SANDBOX:
             send_message(chat_id, f"✅ Принято: {len(facts)} фактов")

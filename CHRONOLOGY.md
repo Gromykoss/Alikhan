@@ -405,3 +405,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **28.07.2026 10:18** — fix(photo): psycopg2 execute().fetchone breaks ojr_photo_log insert (`01edd49`)
 - **29.07.2026 04:07** — chore: auto-sync 29.07 (`cedc03b`)
 - **30.07.2026 01:52** — feat: ролевая модель admin/operator/viewer (`5a305f3`)
+- **30.07.2026 04:04** — chore: auto-sync 30.07 (`7a06792`)
