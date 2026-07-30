@@ -2,6 +2,7 @@
 
 > **Назначение:** единый источник истины о зависимостях, контрактах и правилах взаимодействия модулей.
 > **Обновляется:** при любом изменении сигнатур функций, импортов или публичного API модулей.
+> **Дата:** 29.07.2026 — обновлено после миграции на прямой Hermes Bridge
 > **Используется:** `scripts/pre_delegation.py` для сборки контекста при делегировании задач в Codex/Grok Build.
 
 ---
@@ -10,24 +11,22 @@
 
 ```
 Уровень 0 (фундамент — без зависимостей от других модулей бота):
-  bridge_wrapper.py  ← stdlib + requests (патчит на уровне import)
   config.py          ← os, datetime (чистые константы)
   db.py              ← psycopg2 (чистая БД)
 
 Уровень 1 (сервисы):
-  messaging.py  → bridge_wrapper.py
-  router.py     → config.py
+  messaging.py  → Hermes Agent (прямой вызов, не через bridge_wrapper)
 
 Уровень 2 (обработчики):
-  qa.py         → bridge_wrapper.py
-  handlers.py   → db.py, messaging.py, bridge_wrapper.py
+  qa.py         → Hermes Agent
+  handlers.py   → db.py, messaging.py, Hermes Agent
 
 Уровень 3 (бизнес-логика):
-  poll.py         → db.py, bridge_wrapper.py, messaging.py
+  poll.py         → db.py, Hermes Agent, messaging.py
   data_sources.py → db.py, config.py
 
 Уровень 4 (композиция):
-  fill_ejo.py  → data_sources.py (12 NamedTuple), bridge_wrapper.py
+  fill_ejo.py  → data_sources.py (12 NamedTuple), Hermes Agent
 
 Уровень 5 (точка входа):
   main_waha.py → bridge_wrapper.py, config.py, messaging.py, poll.py (ленивый import)

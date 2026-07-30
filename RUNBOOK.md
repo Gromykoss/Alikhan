@@ -1,47 +1,37 @@
 # 🔧 Алихан — Runbook оператора
 
-**Дата:** 18 июля 2026 · **Проект:** ТЗРК Джеруй · **Версия:** v5.0 (ОЖР)
+**Дата:** 29 июля 2026 · **Проект:** ТЗРК Джеруй · **Версия:** v6.0 (прямой Hermes Bridge)
 
-Быстрое руководство по эксплуатации, перезапуску и восстановлению WhatsApp-бота Алихан.
+Быстрое руководство по эксплуатации, перезапуску и восстановлению WhatsApp-агента Алихан (Hermes Agent, прямой Bridge).
 
 ---
 
 ## 1. Быстрый статус
 
 ```bash
-# Все проверки одним скриптом (8 измерений)
-python3 /home/hermes-workspace/.hermes/scripts/alikhan_health_check.py
-
-# Или вручную:
-# WhatsApp Bridge (Hermes Bridge)
+# WhatsApp Bridge (Hermes Bridge, Baileys, mode=bot)
 curl -s http://127.0.0.1:3000/health
 systemctl --user status hermes-whatsapp-bridge
 
-# Python-бот
-sudo systemctl status alikhan-bot
-
 # Document Extractor
 curl -fsS http://127.0.0.1:8099/health
-sudo systemctl status alikhan-document-extractor
+systemctl --user status alikhan-document-extractor
 
 # PostgreSQL
 docker ps --filter "name=evolution-postgres" --format "{{.Names}} {{.Status}}"
-
-# Процессы бота
-pgrep -af main_waha
 ```
 
-**Признаки работы:** бот отвечает в WhatsApp группе в течение 3-5 секунд.
+**Признаки работы:** Alikhan отвечает в WhatsApp группе напрямую через Hermes Agent (без отдельного Python-бота).
 
----
-
-## 2. Архитектура (v5 — ОЖР)
+## 2. Архитектура (v6 — прямой Hermes Bridge, 29.07.2026)
 
 ```
-WhatsApp → Hermes Bridge (:3000, systemd --user) → bridge_wrapper.py → main_waha.py (poll 3s)
-  → Guard → Router → [QA/DB/Weather/Grok/Schedule/Poll] → Reply
+WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
+  → QA/DB/Weather/Grok/Schedule/Poll → Reply напрямую в WhatsApp
                           │
-                          ▼ QA-парсер (qa.py)
+                          ▼
+                    QA-парсер (qa.py)
+                          │
                     bot_memory_facts (промежуточный слой)
                           │
             ┌─────────────┼─────────────┐
@@ -51,57 +41,31 @@ WhatsApp → Hermes Bridge (:3000, systemd --user) → bridge_wrapper.py → mai
    │_personnel    │ │_work_log   │ │ weather  │
    └──────────────┘ └─────┬──────┘ └──────────┘
             │             │             │
-            │    ┌────────┼────────┐    │
-            │    ▼        ▼        ▼    │
-            │ ┌──────┐┌──────┐┌──────┐ │
-            │ │photo ││daily ││mater-│ │
-            │ │_log  ││_summ ││ials  │ │
-            │ └──────┘└──┬───┘└──────┘ │
-            │            │             │
-            └────────────┼─────────────┘
                          ▼
                   ЕЖО (fill_ejo.py)
 ```
 
-**Сервисы (systemd):**
+**Сервисы:**
 
 | Сервис | Тип | Команда проверки |
 |:-------|:----|:-----------------|
 | `hermes-whatsapp-bridge` | `systemctl --user` | `curl -s http://127.0.0.1:3000/health` |
-| `alikhan-bot` | `systemctl` (sudo) | `sudo systemctl status alikhan-bot` |
-| `alikhan-document-extractor` | `systemctl` (sudo) | `curl -fsS http://127.0.0.1:8099/health` |
+| `alikhan-document-extractor` | `systemctl --user` | `curl -fsS http://127.0.0.1:8099/health` |
 
-**База данных (PostgreSQL, 14 таблиц ОЖР):**
-
-| # | Таблица | Раздел ГОСТ |
-|---|---------|-------------|
-| 1 | `ojr_title_page` | Титульный лист |
-| 2 | `ojr_section1_personnel` | Раздел 1 — ИТР-персонал |
-| 3 | `ojr_section2_design_supervision` | Раздел 2 — Авторский надзор |
-| 4 | `ojr_section2_visits` | Раздел 2 — Посещения |
-| 5 | `ojr_section3_work_log` | **Раздел 3 — Выполнение работ (главная)** |
-| 6 | `ojr_section4_construction_control` | Раздел 4 — Строительный контроль |
-| 7 | `ojr_section4_checks` | Раздел 4 — Акты проверок |
-| 8 | `ojr_section5_asbuilt_docs` | Раздел 5 — Исполнительная документация |
-| 9 | `ojr_section6_gosstroynadzor` | Раздел 6 — Госстройнадзор |
-| 10 | `ojr_weather` | Погода (Open-Meteo) |
-| 11 | `ojr_photo_log` | Фото-фиксация |
-| 12 | `ojr_daily_summary` | Сводные показатели |
-| 13 | `ojr_materials` | Материалы |
-| 14 | `ojr_incidents` | Инциденты и ТБ |
+**alikhan.service (Python-бот) — ОСТАНОВЛЕН 29.07.2026.** Alikhan работает как агент Hermes напрямую через Bridge.
 
 **Ключевые файлы:**
 
 | Файл | Назначение |
 |:-----|:-----------|
-| `bot/main_waha.py` | Главный цикл: poll 3s, Guard, обработка команд |
-| `bot/router.py` | Маршрутизация: QA, Grok, DB, Schedule, Poll |
 | `bot/fill_ejo.py` | Генератор ЕЖО — view на `ojr_section3_work_log` |
 | `bot/qa.py` | QA-парсер: извлечение фактов через Grok |
 | `bot/poll.py` | Ежедневный опрос прорабов |
 | `bot/db.py` | PostgreSQL: подключение, запросы |
-| `bot/bridge_wrapper.py` | Monkey-patch Evolution API → Hermes Bridge |
 | `bot/ojr_sync.py` | Синхронизация bot_memory_facts → OJR-таблицы |
+| ~~bot/main_waha.py~~ | ИСТОРИЧЕСКИЙ — заменён прямым Hermes Agent (29.07.2026) |
+| ~~bot/router.py~~ | ИСТОРИЧЕСКИЙ — маршрутизация теперь в Hermes Agent |
+| ~~bot/bridge_wrapper.py~~ | ИСТОРИЧЕСКИЙ — monkey-patch удалён (29.07.2026) |
 | `bot/watchdog_bridge.py` | Watchdog для Hermes Bridge |
 | `bot/backup_db.py` | Бэкап/восстановление PostgreSQL |
 | `bot/config.py` | Централизованный конфиг |
@@ -129,18 +93,9 @@ journalctl --user -u hermes-whatsapp-bridge --since "10 minutes ago"
 **⚠️ При перезапуске моста бот может потерять ~30 секунд сообщений.**
 Убедись что бот переподключился: `curl -s http://127.0.0.1:3000/health` → `"status":"connected"`.
 
-### Python-бот (main_waha.py)
+### Python-бот (main_waha.py) — ⛔ БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ
 
-```bash
-# Мягкий перезапуск (systemd)
-sudo systemctl restart alikhan-bot
-
-# Или вручную:
-kill $(pgrep -f main_waha.py)
-cd /home/hermes-workspace/Alikhan-migration/bot && python3 main_waha.py &
-```
-
-**⚠️ Убедись что старый процесс убит:** `pgrep -af main_waha` — должно быть ровно 1 PID.
+Alikhan работает как агент Hermes напрямую через Bridge. Отдельный Python-процесс (`main_waha.py`) и `alikhan.service` остановлены 29.07.2026. Перезапуск не требуется — Hermes Agent сам обрабатывает сообщения.
 
 ### Document Extractor
 

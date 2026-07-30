@@ -4,15 +4,20 @@ Concise routing map for `/home/hermes-workspace/Alikhan-migration`.
 
 ## Start here
 
-Read `/home/hermes-workspace/Alikhan-migration/AGENTS.md` first. For active bot
-behavior, start at `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
-and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
+Read `/home/hermes-workspace/Alikhan-migration/AGENTS.md` first.
+Alikhan работает как агент Hermes — прямой WhatsApp Bridge (Baileys, mode=bot), без отдельного Python-бота.
 
 ## Canonical files
 
 - Bot dir: `/home/hermes-workspace/Alikhan-migration/bot/`
-- Live bot: `/home/hermes-workspace/Alikhan-migration/bot/main_waha.py`
-- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
+- **Alikhan работает как агент Hermes** (прямой Bridge, без отдельного бота)
+- Hermes Bridge: `systemctl --user status hermes-whatsapp-bridge` (port 3000, mode=bot)
+- Bridge session: `~/.hermes/sessions/whatsapp/`
+- Номер телефона: 79958974452
+- ~~main_waha.py~~ — НЕ ИСПОЛЬЗУЕТСЯ (миграция 29.07.2026)
+- ~~bridge_wrapper.py~~ — НЕ ИСПОЛЬЗУЕТСЯ (monkey-patch удалён)
+- ~~alikhan.service~~ — ОСТАНОВЛЕН (29.07.2026)
+- ~~Evolution API~~ — ОСТАНОВЛЕН
 - EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
 - AVR generator: `/home/hermes-workspace/Alikhan-migration/bot/avr.py` (КС-2 из ЕЖО, КС-6 — 4 раздела, 780+ строк)
 - AVR tests: `/home/hermes-workspace/Alikhan-migration/bot/test_avr.py` (3 теста: КС-2, КС-6, сводка)
@@ -23,14 +28,12 @@ and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
 - OJR fill guide: `/home/hermes-workspace/Alikhan-migration/db/ojr_fill_guide.md`
 - Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
 - Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
-- Live services: `alikhan.service`, `alikhan-document-extractor.service`
 - Extractor endpoint: `127.0.0.1:8099`
-- Runtime log: `/tmp/alikhan.log` for the current user-systemd service; `bot/bot.log` may be stale.
+- Runtime log: Hermes session logs (не `/tmp/alikhan.log` — бот остановлен)
 
 ## Active workflows
 
-- Bot routing and replies: `bot/main_waha.py`, `bot/router.py`, then helper
-  modules in `bot/`.
+- **Alikhan работает как агент Hermes** — сообщения WhatsApp приходят напрямую через Bridge (Baileys, mode=bot), обработка и ответы в Hermes Agent.
 - EJO generation: `bot/fill_ejo.py` plus `bot/templates/ЕЖО_шаблон.xlsx`.
   - **v5 (18.07.2026):** ЕЖО = view на `ojr_section3_work_log` за дату.
   - Auto-hide rows: `_hide_rows()` — скрывает завершённые/будущие строки по графику (`bot_schedule_phases`).
@@ -59,16 +62,16 @@ and then `/home/hermes-workspace/Alikhan-migration/bot/router.py`.
 ## Do not touch without explicit approval
 
 - Production WhatsApp sends to `120363400682390076@g.us`.
-- Service restarts for `alikhan.service`, `alikhan-document-extractor.service`,
-  or Evolution API.
+- Service restart for `alikhan-document-extractor.service`.
 - Secrets, credentials, DB connection settings, and production service units.
+- alikhan.service и main_waha.py — исторический код, не изменять (миграция 29.07.2026)
 
 ## Verification commands
 
 ```bash
 cd /home/hermes-workspace/Alikhan-migration/bot
-python3 -m py_compile main_waha.py router.py fill_ejo.py document_extractor.py
+python3 -m py_compile poll.py qa.py fill_ejo.py document_extractor.py
 python3 -m pytest test_ejo_simulation.py -q
 curl -fsS http://127.0.0.1:8099/health
-tail -30 /tmp/alikhan.log
+curl -fsS http://127.0.0.1:3000/health
 ```

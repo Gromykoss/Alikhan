@@ -1,5 +1,103 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 29.07.2026 (23:13 UTC) — Ночная сводка: полная миграция на Hermes Agent завершена
+
+### Статус систем
+- **Hermes Bridge:** активен, порт 3000 отвечает (health=200), режим bot. Systemd unit выключен — Bridge запущен напрямую Hermes Agent.
+- **alikhan.service:** ОСТАНОВЛЕН — бот работает как агент Hermes, без отдельного Python-процесса.
+- **document-extractor:** endpoint `127.0.0.1:8099` отвечает.
+- **Knowledge Graph:** 230 nodes / 408 edges, 3 дубликата обнаружены (router≈alerter, qa≈avr, qa≈db), не критично.
+
+### Коммиты за 24 часа
+- **29.07 04:07** — `cedc03b` auto-sync: бэкапы .bak файлов, обновление knowledge graph, CHRONOLOGY nightly summary за 28.07.
+
+### Незакоммиченные изменения (миграция v5→v6)
+**Документация обновлена (5 файлов):**
+- **AGENTS.md** — переписан под прямого Hermes Agent: убраны main_waha.py, bridge_wrapper.py, Evolution API, alikhan.service; добавлены каналы WhatsApp + Telegram DM; обновлены canonical files, workflows, verification.
+- **INDEX.md** — синхронизирован с AGENTS.md: убраны ссылки на бота, добавлены прямые каналы, номер телефона.
+- **RUNBOOK.md** — v5.0→v6.0: убран health check скрипт, обновлена архитектурная диаграмма, убраны systemd-команды для бота.
+- **CONTRACTS.md** — убран bridge_wrapper из дерева зависимостей, заменён на Hermes Agent (прямой вызов).
+- **CHRONOLOGY.md** — текущая запись.
+
+**Новые файлы (2):**
+- **`bot/whatsapp_commands.py`** (302 строки) — диспетчер WhatsApp-команд v2: слушает песочницу + боевую группу через Bridge API. Команды: ЕЖО, раскрыть отчёт, опрос. Авторизация по `authorized_senders.json`. QA-парсинг в обеих группах.
+- **`bot/authorized_senders.json`** — whitelist отправителей: `79958974452` (руководитель).
+
+### Что изменилось в архитектуре
+```
+v5: WhatsApp → Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → ...
+v6: WhatsApp → Bridge :3000 (Baileys, mode=bot) → Hermes Agent → Alikhan (прямой агент)
+```
+- **bot/main_waha.py** — больше не исполняется (исторический)
+- **bot/bridge_wrapper.py** — monkey-patch удалён
+- **alikhan.service** — остановлен
+- **Evolution API** — остановлен
+- **Cron-задачи:** Health Check и Weather удалены. CHRONOLOGY и Knowledge Graph активны.
+
+### Примечание
+- 28.07 CRITICAL (`01edd49` фикс не в памяти процесса) — больше не актуально: бот остановлен, фикс не нужен.
+- Bridge 405-реконнекты 28.07 — штатное поведение, 29.07 работает стабильно.
+
+---
+
+## 29.07.2026 — Миграция с Waha-бота на прямой Hermes Bridge
+
+### Ключевое изменение
+Alikhan переведён с промежуточного Python Waha-бота (`main_waha.py`, Evolution API) на прямое WhatsApp-подключение через Hermes Bridge (Baileys). Бот больше не крутится отдельным процессом — Alikhan теперь напрямую в группах WhatsApp как агент Hermes.
+
+### Архитектура ДО → ПОСЛЕ
+```
+ДО:  WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → ...
+ПОСЛЕ: WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent → Alikhan (прямой агент)
+```
+
+### Что изменилось
+- **Бот (main_waha.py, Evolution API, alikhan.service)** — ОСТАНОВЛЕН. Больше не используется.
+- **bridge_wrapper.py** — удалён (monkey-patch больше не нужен).
+- **WhatsApp Bridge (Baileys)** — mode=bot, порт 3000. Alikhan напрямую в группах.
+- **Номер телефона:** 79958974452 (тот же, что был у бота).
+
+### Каналы (обновлённые)
+| Платформа | Адрес | Роль |
+|-----------|-------|------|
+| WhatsApp | 120363179621030401@g.us | Песочница — команды, QA, ответы |
+| WhatsApp | 120363400682390076@g.us | Боевая группа — пассивный сбор данных |
+| Telegram | DM 652755599 | Администрирование, настройки |
+
+### Конфигурация Hermes Bridge (config.yaml профиля alikhan)
+```yaml
+platforms:
+  whatsapp:
+    enabled: true
+    mode: bot
+    session_dir: /home/hermes-workspace/.hermes/sessions/whatsapp
+    group_policy: allowlist
+    group_allow_from: 120363179621030401@g.us,120363400682390076@g.us
+    require_mention: false
+```
+
+### Патчи Hermes Agent (ключевые)
+1. `adapter.py:412` — group_policy дефолт изменён с "pairing" на "open"
+2. `adapter.py:413` — group_allow_from читает из env vars (WHATSAPP_GROUP_ALLOWED_USERS, WHATSAPP_GROUPS)
+3. `whatsapp_common.py:359-361` — убран сломанный debug log
+
+### Cron-задачи (обновлены)
+- **Alikhan Health Check** — УДАЛЁН (не нужен без бота)
+- **Alikhan Weather** — УДАЛЁН (погода больше не нужна)
+- **Alikhan CHRONOLOGY + брифинг** — активен (23:10 ежедневно)
+- **Alikhan Knowledge Graph** — активен (каждые 6 часов)
+
+### Что осталось неизменным
+- ЕЖО, QA-факты, ОЖР (PostgreSQL) — работают как прежде
+- poll.py, qa.py, fill_ejo.py — вызываются через Hermes напрямую
+- document_extractor — статус не менялся
+- OHM-скиллы — установлены
+
+### Документация обновлена
+- AGENTS.md: убраны main_waha.py, Evolution API, bridge_wrapper, alikhan.service; добавлены прямые каналы WhatsApp
+- INDEX.md: обновлены canonical files, verification commands
+- Knowledge Graph: удалены bot-компоненты (main_waha, bridge_wrapper), добавлены bridge-компоненты, обновлены events
+
 ## 26.07.2026 — ОЖР-миграция: персонал/фото/готовность (production-цикл)
 
 ### Баги найдены и исправлены (5)
@@ -306,3 +404,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **28.07.2026 09:43** — fix(ejo): ON CONFLICT, personnel window, local_path, multi-insert race (28.07) (`4d6985e`)
 - **28.07.2026 10:18** — fix(photo): psycopg2 execute().fetchone breaks ojr_photo_log insert (`01edd49`)
 - **29.07.2026 04:07** — chore: auto-sync 29.07 (`cedc03b`)
+- **30.07.2026 01:52** — feat: ролевая модель admin/operator/viewer (`5a305f3`)

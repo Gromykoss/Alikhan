@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-07-29T00:15:46.359777+00:00",
+  "built_at": "2026-07-30T00:15:59.461765+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 228,
-    "edges": 416,
+    "nodes": 232,
+    "edges": 411,
     "projects": 1,
-    "events": 15,
+    "events": 17,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -751,6 +751,36 @@
       }
     ],
     [
+      "event/2026-07-29/Ночная сводка: полная миграция на Hermes Agent зав",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-29",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: полная миграция на Hermes Agent завершена",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-29/Миграция с Waha-бота на прямой Hermes Bridge",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Миграция с Waha-бота на прямой Hermes Bridge",
+      {
+        "type": "description"
+      }
+    ],
+    [
       "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
       {
         "type": "event"
@@ -1036,12 +1066,6 @@
       "AGENTS.md",
       {
         "type": "unknown"
-      }
-    ],
-    [
-      "-",
-      {
-        "type": "description"
       }
     ],
     [
@@ -1502,9 +1526,23 @@
     },
     {
       "source": "service/hermes-whatsapp-bridge",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/hermes-whatsapp-bridge",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
       "confidence": 0.85
     },
     {
@@ -1603,6 +1641,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/main_waha",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -1985,23 +2030,9 @@
     },
     {
       "source": "bot_component/router",
-      "target": "AGENTS.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bot_component/router",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bot_component/router",
-      "target": "INDEX.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
       "confidence": 0.85
     },
     {
@@ -2051,6 +2082,13 @@
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/poll",
+      "target": "INDEX.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
       "confidence": 0.85
     },
     {
@@ -2663,13 +2701,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_title_page",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_section1_personnel",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2688,13 +2719,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_section1_personnel",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
       "confidence": 0.88
     },
     {
@@ -2726,13 +2750,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_section2_design_supervision",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_section2_visits",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2751,13 +2768,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_section2_visits",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
       "confidence": 0.88
     },
     {
@@ -2782,13 +2792,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_section4_construction_control",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_section4_checks",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2807,13 +2810,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_section4_checks",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
       "confidence": 0.88
     },
     {
@@ -2838,13 +2834,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_section5_asbuilt_docs",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_section6_gosstroynadzor",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2866,13 +2855,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_section6_gosstroynadzor",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_daily_summary",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2891,13 +2873,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_daily_summary",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
       "confidence": 0.88
     },
     {
@@ -2929,13 +2904,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/ojr_materials",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/ojr_incidents",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2954,13 +2922,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_incidents",
-      "target": "RUNBOOK.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
       "confidence": 0.88
     },
     {
@@ -3312,6 +3273,48 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-29/Ночная сводка: полная миграция на Hermes Agent зав",
+      "target": "2026-07-29",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-29/Ночная сводка: полная миграция на Hermes Agent зав",
+      "target": "Ночная сводка: полная миграция на Hermes Agent завершена",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-29/Ночная сводка: полная миграция на Hermes Agent зав",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-29/Миграция с Waha-бота на прямой Hermes Bridge",
+      "target": "2026-07-29",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-29/Миграция с Waha-бота на прямой Hermes Bridge",
+      "target": "Миграция с Waha-бота на прямой Hermes Bridge",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-29/Миграция с Waha-бота на прямой Hermes Bridge",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
@@ -3724,20 +3727,6 @@
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bug/memory-recurring-5",
-      "target": "-",
-      "predicate": "described_as",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bug/memory-recurring-5",
-      "target": "AGENTS.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
       "confidence": 0.85
     },
     {

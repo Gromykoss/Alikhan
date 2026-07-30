@@ -1,8 +1,9 @@
 # Alikhan — рабочая среда Hermes
 
 Проект: WhatsApp AI-агент для ТЗРК Джеруй.
-Бот: Python v5, Hermes WhatsApp bridge + xAI/Grok.
-Путь: /home/hermes-workspace/Alikhan-migration/bot/
+Подключение: прямой Hermes Bridge (Baileys, mode=bot) + xAI/Grok.
+Режим: агент Hermes напрямую в группах WhatsApp.
+Путь: /home/hermes-workspace/Alikhan-migration/
 
 ---
 
@@ -132,33 +133,34 @@ Extract (regex + curated seed from CHRONOLOGY + MEMORY + AGENTS + BUGS) → Reso
 
 ### Canonical files
 
-- Live bot: `systemctl --user {start,stop,restart,status} alikhan.service` (systemd, Restart=always)
+- **Alikhan работает как агент Hermes** (прямой Bridge, без отдельного бота)
 - Venv python: `/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3`
-- Env vars in unit file: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
-- **НЕ запускать вручную** — только через systemd (`systemctl --user restart alikhan`)
-- Service unit: `/home/hermes-workspace/.config/systemd/user/alikhan.service`
-- Bridge wrapper: `/home/hermes-workspace/Alikhan-migration/bot/bridge_wrapper.py` (monkey-patch Evolution→Bridge)
-- Hermes Bridge: `systemctl --user start hermes-whatsapp-bridge` (systemd, Restart=always, port 3000)
+- Env vars в конфигурации Hermes: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
+- Hermes Bridge: `systemctl --user start hermes-whatsapp-bridge` (systemd, Restart=always, port 3000, mode=bot)
 - Bridge session: `~/.hermes/sessions/whatsapp/`
-- Evolution API: остановлен (миграция на Hermes Bridge)
-- alikhan.service: активен (`systemctl --user status alikhan`, Restart=always)
-- Router: `/home/hermes-workspace/Alikhan-migration/bot/router.py`
+- Номер телефона: 79958974452
+- **alikhan.service — ОСТАНОВЛЕН** (29.07.2026, полная миграция на Hermes Agent)
+- **main_waha.py — НЕ ИСПОЛЬЗУЕТСЯ** (заменён прямым подключением Hermes)
+- **bridge_wrapper.py — НЕ ИСПОЛЬЗУЕТСЯ** (monkey-patch удалён, Hermes напрямую)
+- **Evolution API — ОСТАНОВЛЕН**
 - Poll module: `/home/hermes-workspace/Alikhan-migration/bot/poll.py`
 - QA parser: `/home/hermes-workspace/Alikhan-migration/bot/qa.py`
 - EJO generator: `/home/hermes-workspace/Alikhan-migration/bot/fill_ejo.py`
 - Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
 - Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
-- Live user services: `alikhan.service`, `alikhan-document-extractor.service`
 - Extractor endpoint: `127.0.0.1:8099`
-- Runtime log: `/tmp/alikhan.log`
+- Runtime log: Hermes session logs (не `/tmp/alikhan.log` — бот остановлен)
 
 ## Active workflows
 
-- Bot behavior: edit/read `bot/main_waha.py`, `bot/router.py`
+- **Alikhan теперь работает как агент Hermes** — без отдельного бота. Сообщения WhatsApp приходят напрямую через Hermes Bridge (Baileys, mode=bot) в Hermes Agent, который обрабатывает их и отвечает.
 - EJO work: `bot/fill_ejo.py` + `bot/templates/ЕЖО_шаблон.xlsx`
+- Poll module: `bot/poll.py` — вызывается напрямую
+- QA parser: `bot/qa.py` — вызывается напрямую
 - Document extraction: `bot/document_extractor.py`; verify `127.0.0.1:8099`
-- WhatsApp validation: sandbox group `120363179621030401@g.us`
-- Production group `120363400682390076@g.us`: never send without explicit approval
+- WhatsApp sandbox: `120363179621030401@g.us` — полный доступ
+- WhatsApp production: `120363400682390076@g.us` — пассивный сбор данных
+- Telegram DM: 652755599 — администрирование
 
 ## Archive / do not use by default
 
@@ -167,20 +169,19 @@ Extract (regex + curated seed from CHRONOLOGY + MEMORY + AGENTS + BUGS) → Reso
 
 ## Do not touch without explicit approval
 
-- Do not restart `alikhan.service`, `alikhan-document-extractor.service`, or Evolution API
-- Do not send to production WhatsApp group `120363400682390076@g.us`
+- Do not restart `alikhan-document-extractor.service`
+- Do not send to production WhatsApp group `120363400682390076@g.us` без approval
 - Do not change secrets, credentials, DB connection
-- Restart only via `systemctl --user restart alikhan` — не pkill/manual python3
+- alikhan.service и main_waha.py — исторический код, не изменять
 
 ## Verification commands
 
 ```bash
 cd /home/hermes-workspace/Alikhan-migration/bot
-python3 -m py_compile main_waha.py bridge_wrapper.py router.py fill_ejo.py document_extractor.py
+python3 -m py_compile poll.py qa.py fill_ejo.py document_extractor.py
 python3 -m pytest test_ejo_simulation.py -q
 curl -fsS http://127.0.0.1:8099/health
 curl -s http://127.0.0.1:3000/health
-tail -30 /tmp/alikhan.log
 ```
 
 ## Принцип
@@ -189,11 +190,11 @@ tail -30 /tmp/alikhan.log
 
 ## Архитектура
 
-### Поток данных (v5 — 18.07.2026, миграция на ОЖР)
+### Поток данных (v6 — 29.07.2026, прямой Hermes Bridge)
 
 ```
-WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s)
-  → Guard → Router → [QA/DB/Weather/Grok/Schedule/Poll] → Reply
+WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
+  → QA/DB/Weather/Grok/Schedule/Poll → Reply напрямую в WhatsApp
                           │
                           ▼
                     QA-парсер (qa.py)
@@ -223,17 +224,50 @@ WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s
                + ojr_daily_summary
 ```
 
-**WhatsApp → Hermes bridge :3000 → bridge_wrapper.py → main_waha.py (poll 3s) → Guard → Router → [QA/DB/Weather/Grok/Schedule] → Reply**
+**WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan) → Reply напрямую в WhatsApp**
+
+### Ключевые отличия от v5 (18.07.2026)
+
+- **Нет бота (main_waha.py)** — Alikhan работает как агент Hermes, напрямую получает и отправляет сообщения
+- **Нет bridge_wrapper.py** — нет monkey-patch слоя, Hermes использует Bridge нативно
+- **Нет alikhan.service** — системный сервис бота остановлен 29.07.2026
+- **ЕЖО, QA, ОЖР** — вызываются напрямую из Hermes, без промежуточного Python-процесса
 
 ## Быстрые команды
 
 ```bash
-curl -s http://127.0.0.1:3000/health              # Hermes bridge health
+curl -s http://127.0.0.1:3000/health              # Hermes Bridge health
 systemctl --user status hermes-whatsapp-bridge     # bridge systemd status
-systemctl --user status alikhan                    # alikhan bot status
-systemctl --user restart alikhan                   # перезапуск бота (после правок db.py/qa.py)
-tail -30 /tmp/alikhan.log                          # логи
+# alikhan.service ОСТАНОВЛЕН — бот работает как агент Hermes
 ```
+
+## Группы WhatsApp и Telegram
+
+| Платформа | Адрес | Роль |
+|-----------|-------|------|
+| WhatsApp | 120363179621030401@g.us | Песочница — команды, QA, ответы |
+| WhatsApp | 120363400682390076@g.us | Боевая группа — пассивный сбор данных |
+| Telegram | DM 652755599 | Администрирование, настройки |
+
+## Конфигурация Hermes Bridge (профиль alikhan)
+
+```yaml
+platforms:
+  whatsapp:
+    enabled: true
+    mode: bot
+    session_dir: /home/hermes-workspace/.hermes/sessions/whatsapp
+    group_policy: allowlist
+    group_allow_from: 120363179621030401@g.us,120363400682390076@g.us
+    require_mention: false
+```
+
+## Cron-задачи (обновлено 29.07.2026)
+
+- **Alikhan CHRONOLOGY + брифинг** — 23:10 ежедневно
+- **Alikhan Knowledge Graph** — каждые 6 часов
+- ~~Alikhan Health Check~~ — УДАЛЁН (бот остановлен)
+- ~~Alikhan Weather~~ — УДАЛЁН (погода больше не нужна)
 
 ## Память проекта (PostgreSQL) — миграция на ОЖР (18.07.2026)
 
@@ -314,48 +348,26 @@ tail -30 /tmp/alikhan.log                          # логи
 | 7 | Внутриплощадочные сети | 01.07.26 | 01.10.26 | 93 | 🔄 active |
 | 8 | Благоустройство, сдача | 01.07.26 | 31.07.27 | 396 | 🔄 active |
 
-## Последняя сессия (15.07.2026) — миграция на Hermes Bridge
+## Последняя сессия (29.07.2026) — полная миграция на Hermes Agent
 
-**Ключевое изменение:** Evolution API заменён на Hermes WhatsApp Bridge (:3000).
-- `bridge_wrapper.py` — monkey-patch слой: перехватывает `requests.post` к Evolution API, транслирует в Bridge API
-- `main_waha.py` — не менялся, просто импортирует `from bridge_wrapper import *`
-- Evolution API Docker — остановлен
-- `alikhan.service` — активен (`systemctl --user status alikhan`)
-- Hermes Bridge: `node bridge.js --mode bot --session ~/.hermes/sessions/whatsapp &`
+**Ключевое изменение:** Alikhan переведён с промежуточного Python Waha-бота на прямое WhatsApp-подключение через Hermes Bridge (Baileys).
 
-**Что сделано:**
-- ЕЖО 02.07.2026 (v1): без замечаний
-- QA parser fix: убран pre-parse в `qa.py`
-- Дубликаты в БД: 4 записи за 02.07 удалены
-- Авто-шаблон: cron `7adc37a6efc5` ежедневно 8:00 Бишкек
-- Шаблон обновлён из ЕЖО_2026-07-02_v1.xlsx (backup сохранён)
-- SIM_DATE = None
+**Архитектура:**
+```
+ДО:  WhatsApp → Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py → Guard → Router → Reply
+ПОСЛЕ: WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan) → Reply напрямую
+```
 
-**Известные баги / ограничения:**
-- Diff в `_update_template_from_correction()` проверяет только 3 колонки (16, 19, 21)
-- Удаление через WhatsApp API не работает в группах (bug #885)
-- .mpp файлы не читаются (нужен JDK + MPXJ) — только PDF
-- Poll: smart_evening_check.py — резервный, poll.py — основной
+**Что изменилось:**
+- **alikhan.service — ОСТАНОВЛЕН** (29.07.2026)
+- **main_waha.py** — больше не используется (заменён прямым подключением Hermes)
+- **bridge_wrapper.py** — не нужен (Hermes использует Bridge нативно)
+- **Evolution API** — остановлен
+- **Cron-задачи:** Health Check и Weather удалены. CHRONOLOGY и Knowledge Graph активны.
+- **Каналы:** WhatsApp песочница + боевая + Telegram DM 652755599
+- **Номер телефона:** 79958974452
 
-**БД:**
-- PostgreSQL: `evolution-postgres` (172.22.0.3:5432)
-- База: evolution_db, пользователь: evolution, пароль: DB_PASS (из env)
-- bot_memory_messages.content — не UNIQUE (защита через SELECT)
-
-**Ключевые файлы сессии:**
-- `/tmp/ЕЖО_2026-06-30_v2.xlsx`
-- `/tmp/corrected_ЕЖО_30.06.2026 АйБиКон.xlsx`
-- `bot/main_waha.py` L214 (защита фото), L15 (SIM_DATE = None)
-
-## Группы WhatsApp
-
-| Группа | ID | Режим |
-|--------|-----|-------|
-| Песочница | 120363179621030401@g.us | Полный доступ, отвечает |
-| Боевая | 120363400682390076@g.us | Только слушает + погода |
-
-## Погода
-
-- API: Open-Meteo (42.284, 72.765)
-- Cron: 1:30 и 10:30 UTC → боевая группа
-- Формат: °C, м/с, %, мм рт.ст.
+**Что осталось:**
+- ЕЖО, QA-факты, ОЖР (PostgreSQL) — работают как прежде
+- poll.py, qa.py, fill_ejo.py — вызываются напрямую через Hermes
+- document_extractor — без изменений
