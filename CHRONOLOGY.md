@@ -412,3 +412,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **30.07.2026 08:34** — fix: UTC→Бишкек (+6) — data_sources, poll, qa, db, avr, db_lookup (`b6b3ccf`)
 - **30.07.2026 09:18** — fix: fill_ejo + data_sources — персонал, накопительные, фото (`72c7bd8`)
 - **30.07.2026 10:53** — fix: fill_ejo — очистка материалов при отсутствии данных за сегодня (`f53807d`)
+- **31.07.2026 04:04** — chore: auto-sync 31.07 (`5277cce`)
