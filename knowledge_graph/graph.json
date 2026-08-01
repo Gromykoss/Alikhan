@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-07-31T00:15:24.021763+00:00",
+  "built_at": "2026-08-01T00:15:39.879758+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 232,
-    "edges": 413,
+    "nodes": 235,
+    "edges": 417,
     "projects": 1,
-    "events": 17,
+    "events": 18,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,24 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-31/Ночная сводка: экология 2025, авто-синхронизация,",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-31",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: экология 2025, авто-синхронизация, UTC→Бишкек",
       {
         "type": "description"
       }
@@ -1522,13 +1540,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "service/hermes-whatsapp-bridge",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -2338,6 +2349,13 @@
     },
     {
       "source": "bot_component/db",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -2363,6 +2381,13 @@
       "predicate": "referenced_in",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "bot_component/db_lookup",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "bot_component/db_lookup",
@@ -3287,6 +3312,27 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-31/Ночная сводка: экология 2025, авто-синхронизация,",
+      "target": "2026-07-31",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-31/Ночная сводка: экология 2025, авто-синхронизация,",
+      "target": "Ночная сводка: экология 2025, авто-синхронизация, UTC→Бишкек",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-31/Ночная сводка: экология 2025, авто-синхронизация,",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-07-29/Ночная сводка: полная миграция на Hermes Agent зав",
