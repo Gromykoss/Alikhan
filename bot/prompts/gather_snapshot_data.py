@@ -21,7 +21,9 @@ Alikhan Daily Snapshot — Data Gatherer for Codex/Grok Build CLI
 """
 
 import sys, os, json, argparse, requests
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 from pathlib import Path
 
 # ── Project paths ──────────────────────────────────────────────
@@ -59,10 +61,15 @@ def get_db_conn():
             ).decode().strip()
         except Exception:
             host = "172.18.0.4"
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         host=host, port=5432, dbname="evolution_db",
         user="evolution", password=db_pass
     )
+    # Та же сессия в местном времени Бишкек, что и db.get_conn()
+    cur = conn.cursor()
+    cur.execute("SET TIME ZONE 'Asia/Bishkek'")
+    cur.close()
+    return conn
 
 
 def get_weather():
@@ -131,7 +138,10 @@ def gather_data(chat_id: str, target_date: str):
     import psycopg2.extras
 
     today = datetime.strptime(target_date, "%Y-%m-%d").date()
-    bishkek_start = datetime(today.year, today.month, today.day, 0, 1) - timedelta(hours=6)
+    # Явный tzinfo=BISHKEK_TZ: параметры против timestamptz адаптируются
+    # с офсетом +06 → абсолютный момент не зависит от сессионного TimeZone
+    # (наивные datetime интерпретировались бы в TZ сессии — 6ч сдвиг).
+    bishkek_start = datetime(today.year, today.month, today.day, 0, 1, tzinfo=BISHKEK_TZ)
     bishkek_end = bishkek_start + timedelta(days=1)
 
     conn = get_db_conn()
@@ -189,7 +199,7 @@ def gather_data(chat_id: str, target_date: str):
         FROM bot_memory_facts
         WHERE created_at >= %s AND created_at < %s
           AND source != 'снимок_дня'
-          AND fact NOT ILIKE '%не выполня%'
+          AND fact NOT ILIKE '%%не выполня%%'
     """, (bishkek_start, bishkek_end))
     facts = cur.fetchall()
     fact_block = "\n".join(

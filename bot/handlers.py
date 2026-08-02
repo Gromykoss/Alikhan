@@ -2,7 +2,9 @@ import db, json, re, requests, os, sys
 import db_memory
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+BISHKEK_TZ = timezone(timedelta(hours=6))
 
 import psycopg2.extras
 import requests
@@ -331,8 +333,8 @@ def handle_fact_lookup(group, sender, payload):
     if any(w in text for w in ["абк", "общежит", "бетон", "монтаж", "за неделю", "за месяц"]):
         try:
             building = "АБК" if "абк" in text else ("Общежитие" if "общежит" in text else None)
-            from datetime import datetime, timedelta
-            start = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d") if "недел" in text else None
+            from datetime import timedelta
+            start = (datetime.now(BISHKEK_TZ) - timedelta(days=7)).strftime("%Y-%m-%d") if "недел" in text else None
             facts = db_memory.fact_lookup(group, building=building, start_date=start)
             if facts:
                 lines = [f"{f['building'] or 'Общее'} | {f['category']} | {f['fact']} | {f['fact_date']}" for f in facts[:10]]
@@ -398,7 +400,7 @@ def handle_calendar_create(group, sender, payload):
             "Верни только JSON без markdown.",
             "Поля: title, description, location, date, time, timezone, event_end_date, event_end_time, remind_minutes_before.",
             "date в YYYY-MM-DD, time в HH:MM. Если часовой пояс не указан, Asia/Bishkek.",
-            f"Текущая дата и время: {datetime.now().isoformat()}",
+            f"Текущая дата и время: {datetime.now(BISHKEK_TZ).isoformat()}",
             f"Текст: {ctx.get('userMessage', '')}",
         ]
     )
@@ -485,7 +487,7 @@ def handle_group_participants(group, sender, payload):
 
 def handle_period_summary(group, sender, payload):
     ctx = _ctx(group, sender, payload)
-    start = ctx.get("summaryStartDate") or datetime.now().date().isoformat()
+    start = ctx.get("summaryStartDate") or datetime.now(BISHKEK_TZ).date().isoformat()
     end = ctx.get("summaryEndDate") or start
     rows = db.get_messages_by_date_range(group, start, end)
     if not rows:

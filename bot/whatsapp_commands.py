@@ -520,6 +520,129 @@ def _detect_building(caption: str):
     return None
 
 
+# ─── Классификация фото без caption-здания (vision, 2026-08-02) ────────────
+# Поздравительные открытки (День строителя и т.п.) из боевой НЕ должны
+# попадать в ojr_photo_log (журнал строительных фото для ЕЖО) как «Общий план».
+VISION_UNAVAILABLE_BUILDING = "Фото (описание недоступно)"
+GREETING_CARD_BUILDING = "Поздравительная открытка"
+CONSTRUCTION_DEFAULT_BUILDING = "Строительная площадка"
+SITE_RELATED_DEFAULT_BUILDING = "Связано с объектом (не стройка)"
+UNRELATED_DEFAULT_BUILDING = "Постороннее фото"
+GREETING_KEYWORDS = (
+    "поздрав", "открытк", "день строителя", "днём строителя", "днем строителя",
+    "с праздником", "congratul",
+)
+
+# 3-категорийная классификация фото (2026-08-02):
+#   construction — стройка → ojr_photo_log;
+#   site_related — связано с объектом, но НЕ стройка (материалы, техника, бытовки,
+#                  инфраструктура) → только bot_memory_messages с тегом category;
+#   unrelated    — постороннее (открытки, поздравления, личные фото, мемы) →
+#                  только bot_memory_messages с тегом category.
+CATEGORY_CONSTRUCTION = "construction"
+CATEGORY_SITE_RELATED = "site_related"
+CATEGORY_UNRELATED = "unrelated"
+PHOTO_CATEGORIES = (CATEGORY_CONSTRUCTION, CATEGORY_SITE_RELATED, CATEGORY_UNRELATED)
+
+
+def _detect_greeting(caption: str) -> bool:
+    """Открытка/поздравление по caption (дешевле vision и надёжнее для
+    типового случая «С Днём строителя!»)."""
+    c = (caption or "").lower()
+    return any(k in c for k in GREETING_KEYWORDS)
+
+
+def _normalize_vision_area(value):
+    """Привести area_identified из Grok vision к каноническому имени здания
+    (АБК/Общежитие/Галерея/Общий план) либо вернуть сырое значение."""
+    v = (value or "").strip()
+    if not v:
+        return None
+    vl = v.lower()
+    for tag in PHOTO_BUILDINGS:
+        if tag.lower() in vl:
+            return tag
+    return v[:80]
+
+
+def _classify_photo_via_vision(local_path: str, mimetype: str = "image/jpeg"):
+    """Grok vision: 3-категорийная классификация фото БЕЗ caption-здания.
+
+    Использует vision_checklist.checklist_from_image (расширенный CHECKLIST_PROMPT
+    с полем category — промпты не дублируются). Категории:
+      construction — стройка: строительные работы/прогресс на объекте;
+      site_related — связано с объектом, но НЕ стройка: материалы, техника,
+                     бытовки, инфраструктура, транспорт объекта;
+      unrelated    — постороннее: открытки, поздравления, личные фото, мемы.
+
+    Если vision не вернул явную category — fallback по сигналам чеклиста:
+    area/рабочие/прогресс/безопасность → construction; только техника →
+    site_related; ничего → unrelated (weather_visible НЕ сигнал — у открытки
+    с небом-иллюстрацией он может быть observed).
+
+    Возвращает (building, classification, category, cat_description):
+      construction       → (здание из area_identified | «Строительная площадка»,
+                            "construction", "construction", None)
+      site_related       → (здание | «Связано с объектом (не стройка)»,
+                            "site_related", "site_related", описание категории)
+      unrelated          → («Поздравительная открытка» | «Постороннее фото»,
+                            "unrelated", "unrelated", описание категории)
+      vision_unavailable → («Фото (описание недоступно)», "vision_unavailable",
+                            None, None)
+    """
+    try:
+        from vision_checklist import checklist_from_image
+        with open(local_path, "rb") as f:
+            image_base64 = base64.b64encode(f.read()).decode()
+        checklist = checklist_from_image(image_base64, mimetype)
+    except Exception as e:
+        log(f"[PRD] PHOTO VISION ERR: {e}")
+        return VISION_UNAVAILABLE_BUILDING, "vision_unavailable", None, None
+
+    if not checklist or "_error" in checklist:
+        err = checklist.get("_error") if isinstance(checklist, dict) else "?"
+        log(f"[PRD] PHOTO VISION unavailable (checklist _error={err})")
+        return VISION_UNAVAILABLE_BUILDING, "vision_unavailable", None, None
+
+    from vision_checklist import checklist_category
+    category, reason = checklist_category(checklist)
+
+    area = checklist.get("area_identified") or {}
+    area_value = str(area.get("value") or "").strip()
+    area_ok = bool(area.get("observed")) and bool(area_value)
+    building = _normalize_vision_area(area_value) if area_ok else None
+
+    signals = []
+    for f in ("workers_count", "equipment_visible", "progress_vs_plan", "safety_issues"):
+        e = checklist.get(f) or {}
+        if e.get("observed") and str(e.get("value") or "").strip():
+            signals.append(f)
+
+    # 1. construction: явная категория vision ИЛИ fallback-сигналы стройки
+    if category == CATEGORY_CONSTRUCTION or (
+            not category and (area_ok or any(s in signals for s in
+                                             ("workers_count", "progress_vs_plan", "safety_issues")))):
+        building = building or CONSTRUCTION_DEFAULT_BUILDING
+        log(f"[PRD] PHOTO VISION category=construction (signals: {', '.join(signals) or 'area'}) → building={building}")
+        return building, CATEGORY_CONSTRUCTION, CATEGORY_CONSTRUCTION, None
+
+    # 2. site_related: явная категория vision ИЛИ только техника/оборудование
+    if category == CATEGORY_SITE_RELATED or (not category and "equipment_visible" in signals):
+        building = building or SITE_RELATED_DEFAULT_BUILDING
+        desc = reason or "Связано с объектом (не стройка)"
+        log(f"[PRD] PHOTO VISION category=site_related (не стройка: {desc}) → building={building}")
+        return building, CATEGORY_SITE_RELATED, CATEGORY_SITE_RELATED, desc
+
+    # 3. unrelated: явная категория vision ИЛИ отсутствие любых сигналов стройки
+    if reason and _detect_greeting(reason):
+        building = GREETING_CARD_BUILDING
+    else:
+        building = UNRELATED_DEFAULT_BUILDING
+    desc = reason or "Постороннее фото (сигналы стройки отсутствуют)"
+    log(f"[PRD] PHOTO VISION category=unrelated ({desc}) → building={building}")
+    return building, CATEGORY_UNRELATED, CATEGORY_UNRELATED, desc
+
+
 def _clean_body(msg: dict) -> str:
     """body моста для медиа = caption. Плейсхолдеры вида '[image received]' — пусто."""
     body = (msg.get("body") or "").strip()
@@ -570,13 +693,60 @@ def _save_prod_photo(msg, mid) -> bool:
     """Фото из боевой: bot_memory_messages (метаданные ВСЕГДА) + ojr_photo_log.
     Кэш-файла нет ИЛИ mediaMissing:true → строка с file_path=NULL (факт прихода
     фото не теряется; бинарь недоступен — факт прихода сохранён метаданными).
+    Классификация (3 категории, 2026-08-02; порядок уточнён 2026-08-02 по
+    замечанию Codex — greeting по caption идёт ПЕРВЫМ):
+      - caption-поздравление (_detect_greeting) → category=unrelated,
+        «Поздравительная открытка», НЕ в ojr_photo_log — даже если в caption есть
+        здание («АБК поздравляет с Днём строителя» — открытка, а НЕ стройка);
+      - нет caption-поздравления → Grok vision (vision_checklist.checklist_from_image,
+        поле category): construction → building из area_identified (или «Строительная
+        площадка»), в ojr_photo_log; site_related → «Связано с объектом (не стройка)»
+        + описание категории, НЕ в ojr_photo_log; unrelated → «Поздравительная
+        открытка»/«Постороннее фото», НЕ в ojr_photo_log;
+      - vision недоступна (файла нет) → caption-здание (АБК/Общежитие/Галерея/
+        Общий план) → как раньше, в ojr_photo_log;
+      - ни поздравления, ни здания, ни vision → «Фото (описание недоступно)»,
+        НЕ в ojr_photo_log
+        (только bot_memory_messages с тегом classification=vision_unavailable).
+    Все не-строительные фото сохраняются в bot_memory_messages с тегом category
+    (site_related/unrelated) и описанием category_description.
     Возвращает True, только если факт фото зафиксирован в БД полностью."""
     cap = _clean_body(msg)
     media_missing = bool(msg.get("mediaMissing"))
     local_path = None if media_missing else _media_local_path(msg)
-    building = _detect_building(cap) or "Общий план"
+    mimetype = msg.get("mime") or "image/jpeg"
+
+    # Порядок проверок (2026-08-02, замечание Codex): greeting по caption — ПЕРВЫМ,
+    # иначе caption «АБК поздравляет с Днём строителя» перехватится _detect_building
+    # («АБК») как стройка. Затем vision-классификация (caption не поздравление и
+    # файл есть), и только потом caption-здание — fallback, когда vision недоступна
+    # (файла нет).
+    if _detect_greeting(cap):
+        building = GREETING_CARD_BUILDING
+        classification = "greeting_card"
+        category = CATEGORY_UNRELATED
+        cat_description = "Поздравительная открытка"
+    elif local_path:
+        building, classification, category, cat_description = _classify_photo_via_vision(local_path, mimetype)
+    elif (caption_building := _detect_building(cap)):
+        building = caption_building
+        classification = "caption"
+        category = CATEGORY_CONSTRUCTION
+        cat_description = None
+    else:
+        building = VISION_UNAVAILABLE_BUILDING
+        classification = "vision_unavailable"
+        category = None
+        cat_description = None
+
     sender = msg.get("senderId") or msg.get("senderNumber") or "user"
     tags = {"msg_id": mid, "building": building}
+    if classification != "caption":
+        tags["classification"] = classification
+    if category:
+        tags["category"] = category
+    if cat_description:
+        tags["category_description"] = cat_description
     if media_missing:
         tags["media_missing"] = True
     if local_path:
@@ -589,6 +759,11 @@ def _save_prod_photo(msg, mid) -> bool:
         log(f"[PRD] PHOTO {mid[:12]} MEDIA MISSING (download failed) — metadata row {rid}, file_path=NULL, ACK'ed (факт прихода сохранён)")
     elif not local_path:
         log(f"[PRD] PHOTO {mid[:12]} no local file (mediaUrls={msg.get('mediaUrls')}) — metadata row {rid}, file missing")
+    # В ojr_photo_log — ТОЛЬКО строительные фото (caption-здание или vision-construction).
+    # site_related / unrelated / greeting_card / vision_unavailable — не стройка.
+    if classification not in ("caption", CATEGORY_CONSTRUCTION):
+        log(f"[PRD] PHOTO {mid[:12]} category={category or classification} (не стройка) — metadata row {rid}, ojr_photo_log SKIPPED (building={building})")
+        return True
     conn = None
     try:
         from db import get_conn

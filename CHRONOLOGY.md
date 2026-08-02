@@ -1,5 +1,26 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 01.08-02.08.2026 — Полный listen-only фикс боевой группы (collect-only), аудит Codex/Grok CLI, Бишкек-время БД, 3-категорийная классификация фото
+
+### Аудит / Исправления
+- **Инцидент 01.08 08:54–08:57 UTC:** агент ОТВЕЧАЛ в боевую группу `120363400682390076@g.us` — нарушение listen-only. Устранён полностью.
+- **ПОЛНЫЙ фикс listen-only (боевая группа → collect-only):**
+  - `collectQueue` в `bridge.js` (`WHATSAPP_COLLECT_ONLY_CHATS`) — входящие из боевой группы идут только в очередь сбора, не в ответный контур
+  - `/collect-messages` — ручной запуск сбора; JSONL-журнал `collect_journal.jsonl` + `/collect-ack` (подтверждение после записи в БД)
+  - `failClosed`: HTTP 503 при пустом конфиге collect-only — не молчаливый пропуск
+  - 403-гварды на ВСЕ outbound-каналы; изоляция от `messageQueue`; `/messages` без splice
+  - Сбор `fromMe`/`fromOwner`; overflow сохраняет журнал; обработка `mediaMissing`
+  - Фильтр `channel_directory`; send-guard адаптера (`_standalone_send`); диспетчер обрабатывает только `/collect-messages` + deny-send PRODUCTION + ack после записи в БД
+- **Аудит настоящими CLI (не симуляция):** Codex CLI — 5 раундов REJECT→APPROVED; Grok CLI — APPROVED; кросс-ревью — APPROVED. Все найденные баги закрыты до нуля.
+- **02.08 — время БД → местное Бишкек UTC+6:** `db.py` (`SET TIME ZONE 'Asia/Bishkek'`), `handlers.py`, `gather_snapshot_data.py`, `cleanup_db.py` (PGOPTIONS)
+- **Классификация фото — 3 категории:** `construction` → `ojr_photo_log`; `site_related` / `unrelated` / `vision_unavailable` → только `bot_memory_messages`; greeting-приоритет: «АБК поздравляет…» → открытка. `vision_checklist.py`: `CHECKLIST_PROMPT` + поле `category`
+
+### Сегодня (02.08)
+- **Проверка сбора:** «С Днём строителя, коллектив!» и фото Максата собраны — доказано [PRD] SAVED/COLLECTED
+- **Статус бота:** боевая группа в collect-only режиме, ответы заблокированы на всех уровнях (bridge + adapter + dispatcher)
+
+---
+
 ## 02.08.2026 (04:04 UTC) — Ночная сводка: спокойный день, circulation graph, MEMORY.md → SOUL.md
 
 ### Статус систем (04:04 UTC)
@@ -481,3 +502,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **31.07.2026 08:02** — docs: ecology 2025 docs updated — period 19.03-31.07.2026 (`ff48764`)
 - **01.08.2026 04:04** — chore: auto-sync 01.08 (`e3d3949`)
 - **02.08.2026 00:29** — chore: auto-sync 02.08 — chronology, KG, whatsapp commands, briefing (`df3c9a1`)
+- **02.08.2026 04:21** — chore: auto-sync 02.08 (`e1fc08c`)

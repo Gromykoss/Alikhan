@@ -59,7 +59,14 @@ DB_CONFIG = {
 
 def get_conn():
     DB_CONFIG["host"] = resolve_db_host()
-    return psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**DB_CONFIG)
+    # Сессия в местном времени Бишкек (UTC+6): все SELECT timestamptz
+    # (created_at, message_time, event_start, ...) и касты ::date/DATE()
+    # возвращаются в бишкекском дне, а не в UTC.
+    cur = conn.cursor()
+    cur.execute("SET TIME ZONE 'Asia/Bishkek'")
+    cur.close()
+    return conn
 
 def save_message(chat_id, sender, role, content, message_type="text", file_name=None):
     conn = get_conn()

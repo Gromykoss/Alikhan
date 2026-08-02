@@ -34,7 +34,13 @@ CHECKLIST_SCHEMA = {
     "progress_vs_plan": "string - visible progress relative to expected stage",
     "safety_issues": "string - any visible safety concerns (missing PPE, unsafe scaffolding, etc.)",
     "area_identified": "string - which building area/section is shown",
+    "category": "one of: construction | site_related | unrelated (see rules)",
+    "category_reason": "short Russian phrase: what is visible and why this category was chosen",
 }
+
+# 3-категорийная классификация фото (2026-08-02): стройка / связано с объектом
+# (но не стройка) / постороннее. Значение поля category в чеклисте vision.
+PHOTO_CATEGORIES = ("construction", "site_related", "unrelated")
 
 # Prompt that forces Grok to respond in structured JSON
 CHECKLIST_PROMPT = """You are analyzing a construction site photo for a daily report (ЕЖО). 
@@ -47,7 +53,9 @@ Structure:
   "equipment_visible": {"observed": true/false, "value": "list of equipment", "confidence": 0.0-1.0},
   "progress_vs_plan": {"observed": true/false, "value": "visible progress assessment", "confidence": 0.0-1.0},
   "safety_issues": {"observed": true/false, "value": "any safety concerns visible", "confidence": 0.0-1.0},
-  "area_identified": {"observed": true/false, "value": "building/section name", "confidence": 0.0-1.0}
+  "area_identified": {"observed": true/false, "value": "building/section name", "confidence": 0.0-1.0},
+  "category": {"observed": true/false, "value": "construction|site_related|unrelated", "confidence": 0.0-1.0},
+  "category_reason": {"observed": true/false, "value": "short reason in Russian", "confidence": 0.0-1.0}
 }
 
 Rules:
@@ -58,6 +66,18 @@ Rules:
 - area_identified: use Russian names (Общежитие, АБК, Галерея, Общий план) if recognizable
 - safety_issues: note missing helmets, unsafe scaffolding, open trenches, missing barriers
 - progress_vs_plan: compare visible state to what should be done at this stage of a building construction
+- category: exactly ONE of the three:
+  * construction — photo shows actual construction work or visible progress of the site
+    (workers building, scaffolding, concrete works, erected structures of АБК/Общежитие/Галерея);
+  * site_related — photo IS related to the construction site but shows NO construction
+    work/progress: materials stockpiles (brick, rebar, cement, pallets), equipment/machinery
+    (parked or transporting, no active construction), site cabins (бытовки), site infrastructure
+    (roads, fencing, lighting, power), site transport (dump trucks, loaders);
+  * unrelated — NOT related to the site: greeting cards (открытки), congratulations,
+    personal photos, memes, food, landscapes without site context
+- category_reason: short Russian phrase (2-5 words) explaining the choice,
+  e.g. "открытка с поздравлением", "склад арматуры", "бытовки на площадке", "монтаж каркаса АБК"
+- category.observed=true if the photo content can be assessed; false if it cannot be determined
 
 Respond with JSON only."""
 
@@ -163,9 +183,33 @@ def _validate_checklist(data: dict) -> dict:
         result[field] = {
             "observed": bool(entry.get("observed", False)),
             "value": str(entry.get("value", "")),
-            "confidence": float(entry.get("confidence", 0.0)),
+            "confidence": float(entry.get("confidence") or 0.0),
         }
     return result
+
+
+def checklist_category(checklist) -> tuple:
+    """Извлечь категорию фото из чеклиста vision (3-категорийная классификация).
+
+    Возвращает (category, reason):
+      category — одна из PHOTO_CATEGORIES ("construction"/"site_related"/"unrelated"),
+                 либо None, если vision не дал явной категории (старый промпт,
+                 невалидное значение или observed=false);
+      reason   — короткое описание категории (category_reason) или "".
+    """
+    if not isinstance(checklist, dict):
+        return None, ""
+    entry = checklist.get("category")
+    if not isinstance(entry, dict) or not entry.get("observed"):
+        return None, ""
+    value = str(entry.get("value") or "").strip().lower()
+    if value not in PHOTO_CATEGORIES:
+        return None, ""
+    reason_entry = checklist.get("category_reason")
+    reason = ""
+    if isinstance(reason_entry, dict):
+        reason = str(reason_entry.get("value") or "").strip()
+    return value, reason
 
 
 def checklist_from_image(image_base64: str, mimetype: str = "image/jpeg",

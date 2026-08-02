@@ -31,7 +31,11 @@ if not DB_PASS:
     except Exception:
         pass
 
-PSQL = f"docker exec evolution-postgres psql -U evolution -d evolution_db"
+# Все psql-вызовы — в часовом поясе Бишкека (UTC+6), как в приложении
+# (bot/db.py get_conn: SET TIME ZONE 'Asia/Bishkek'). PGOPTIONS='-c timezone=...'
+# — эквивалент SET TIME ZONE на старте сессии: без него created_at::date
+# фильтры дают UTC-день и не совпадают с фильтрами приложения.
+PSQL = "docker exec -e PGOPTIONS='-c timezone=Asia/Bishkek' evolution-postgres psql -U evolution -d evolution_db"
 PG_ENV = {"DB_HOST": DB_HOST, "DB_PASS": DB_PASS}
 
 
