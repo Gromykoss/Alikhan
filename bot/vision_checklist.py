@@ -26,6 +26,25 @@ from typing import Any, Dict, Optional
 
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 DEFAULT_XAI_KEY = os.environ.get("XAI_API_KEY", os.environ.get("XAI_KEY", ""))
+if not DEFAULT_XAI_KEY:
+    # Fallback (по образцу db.py, строки 8-15): cron-процессы не наследуют env Hermes,
+    # поэтому XAI_API_KEY в os.environ может быть пуст — читаем .env напрямую.
+    # Порядок: secrets.env ПЕРВЫМ — проверено 2026-08-02: ключ в profile .env
+    # отклоняется xAI (HTTP 400 "Incorrect API key"), ключ в secrets.env — рабочий.
+    for env_path in (
+        "/home/hermes-workspace/.hermes/secrets.env",
+        "/home/hermes-workspace/.hermes/profiles/alikhan/.env",
+    ):
+        try:
+            with open(env_path) as f:
+                for line in f:
+                    if line.startswith("XAI_API_KEY="):
+                        DEFAULT_XAI_KEY = line.strip().split("=", 1)[1]
+                        break
+        except Exception:
+            pass
+        if DEFAULT_XAI_KEY:
+            break
 
 CHECKLIST_SCHEMA = {
     "weather_visible": "string describing sky conditions (sunny/cloudy/rain/snow/fog)",
@@ -102,7 +121,7 @@ def _call_grok_vision(image_base64: str, mimetype: str = "image/jpeg",
         return None
 
     payload = {
-        "model": "grok-2-vision-latest",
+        "model": "grok-4-latest",  # 2026-08-02: grok-2-vision-latest удалён из каталога xAI (HTTP 400 "Model not found"); grok-4-latest — как в handlers.py
         "messages": [
             {
                 "role": "user",
