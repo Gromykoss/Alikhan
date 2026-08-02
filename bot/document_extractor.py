@@ -21,6 +21,8 @@ HOST = "127.0.0.1"
 PORT = 8099
 MAX_BODY_BYTES = 80 * 1024 * 1024
 PREVIEW_CHARS = 500
+# Below this amount of real text a PDF is treated as a scan -> OCR fallback.
+PDF_OCR_MIN_CHARS = 20
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, Any]) -> None:
@@ -64,29 +66,103 @@ def _extract_xlsx(file_obj: io.BytesIO | str) -> str:
     return _clean_text("\n".join(parts))
 
 
-def _extract_pdf(file_obj: io.BytesIO | str) -> str:
+def _extract_pdf(file_obj: io.BytesIO | str, raw_bytes: bytes | None = None, path: str | None = None) -> str:
     try:
         import pdfplumber
     except Exception:
         pdfplumber = None
 
+    text: str | None = None
     if pdfplumber is not None:
         try:
             with pdfplumber.open(file_obj) as pdf:
-                return _clean_text("\n".join(page.extract_text() or "" for page in pdf.pages))
+                text = _clean_text("\n".join(page.extract_text() or "" for page in pdf.pages))
         except Exception as exc:
-            return f"[extractor: pdfplumber failed: {type(exc).__name__}]"
+            text = f"[extractor: pdfplumber failed: {type(exc).__name__}]"
 
-    try:
-        from pypdf import PdfReader
-    except Exception as exc:
-        return f"[extractor: PDF extraction unavailable: {type(exc).__name__}]"
+    if text is None:
+        try:
+            from pypdf import PdfReader
+        except Exception as exc:
+            text = f"[extractor: PDF extraction unavailable: {type(exc).__name__}]"
+        else:
+            try:
+                reader = PdfReader(file_obj)
+                text = _clean_text("\n".join(page.extract_text() or "" for page in reader.pages))
+            except Exception as exc:
+                text = f"[extractor: pypdf failed: {type(exc).__name__}]"
 
+    # OCR fallback: a scan has no text layer, so pdfplumber/pypdf yield nothing.
+    # Render pages (poppler) and OCR them (tesseract rus+eng).
+    needs_ocr = (
+        text is None
+        or not text.strip()
+        or text.lstrip().startswith("[extractor:")
+        or _meaningful_len(text) < PDF_OCR_MIN_CHARS
+    )
+    if needs_ocr:
+        ocr_text = _ocr_pdf(raw_bytes, path)
+        if ocr_text and not ocr_text.lstrip().startswith("[extractor:"):
+            return ocr_text
+        if not text or not text.strip():
+            return ocr_text  # surface OCR errors when the primary pass gave nothing
+    return text or ""
+
+
+def _ocr_image(data: bytes) -> str:
+    """OCR a raster image (jpg/png/webp) via tesseract (rus+eng)."""
     try:
-        reader = PdfReader(file_obj)
-        return _clean_text("\n".join(page.extract_text() or "" for page in reader.pages))
+        import pytesseract
+        from PIL import Image
     except Exception as exc:
-        return f"[extractor: pypdf failed: {type(exc).__name__}]"
+        return f"[extractor: OCR unavailable: {type(exc).__name__}]"
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            # Tesseract assumes 70 dpi when metadata is missing, which hurts
+            # recognition; hint a realistic resolution instead.
+            if not img.info.get("dpi"):
+                img.info["dpi"] = (300, 300)
+            return _clean_text(pytesseract.image_to_string(img, lang="rus+eng"))
+    except Exception as exc:
+        return f"[extractor: OCR failed: {type(exc).__name__}]"
+
+
+def _extract_image(raw_bytes: bytes | None, path: str | None = None) -> str:
+    data = raw_bytes
+    if data is None and path:
+        try:
+            data = Path(path).read_bytes()
+        except OSError as exc:
+            return f"[extractor: failed to read image: {type(exc).__name__}]"
+    if data is None:
+        return "[extractor: image data missing]"
+    return _ocr_image(data)
+
+
+def _ocr_pdf(raw_bytes: bytes | None, path: str | None) -> str:
+    """Render PDF pages to images (poppler) and OCR them — scan fallback."""
+    try:
+        import pytesseract
+        from pdf2image import convert_from_bytes, convert_from_path
+    except Exception as exc:
+        return f"[extractor: PDF OCR unavailable: {type(exc).__name__}]"
+    try:
+        if raw_bytes is not None:
+            pages = convert_from_bytes(raw_bytes, dpi=200)
+        elif path:
+            pages = convert_from_path(path, dpi=200)
+        else:
+            return ""
+        parts = [_clean_text(pytesseract.image_to_string(page, lang="rus+eng")) for page in pages]
+        return _clean_text("\n\n".join(parts))
+    except Exception as exc:
+        return f"[extractor: PDF OCR failed: {type(exc).__name__}]"
+
+
+def _meaningful_len(text: str) -> int:
+    return len("".join(text.split()))
 
 
 def _fallback_text(filename: str, data_length: int | None = None, path: str | None = None) -> str:
@@ -141,8 +217,10 @@ def extract_document(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         if ext in {".xlsx", ".xlsm"}:
             text = _extract_xlsx(source)
+        elif ext in {".jpg", ".jpeg", ".png", ".webp"}:
+            text = _extract_image(raw_bytes, path or None)
         elif ext == ".pdf":
-            text = _extract_pdf(source)
+            text = _extract_pdf(source, raw_bytes=raw_bytes, path=path or None)
         else:
             text = _fallback_text(filename, size, path or None)
     except Exception as exc:
@@ -151,6 +229,10 @@ def extract_document(payload: dict[str, Any]) -> dict[str, Any]:
 
     if not text:
         text = _fallback_text(filename, size, path or None)
+    if text.lstrip().startswith("[extractor:"):
+        # Экстрактор вернул маркер ошибки вместо текста (OCR недоступен/сбой).
+        # Это НЕ успешное извлечение: отдаём ok=False и текст ошибки в error.
+        return _result(False, filename, "", text[:200])
     return _result(True, filename, text)
 
 

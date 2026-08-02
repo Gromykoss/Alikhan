@@ -1,5 +1,16 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 02.08.2026 — T-174 OCR Pipeline для документов стройки
+
+### Аудит / Исправления
+- Установлены: `tesseract-ocr`, `tesseract-ocr-rus`, `poppler-utils` (рендер PDF-сканов)
+- `document_extractor.py`: OCR изображений (pytesseract, rus+eng), PDF-сканы через pdf2image/poppler (fallback, когда нет текстового слоя: <20 символов или пусто), ошибки OCR → `ok=false` + `error`
+- `whatsapp_commands.py`: `_ocr_document_tags()` — POST `{path}` на extractor `127.0.0.1:8099/extract-document`, timeout 5с → теги `extract_ok` / `extracted_text` (≤20000 символов) / `extract_error` в `bot_memory_messages.tags`; содержимое документа в логи НЕ выводится; ошибки не ломают ack/seen
+- Аудит: Codex CLI — APPROVED; Grok CLI — APPROVED
+- Проверено живым тестом: PNG OCR «АКТ КС-2…» — текст распознан, теги записаны
+
+---
+
 ## 01.08-02.08.2026 — Полный listen-only фикс боевой группы (collect-only), аудит Codex/Grok CLI, Бишкек-время БД, 3-категорийная классификация фото
 
 ### Аудит / Исправления
@@ -503,3 +514,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **01.08.2026 04:04** — chore: auto-sync 01.08 (`e3d3949`)
 - **02.08.2026 00:29** — chore: auto-sync 02.08 — chronology, KG, whatsapp commands, briefing (`df3c9a1`)
 - **02.08.2026 04:21** — chore: auto-sync 02.08 (`e1fc08c`)
+- **02.08.2026 06:36** — fix: listen-only collection + bishkek tz + 3-category photo classification (`536c451`)

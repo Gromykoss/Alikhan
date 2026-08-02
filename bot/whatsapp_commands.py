@@ -807,6 +807,69 @@ def _save_prod_photo(msg, mid) -> bool:
                 pass
 
 
+# ─── OCR текста документов из боевой (T-174, 2026-08-02) ────────────────────
+# После сохранения документа (bot_memory_messages, row уже есть) — best-effort
+# POST /extract-document (path) → extracted_text/extract_ok/extract_error в tags.
+# Любые ошибки (сервис недоступен/таймаут 5с/БД) НЕ ломают обработку: документ
+# сохранён как раньше, ack/seen не меняются — только теги помечаются.
+DOC_OCR_EXTS = {".pdf", ".xlsx", ".xls", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"}
+EXTRACTOR_URL = "http://127.0.0.1:8099/extract-document"
+
+
+def _ocr_document_tags(rid, local_path):
+    """OCR текста документа по local_path → дописать теги в bot_memory_messages.
+    Теги: extract_ok ('true'/'false'), extracted_text (если есть), extract_error
+    (если не ok). Логи [PRD] DOC OCR ok/fail. Исключения не пробрасываются."""
+    extra = {}
+    try:
+        resp = requests.post(EXTRACTOR_URL, json={"path": local_path}, timeout=5)
+        data = resp.json()
+        ok = bool(data.get("ok"))
+        text = str(data.get("text") or "").strip()
+        extra["extract_ok"] = "true" if ok else "false"
+        if text:
+            # В теги кладём не более 20000 символов (защита от раздувания БД);
+            # в логи содержимое документа НЕ выводится.
+            extra["extracted_text"] = text[:20000]
+        if not ok:
+            err = str(data.get("error") or f"HTTP {resp.status_code}")
+            extra["extract_error"] = err[:500]
+        if ok:
+            log(f"[PRD] DOC OCR ok (len={len(text)})")
+        else:
+            log(f"[PRD] DOC OCR FAIL: {extra.get('extract_error')}")
+    except Exception as e:
+        extra["extract_ok"] = "false"
+        extra["extract_error"] = str(e)[:500]
+        log(f"[PRD] DOC OCR FAIL: {e}")
+    if not extra:
+        return
+    conn = None
+    try:
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE bot_memory_messages SET tags = tags || %s::jsonb WHERE id = %s",
+            (json.dumps(extra, ensure_ascii=False), rid))
+        conn.commit()
+        cur.close()
+        log(f"[PRD] DOC OCR tags → row {rid}: {list(extra)}")
+    except Exception as e:
+        log(f"[PRD] DOC OCR tags update ERR: {e} (row {rid})")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def _save_prod_document(msg, mid) -> bool:
     """Документ из боевой: bot_memory_messages (метаданные ВСЕГДА, local_path — если кэш есть).
     mediaMissing:true → метаданные с file_path=NULL + лог MEDIA MISSING, ack'ается
@@ -832,6 +895,10 @@ def _save_prod_document(msg, mid) -> bool:
         log(f"[PRD] DOC saved: {fname} → {local_path} (row {rid})")
     else:
         log(f"[PRD] DOC metadata-only: {fname} (row {rid}, mediaUrls={msg.get('mediaUrls')}, файл недоступен)")
+    # OCR текста документа (T-174): только если файл есть и расширение поддерживается.
+    # Best-effort — ошибки extractor'а/БД не влияют на ack/seen (документ уже сохранён).
+    if local_path and os.path.splitext(local_path)[1].lower() in DOC_OCR_EXTS:
+        _ocr_document_tags(rid, local_path)
     return True
 
 
