@@ -31,27 +31,31 @@ ROLE_HIERARCHY = {"admin": 3, "operator": 2, "viewer": 1}
 
 def _load_roles() -> dict:
     """Загрузить роли из authorised_senders.json. Обратная совместимость со старым форматом."""
-    try:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "authorized_senders.json")
-        with open(path) as f:
-            data = json.load(f)
-        if "roles" in data:
-            return data.get("roles", {})
-        elif "authorized_senders" in data:
-            # Старый формат — все становятся admin
-            return {phone: "admin" for phone in data.get("authorized_senders", [])}
-        return {}
-    except Exception:
-        return {}
+    candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "authorized_senders.json"),
+        "/home/hermes-workspace/Alikhan-migration/bot/authorized_senders.json",
+    ]
+    for path in candidates:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            if "roles" in data:
+                return data.get("roles", {})
+            elif "authorized_senders" in data:
+                # Старый формат — все становятся admin
+                return {phone: "admin" for phone in data.get("authorized_senders", [])}
+        except Exception:
+            continue
+    return {}
 
 
 ROLES = _load_roles()
 
 
 def _save_roles() -> bool:
-    """Сохранить роли на диск."""
+    """Сохранить роли на диск (канонический путь — bot/authorized_senders.json)."""
     try:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "authorized_senders.json")
+        path = "/home/hermes-workspace/Alikhan-migration/bot/authorized_senders.json"
         with open(path, "w") as f:
             json.dump({"roles": ROLES}, f, indent=2, ensure_ascii=False)
         return True
@@ -121,12 +125,45 @@ def save_seen(ids: set):
     except Exception as e:
         log(f"SAVE_SEEN ERR: {e}")
 
+def send_collect_ack(ids: list) -> bool:
+    """Подтвердить мосту успешную обработку батча (durability, аудит).
+
+    POST {BRIDGE}/collect-ack {"ids": [...]} — мост удаляет эти id из своего
+    файлового журнала. Не-ack id восстанавливаются после рестарта моста
+    (re-drain в collectQueue) → диспетчер ретраит их следующим тиком.
+    Вызывается ТОЛЬКО с успешно обработанными id (confirmed[]); упавшие
+    БД-записи в список не попадают."""
+    if not ids:
+        return True
+    try:
+        resp = requests.post(f"{BRIDGE}/collect-ack", json={"ids": ids}, timeout=5)
+        ok = resp.status_code == 200
+        log(f"ACK {len(ids)} ids → /collect-ack: {'OK' if ok else f'HTTP {resp.status_code}'}")
+        return ok
+    except Exception as e:
+        log(f"ACK ERR: {e} — ids останутся в журнале моста (re-drain после рестарта)")
+        return False
 
 def get_messages() -> list:
+    # v4: ТОЛЬКО /collect-messages. /messages?only=<collect-only-JID> на новом
+    # мосту ОПАСЕН: collect-only JID вырезаются из only= → список пустеет →
+    # legacy splice всей очереди шлюза (кража песочницы). Поэтому fallback на
+    # /messages ЗАПРЕЩЁН: при health fail или отсутствии collectOnlyChats
+    # возвращаем [] — следующий тик крона повторит попытку.
     try:
-        resp = requests.get(f"{BRIDGE}/messages", timeout=5)
+        health = requests.get(f"{BRIDGE}/health", timeout=3).json()
+    except Exception as e:
+        log(f"BRIDGE HEALTH ERR: {e} — collect-only не подтверждён, тик пропущен")
+        return []
+    if not health.get("collectOnlyChats"):
+        # Старый мост / новый без конфига / health не отдал ключ:
+        # НЕ читаем /messages, возвращаем пусто.
+        log("BRIDGE: collectOnlyChats отсутствует — /messages НЕ читаю, тик пропущен")
+        return []
+    try:
+        resp = requests.get(f"{BRIDGE}/collect-messages?only={PRODUCTION}", timeout=5)
         if resp.status_code != 200:
-            log(f"BRIDGE HTTP {resp.status_code}")
+            log(f"BRIDGE HTTP {resp.status_code} (/collect-messages)")
             return []
         data = resp.json()
         return data if isinstance(data, list) else []
@@ -136,6 +173,11 @@ def get_messages() -> list:
 
 
 def send_message(chat_id: str, text: str) -> bool:
+    if chat_id == PRODUCTION:
+        # ⛔ Client-side collect-only guard: боевая группа listen-only.
+        # НИКОГДА не отправляем, даже если мост не вернёт 403.
+        log(f"SEND BLOCKED: PRODUCTION listen-only (client guard), text '{text[:40]}' skipped")
+        return False
     try:
         resp = requests.post(f"{BRIDGE}/send", json={
             "chatId": chat_id, "message": text
@@ -149,6 +191,10 @@ def send_message(chat_id: str, text: str) -> bool:
 
 
 def send_file(chat_id: str, filepath: str, filename: str = None) -> bool:
+    if chat_id == PRODUCTION:
+        # ⛔ Client-side collect-only guard: боевая группа listen-only.
+        log(f"SEND_FILE BLOCKED: PRODUCTION listen-only (client guard), {filename or os.path.basename(filepath)} skipped")
+        return False
     try:
         fname = filename or os.path.basename(filepath)
         with open(filepath, "rb") as f:
@@ -424,7 +470,7 @@ def is_qa_text(text: str) -> bool:
     triggers = ["майкадам", "атантай", "наватек", "айбикон",
                 "рабочие", "рабочих", "итр", "поставки",
                 "техника", "материал", "происшестви",
-                "=", "м3", "м2", "кг", "т ", "шт"]
+                "=", "м3", "м2", "кг", " т ", "шт"]
     return any(w in t for w in triggers)
 
 
@@ -433,7 +479,9 @@ def handle_qa(text: str, chat_id: str):
     try:
         from qa import parse_qa
         today = bishkek_date_str()
-        facts = parse_qa(text, chat_id, today)
+        # ВАЖНО: parse_qa(gid, text, date_str) — gid ПЕРВЫМ аргументом.
+        # Раньше было parse_qa(text, chat_id, today) — gid=текст, text=chat_id.
+        facts = parse_qa(chat_id, text, today)
         if facts and chat_id == SANDBOX:
             send_message(chat_id, f"✅ Принято: {len(facts)} фактов")
         elif facts:
@@ -444,6 +492,188 @@ def handle_qa(text: str, chat_id: str):
             send_message(chat_id, f"❌ Ошибка: {e}")
 
 
+# ─── Сбор данных из боевой группы (listen-only, v3 — 2026-08-01) ───────────
+# Боевая группа 120363400682390076@g.us: ТОЛЬКО сбор (фото/документы/тексты →
+# bot_memory_messages + ojr_photo_log + ojr_* через parse_qa). Ответов в боевую
+# НИКОГДА не отправляем — только лог. Песочницу целиком обслуживает Hermes-шлюз.
+
+PHOTO_BUILDINGS = ["АБК", "Общежитие", "Галерея", "Общий план"]
+
+
+def _media_local_path(msg: dict):
+    """Локальный путь скачанного мостом медиа (поле mediaUrls — кэш-файлы)."""
+    urls = msg.get("mediaUrls") or []
+    if isinstance(urls, str):
+        urls = [urls]
+    urls = [u for u in urls if u]
+    for u in urls:
+        if os.path.exists(u):
+            return u
+    return urls[0] if urls else None
+
+
+def _detect_building(caption: str):
+    c = (caption or "").lower()
+    for tag in PHOTO_BUILDINGS:
+        if tag.lower() in c:
+            return tag
+    return None
+
+
+def _clean_body(msg: dict) -> str:
+    """body моста для медиа = caption. Плейсхолдеры вида '[image received]' — пусто."""
+    body = (msg.get("body") or "").strip()
+    if body.startswith("[") and body.endswith("received]"):
+        return ""
+    return body
+
+
+def _insert_media_message(chat_id, sender, message_type, mid, tags):
+    """bot_memory_messages: content=mid (дедуп), tags=jsonb. Возвращает id."""
+    conn = None
+    try:
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM bot_memory_messages WHERE chat_id=%s AND content=%s AND message_type=%s LIMIT 1",
+            (chat_id, mid, message_type))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        cur.execute(
+            "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) "
+            "VALUES (%s, %s, 'user', %s, %s, %s, %s) RETURNING id",
+            (chat_id, sender, message_type, mid,
+             json.dumps(tags, ensure_ascii=False), datetime.now(BISHKEK_TZ)))
+        rid = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        return rid
+    except Exception as e:
+        log(f"MEDIA INSERT ERR: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return None
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _save_prod_photo(msg, mid) -> bool:
+    """Фото из боевой: bot_memory_messages (метаданные ВСЕГДА) + ojr_photo_log.
+    Кэш-файла нет ИЛИ mediaMissing:true → строка с file_path=NULL (факт прихода
+    фото не теряется; бинарь недоступен — факт прихода сохранён метаданными).
+    Возвращает True, только если факт фото зафиксирован в БД полностью."""
+    cap = _clean_body(msg)
+    media_missing = bool(msg.get("mediaMissing"))
+    local_path = None if media_missing else _media_local_path(msg)
+    building = _detect_building(cap) or "Общий план"
+    sender = msg.get("senderId") or msg.get("senderNumber") or "user"
+    tags = {"msg_id": mid, "building": building}
+    if media_missing:
+        tags["media_missing"] = True
+    if local_path:
+        tags["local_path"] = local_path
+    rid = _insert_media_message(PRODUCTION, sender, "image", mid, tags)
+    if rid is None:
+        log(f"[PRD] PHOTO {mid[:12]} DB FAIL (metadata row not saved) — seen NOT marked")
+        return False
+    if media_missing:
+        log(f"[PRD] PHOTO {mid[:12]} MEDIA MISSING (download failed) — metadata row {rid}, file_path=NULL, ACK'ed (факт прихода сохранён)")
+    elif not local_path:
+        log(f"[PRD] PHOTO {mid[:12]} no local file (mediaUrls={msg.get('mediaUrls')}) — metadata row {rid}, file missing")
+    conn = None
+    try:
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+        trow = cur.fetchone()
+        title_id = trow[0] if trow else 1
+        photo_date = datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
+        cur.execute("SELECT 1 FROM ojr_photo_log WHERE file_message_id=%s LIMIT 1", (rid,))
+        exists = cur.fetchone()
+        if not exists:
+            cur.execute(
+                "INSERT INTO ojr_photo_log (title_id, photo_date, building, file_message_id, file_path, file_name, mime_type, caption, created_at) "
+                "VALUES (%s, %s::date, %s, %s, %s, %s, %s, %s, NOW())",
+                (title_id, photo_date, building, rid, local_path,
+                 os.path.basename(local_path) if local_path else None,
+                 msg.get("mime") or "image/jpeg", cap or None))
+            conn.commit()
+            if local_path:
+                log(f"[PRD] PHOTO saved: {building} — {os.path.basename(local_path)} (row {rid})")
+            else:
+                log(f"[PRD] PHOTO metadata-only: {building} (row {rid}, файл недоступен)")
+        else:
+            log(f"[PRD] PHOTO already logged (msg {mid[:12]})")
+        cur.close()
+        return True
+    except Exception as e:
+        log(f"PHOTO OJR ERR: {e} — seen NOT marked, retry next tick")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return False
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _save_prod_document(msg, mid) -> bool:
+    """Документ из боевой: bot_memory_messages (метаданные ВСЕГДА, local_path — если кэш есть).
+    mediaMissing:true → метаданные с file_path=NULL + лог MEDIA MISSING, ack'ается
+    (факт прихода сохранён метаданными, бинарь недоступен).
+    Возвращает True, только если строка записана в БД."""
+    fname = msg.get("fileName") or "document"
+    cap = _clean_body(msg)
+    media_missing = bool(msg.get("mediaMissing"))
+    local_path = None if media_missing else _media_local_path(msg)
+    sender = msg.get("senderId") or msg.get("senderNumber") or "user"
+    tags = {"msg_id": mid, "file_name": fname}
+    if media_missing:
+        tags["media_missing"] = True
+    if local_path:
+        tags["local_path"] = local_path
+    rid = _insert_media_message(PRODUCTION, sender, "document", mid, tags)
+    if rid is None:
+        log(f"[PRD] DOC DB FAIL: {fname} ({mid[:12]}) — seen NOT marked")
+        return False
+    if media_missing:
+        log(f"[PRD] DOC {mid[:12]} MEDIA MISSING (download failed): {fname} — metadata row {rid}, file_path=NULL, ACK'ed (факт прихода сохранён)")
+    elif local_path:
+        log(f"[PRD] DOC saved: {fname} → {local_path} (row {rid})")
+    else:
+        log(f"[PRD] DOC metadata-only: {fname} (row {rid}, mediaUrls={msg.get('mediaUrls')}, файл недоступен)")
+    return True
+
+
+def _save_prod_text(text, chat_id, mid, sender) -> bool:
+    """Текст из боевой: всегда сырая запись + parse_qa → ojr_* (если QA). Silent.
+    Возвращает True, только если сырая запись легла в БД (QA — best-effort)."""
+    try:
+        from db import save_message
+        save_message(chat_id, sender, "user", text, message_type="text")
+    except Exception as e:
+        log(f"RAW TEXT ERR: {e} — seen NOT marked, retry next tick")
+        return False
+    if is_qa_text(text):
+        handle_qa(text, chat_id)
+    return True
+
+
 def main():
     log("START")
     seen = load_seen()
@@ -451,66 +681,98 @@ def main():
     log(f"GOT {len(messages)} msgs, {len(seen)} seen")
 
     new_count = 0
+    confirmed = []  # mid, подтверждённые обработкой → seen (durability: только после успеха)
+    ack_ids = []    # mid → POST /collect-ack (успешно обработанные + re-ack seen из журнала моста)
     for msg in messages:
         mid = msg.get("messageId") or msg.get("id")
-        if not mid or mid in seen:
+        if not mid:
             continue
-        seen.add(mid)
-
-        if msg.get("fromMe") or msg.get("fromOwner"):
+        if mid in seen:
+            # Пришёл повторно (re-drain файлового журнала после рестарта моста):
+            # ack'аем повторно, чтобы мост удалил id из журнала, обработку не дублируем.
+            ack_ids.append(mid)
             continue
 
         chat_id = msg.get("chatId", "")
-        is_sandbox = chat_id == SANDBOX
-        is_prod = chat_id == PRODUCTION
-
-        if not is_sandbox and not is_prod:
+        # Свои сообщения из ПЕСОЧНИЦЫ / не-боевых чатов: данных для записи нет —
+        # помечаем seen без БД (иначе ретрай вечно). Данные при этом не теряются.
+        # Песочница: fromMe/fromOwner пропускаем как и раньше (не меняем).
+        if (msg.get("fromMe") or msg.get("fromOwner")) and chat_id != PRODUCTION:
+            confirmed.append(mid)
+            ack_ids.append(mid)
             continue
+        # Диспетчер получает из очереди ТОЛЬКО боевую (/collect-messages?only=PRODUCTION).
+        # Песочницу обслуживает Hermes-шлюз — сюда она не попадает.
+        if chat_id != PRODUCTION:
+            confirmed.append(mid)
+            ack_ids.append(mid)
+            continue
+        # fromMe/fromOwner ИЗ БОЕВОЙ (120363400682390076@g.us): свои сообщения
+        # несут данные (отчёты, фото, документы) — сохраняем как обычные
+        # prod-события (текст → save_message, фото/документы → их обработчики)
+        # и ТОЛЬКО ПОСЛЕ записи в БД ack'аем. Ack без записи = потеря данных.
 
-        grp = "SND" if is_sandbox else "PRD"
+        grp = "PRD"
+        mtype = msg.get("mediaType") or ""
+        sender = msg.get("senderId") or msg.get("senderNumber") or "user"
 
+        ok = False
         # --- Фото ---
-        if msg.get("imageMessage") or msg.get("_media", {}).get("mediaType") == "image":
-            log(f"[{grp}] PHOTO {mid[:12]}...")
-            new_count += 1
-            continue
-
+        if mtype == "image":
+            log(f"[{grp}] PHOTO {mid[:12]}... {_clean_body(msg)[:60]}")
+            ok = _save_prod_photo(msg, mid)
         # --- Документ ---
-        if msg.get("documentMessage") or msg.get("_media", {}).get("mediaType") == "document":
-            fname = msg.get("documentMessage", {}).get("fileName", "?")
-            log(f"[{grp}] DOC {mid[:12]}... {fname}")
-            new_count += 1
-            continue
-
+        elif mtype == "document":
+            log(f"[{grp}] DOC {mid[:12]}... {msg.get('fileName', '?')}")
+            ok = _save_prod_document(msg, mid)
+        # --- Прочие медиа (видео/аудио/стикеры/локации) — сырая запись ---
+        elif mtype in ("video", "gif", "ptt", "audio", "sticker", "location", "contact"):
+            log(f"[{grp}] MEDIA {mtype} {mid[:12]}...")
+            local_path = _media_local_path(msg)
+            tags = {"msg_id": mid, "media_type": mtype}
+            if local_path:
+                tags["local_path"] = local_path
+            ok = _insert_media_message(PRODUCTION, sender, mtype, mid, tags) is not None
         # --- Текст ---
-        text = extract_text(msg)
-        if not text:
-            log(f"[{grp}] EMPTY {mid[:12]}... — skipping")
-            continue
-
-        log(f"[{grp}] MSG {mid[:12]}...: {text[:100]}")
-
-        if is_sandbox:
-            if handle_sandbox_command(text, chat_id, msg):
-                new_count += 1
-                continue
-            # QA-факты: только для viewer+ (неавторизованные — мимо)
-            if is_qa_text(text) and check_role(msg, "viewer"):
-                handle_qa(text, chat_id)
-                new_count += 1
-                continue
-            log(f"[{grp}] UNHANDLED: {text[:80]}")
-            if get_role(msg) is not None:
-                send_message(chat_id, "❓ Команда не распознана. Доступные: /help")
         else:
-            # Production: QA только для viewer+
-            if is_qa_text(text) and check_role(msg, "viewer"):
-                handle_qa(text, chat_id)
-                new_count += 1
+            text = extract_text(msg)
+            if not text:
+                # Пустое событие из боевой (нет текста, нет медиа): факт прихода
+                # НЕ теряем — durable-запись в bot_memory_messages ПЕРЕД ack.
+                # Только успешная запись → confirmed/ack_ids; при ошибке БД —
+                # seen НЕ помечаем и мост НЕ ack'аем (ретрай на следующем тике).
+                # Песочница сюда не попадает (continue выше) — не меняется.
+                tags = {"msg_id": mid}
+                rid = _insert_media_message(PRODUCTION, sender, "empty", mid, tags)
+                if rid is None:
+                    log(f"[{grp}] EMPTY {mid[:12]}... DB FAIL (arrival not saved) — seen NOT marked, retry next tick")
+                    continue
+                log(f"[{grp}] EMPTY {mid[:12]}... arrival saved (row {rid})")
+                confirmed.append(mid)
+                ack_ids.append(mid)
                 continue
+            log(f"[{grp}] MSG {mid[:12]}...: {text[:100]}")
+            ok = _save_prod_text(text, chat_id, mid, sender)
 
-    if new_count:
+        if ok:
+            confirmed.append(mid)
+            ack_ids.append(mid)
+            new_count += 1
+            log(f"[{grp}] SAVED {mtype or 'text'} {mid} → DB")
+        else:
+            log(f"[{grp}] DB FAIL {mid[:12]}... — seen NOT marked, retry next tick")
+
+    # Durability: seen сохраняется ТОЛЬКО для подтверждённых mid. Если БД была
+    # недоступна — mid остаётся вне seen → следующий тик обработает снова.
+    if confirmed:
+        seen.update(confirmed)
         save_seen(seen)
+    # ACK мосту: ТОЛЬКО успешно обработанные (confirmed) — мост удалит их из
+    # файлового журнала; не-ack (DB FAIL) восстановятся после рестарта моста.
+    if ack_ids:
+        send_collect_ack(ack_ids)
+    if new_count > 0:
+        log(f"[PRD] COLLECTED {new_count}")
     log(f"DONE: {new_count} new")
 
 if __name__ == "__main__":

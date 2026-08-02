@@ -1,5 +1,39 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 02.08.2026 (04:04 UTC) — Ночная сводка: спокойный день, circulation graph, MEMORY.md → SOUL.md
+
+### Статус систем (04:04 UTC)
+- **Hermes Bridge:** ✅ активен, порт 3000 отвечает (uptime ~10.3ч), queueLength=0
+- **document-extractor:** ✅ endpoint 8099 отвечает
+- **Knowledge Graph:** актуален (сборка 01.08 04:04 UTC)
+- **alikhan.service:** ОСТАНОВЛЕН (v6, Hermes Agent)
+- **Hermes systemd unit:** inactive (dead) — Bridge запущен напрямую Hermes Agent, штатно
+
+### Коммиты за 24 часа
+- **01.08 04:04** — `e3d3949` chore: auto-sync 01.08 (CHRONOLOGY, CIRCULATION_GRAPH.md, бэкапы, knowledge graph, брифинг 31.07)
+
+### Что изменилось
+- **CIRCULATION_GRAPH.md** — новый документ: circulation edge types для knowledge graph (MGT_maccha #7). Информация не хранится — течёт: `работа → решение → артефакт → результат → обратно в работу`.
+- **АйБиКон реквизиты:** `docs/реквизиты_АйБиКон_КР.md` — 16 строк, юридические реквизиты компании
+- **HERMES-SOUL:** Hermes-оператор перешёл с MEMORY.md(hidden) на SOUL.md(public) — CRITICAL GATES публичны, failure-classification встроен в Rule 10
+- **AGENTS.md Alikhan:** bot/AGENTS.md переименован в `AGENTS.md._DEPRECATED_` (дубликат, основной — в корне)
+- **Knowledge Graph:** +68 строк, maintenance_report без критичных изменений
+- **Бэкапы:** удалены старые .bak файлы шаблона ЕЖО (0729, clean_0730, fix_pu)
+
+### Примечание
+- 01.08 — спокойный день. Никаких багов в production. Bridge стабилен 3+ дня после миграции v6.
+- Незакоммиченные изменения: whatsapp_commands.py, knowledge_graph (текущая CHRONOLOGY будет закоммичена авто-синхронизацией)
+
+---
+
+## 01.08.2026 — Внедрена классификация ошибок failure-classification
+
+- В MEMORY.md добавлено правило: ошибки классифицировать через failure-classification (6 классов: REASONING_FAILURE, TOOL_FAILURE, MEMORY_FAILURE, ORCHESTRATION_FAILURE, EVALUATION_FAILURE, COST_FAILURE)
+- TRANSIENT → retry max 3, PERMANENT → escalate (gateway не перезапускать!), LOGIC → replan+verify
+- Decision tree: классифицировать → применить recovery → если не помогло → escalate
+
+---
+
 ## 31.07.2026 (23:10 UTC) — Ночная сводка: экология 2025, авто-синхронизация, UTC→Бишкек
 
 ### Статус систем (23:10 UTC)
@@ -445,3 +479,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **31.07.2026 04:04** — chore: auto-sync 31.07 (`5277cce`)
 - **31.07.2026 07:33** — docs: финальные документы экология 2025 (`2d24c53`)
 - **31.07.2026 08:02** — docs: ecology 2025 docs updated — period 19.03-31.07.2026 (`ff48764`)
+- **01.08.2026 04:04** — chore: auto-sync 01.08 (`e3d3949`)
