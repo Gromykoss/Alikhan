@@ -480,3 +480,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **31.07.2026 07:33** — docs: финальные документы экология 2025 (`2d24c53`)
 - **31.07.2026 08:02** — docs: ecology 2025 docs updated — period 19.03-31.07.2026 (`ff48764`)
 - **01.08.2026 04:04** — chore: auto-sync 01.08 (`e3d3949`)
+- **02.08.2026 00:29** — chore: auto-sync 02.08 — chronology, KG, whatsapp commands, briefing (`df3c9a1`)
