@@ -1,5 +1,50 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 03.08.2026 (04:04 UTC) — Ночная сводка: OCR Pipeline, listen-only hardening, день строителя
+
+### Статус систем (04:04 UTC)
+- **Hermes Bridge:** ✅ активен, порт 3000 отвечает, queueLength=0
+- **document-extractor:** ✅ endpoint 8099 отвечает (OCR tesseract rus+eng)
+- **Knowledge Graph:** актуален (сборка 02.08 04:21 UTC)
+- **alikhan.service:** ОСТАНОВЛЕН (v6, Hermes Agent)
+
+### Коммиты за 24 часа
+- **02.08 00:29** — `df3c9a1` chore: auto-sync 02.08 (CHRONOLOGY, KG, whatsapp commands, брифинг)
+- **02.08 04:21** — `e1fc08c` chore: auto-sync 02.08
+- **02.08 06:36** — `536c451` fix: listen-only collection + bishkek tz + 3-category photo classification (8 файлов, +601/−14)
+- **02.08 09:07** — `5a652ed` feat: T-174 OCR pipeline — document_extractor OCR (rus+eng), dispatcher extracted_text tags (3 файла, +170/−9)
+- **02.08 09:08** — `f9c41a8` fix: vision_checklist fallback XAI_API_KEY from secrets.env
+
+### Что изменилось
+
+**OCR Pipeline (T-174):**
+- `document_extractor.py`: OCR изображений (pytesseract, rus+eng), PDF-сканы через pdf2image/poppler (fallback при <20 символов текстового слоя), ошибки → `ok=false` + `error`
+- `whatsapp_commands.py`: `_ocr_document_tags()` — теги `extract_ok` / `extracted_text` / `extract_error` в `bot_memory_messages.tags`
+- Установлены пакеты: `tesseract-ocr`, `tesseract-ocr-rus`, `poppler-utils`
+- Живой тест: PNG OCR «АКТ КС-2…» — текст распознан, теги записаны ✅
+
+**Listen-only hardening (боевая группа):**
+- `collectQueue` в bridge.js — входящие из боевой группы идут только в очередь сбора
+- `/collect-messages` + `/collect-ack` — ручной сбор с подтверждением
+- `failClosed`: HTTP 503 при пустом конфиге collect-only
+- 403-гварды на ВСЕ outbound-каналы; изоляция от `messageQueue`
+- Фильтр `channel_directory`; send-guard адаптера; deny-send PRODUCTION
+
+**3-категорийная классификация фото:**
+- `vision_checklist.py`: `CHECKLIST_PROMPT` + поле `category`
+- Категории: `construction` → `ojr_photo_log`; `site_related` / `unrelated` / `vision_unavailable` → `bot_memory_messages`
+- `test_photo_classification.py` — новый тестовый модуль (323 строки)
+
+**Бишкек-время:**
+- `db.py`, `handlers.py`, `gather_snapshot_data.py`, `cleanup_db.py` — `SET TIME ZONE 'Asia/Bishkek'`
+
+### Примечание
+- 02.08 — насыщенный день. Полный listen-only fix боевой группы (после инцидента 01.08), OCR pipeline для документов стройки, классификация фото.
+- «С Днём строителя, коллектив!» и фото Максата собраны — [PRD] SAVED/COLLECTED.
+- Статус боевой группы: collect-only, ответы заблокированы на всех уровнях (bridge + adapter + dispatcher).
+
+---
+
 ## 02.08.2026 — T-174 OCR Pipeline для документов стройки
 
 ### Аудит / Исправления
@@ -515,3 +560,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **02.08.2026 00:29** — chore: auto-sync 02.08 — chronology, KG, whatsapp commands, briefing (`df3c9a1`)
 - **02.08.2026 04:21** — chore: auto-sync 02.08 (`e1fc08c`)
 - **02.08.2026 06:36** — fix: listen-only collection + bishkek tz + 3-category photo classification (`536c451`)
+- **02.08.2026 09:07** — feat: T-174 OCR pipeline — document_extractor OCR (rus+eng), dispatcher extracted_text tags (`5a652ed`)
+- **02.08.2026 09:08** — fix: vision_checklist fallback XAI_API_KEY from secrets.env (`f9c41a8`)

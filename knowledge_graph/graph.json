@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-02T00:15:16.316156+00:00",
+  "built_at": "2026-08-03T00:15:58.378579+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 241,
-    "edges": 418,
+    "nodes": 247,
+    "edges": 432,
     "projects": 1,
-    "events": 20,
+    "events": 22,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -15,7 +15,7 @@
     "services": 3,
     "templates": 4,
     "decisions": 3,
-    "tasks": 4
+    "tasks": 5
   },
   "nodes": [
     [
@@ -751,7 +751,25 @@
       }
     ],
     [
-      "event/2026-08-02/Ночная сводка: спокойный день, circulation graph,",
+      "event/2026-08-03/Ночная сводка: OCR Pipeline, listen-only hardening",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-03",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: OCR Pipeline, listen-only hardening, день строителя",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-02/T-174 OCR Pipeline для документов стройки",
       {
         "type": "event"
       }
@@ -760,6 +778,18 @@
       "2026-08-02",
       {
         "type": "date"
+      }
+    ],
+    [
+      "T-174 OCR Pipeline для документов стройки",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-02/Ночная сводка: спокойный день, circulation graph,",
+      {
+        "type": "event"
       }
     ],
     [
@@ -1078,6 +1108,12 @@
       "bug/AL-020",
       {
         "type": "bug"
+      }
+    ],
+    [
+      "task/T-174",
+      {
+        "type": "task"
       }
     ],
     [
@@ -1748,6 +1784,13 @@
     },
     {
       "source": "decision/ojr-migration",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/ojr-migration",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1804,6 +1847,13 @@
     },
     {
       "source": "decision/hermes-bridge-migration",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1849,6 +1899,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -2245,6 +2302,13 @@
     },
     {
       "source": "bot_component/fill_ejo",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -2454,6 +2518,13 @@
       "confidence": 0.9
     },
     {
+      "source": "bot_component/handlers",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "bot_component/daily_snapshot",
       "target": "bot/daily_snapshot.py",
       "predicate": "located_at",
@@ -2623,6 +2694,13 @@
     },
     {
       "source": "db_table/ojr_photo_log",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -2668,6 +2746,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -3315,6 +3400,48 @@
       "confidence": 0.9
     },
     {
+      "source": "event/2026-08-03/Ночная сводка: OCR Pipeline, listen-only hardening",
+      "target": "2026-08-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-03/Ночная сводка: OCR Pipeline, listen-only hardening",
+      "target": "Ночная сводка: OCR Pipeline, listen-only hardening, день строителя",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-03/Ночная сводка: OCR Pipeline, listen-only hardening",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-02/T-174 OCR Pipeline для документов стройки",
+      "target": "2026-08-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-02/T-174 OCR Pipeline для документов стройки",
+      "target": "T-174 OCR Pipeline для документов стройки",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-02/T-174 OCR Pipeline для документов стройки",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-08-02/Ночная сводка: спокойный день, circulation graph,",
       "target": "2026-08-02",
       "predicate": "occurred_on",
@@ -3789,6 +3916,13 @@
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
       "confidence": 0.92
+    },
+    {
+      "source": "task/T-174",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
     },
     {
       "source": "task/T-115",
