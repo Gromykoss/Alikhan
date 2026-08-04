@@ -1,5 +1,27 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 04.08.2026 (04:00 UTC) — Ночная сводка: спокойный день, системы стабильны
+
+### Статус систем (04:00 UTC)
+- **Hermes Bridge:** ✅ активен, порт 3000 отвечает, HTTP 200
+- **document-extractor:** ✅ endpoint 8099 отвечает, ok=true
+- **Knowledge Graph:** актуален (сборка 03.08 04:06 UTC)
+- **alikhan.service:** ОСТАНОВЛЕН (v6, Hermes Agent)
+
+### Коммиты за 24 часа
+- **03.08 04:06** — `332f569` chore: auto-sync 03.08 — chrono, knowledge_graph, briefing
+
+### Что изменилось
+- **Никаких изменений кода.** 03.08 — спокойный день, первый день без новых коммитов после насыщенной недели (listen-only hardening, OCR pipeline, photo classification).
+- **Knowledge Graph:** maintenance_report без критичных изменений.
+
+### Примечание
+- Все системы стабильны. Мост работает 7+ дней после миграции v6.
+- Боевая группа: collect-only режим подтверждён, ответы заблокированы.
+- Это первый «тихий» день после завершения основного блока работ (29.07–02.08).
+
+---
+
 ## 03.08.2026 (04:04 UTC) — Ночная сводка: OCR Pipeline, listen-only hardening, день строителя
 
 ### Статус систем (04:04 UTC)
@@ -562,3 +584,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **02.08.2026 06:36** — fix: listen-only collection + bishkek tz + 3-category photo classification (`536c451`)
 - **02.08.2026 09:07** — feat: T-174 OCR pipeline — document_extractor OCR (rus+eng), dispatcher extracted_text tags (`5a652ed`)
 - **02.08.2026 09:08** — fix: vision_checklist fallback XAI_API_KEY from secrets.env (`f9c41a8`)
+- **03.08.2026 04:06** — chore: auto-sync 03.08 — chrono, knowledge_graph, briefing (`332f569`)

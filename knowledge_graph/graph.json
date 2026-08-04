@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-03T00:15:58.378579+00:00",
+  "built_at": "2026-08-04T00:18:12.515746+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 247,
-    "edges": 432,
+    "nodes": 250,
+    "edges": 435,
     "projects": 1,
-    "events": 22,
+    "events": 23,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,24 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-04/Ночная сводка: спокойный день, системы стабильны",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-04",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: спокойный день, системы стабильны",
       {
         "type": "description"
       }
@@ -3398,6 +3416,27 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-04/Ночная сводка: спокойный день, системы стабильны",
+      "target": "2026-08-04",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-04/Ночная сводка: спокойный день, системы стабильны",
+      "target": "Ночная сводка: спокойный день, системы стабильны",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-04/Ночная сводка: спокойный день, системы стабильны",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-03/Ночная сводка: OCR Pipeline, listen-only hardening",

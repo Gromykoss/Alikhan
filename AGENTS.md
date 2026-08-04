@@ -14,6 +14,8 @@
 ### ⛔ DELEGATION GATE — ПРАВИЛО №0 (MANDATORY — 25.07.2026, усилено 26.07)
 
 **Alikhan на DeepSeek v4 Pro — ОРКЕСТРАТОР, не исполнитель кода. Никаких исключений.**
+**MoA Auto:** `skill_view('moa-auto')` — автоматический Codex Maker + Grok Checker.
+**⛔ НИКОГДА `delegate_task` без `acp_command`** — spawn default-сабагента (DeepSeek-клон), пустая трата токенов.
 
 **SELF-CHECK перед КАЖДЫМ tool call:**
 > «Этот вызов: пишет код, патчит файл, или делает что-то что Codex/Grok Build может сделать?»
