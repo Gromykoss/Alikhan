@@ -609,3 +609,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **02.08.2026 09:08** — fix: vision_checklist fallback XAI_API_KEY from secrets.env (`f9c41a8`)
 - **03.08.2026 04:06** — chore: auto-sync 03.08 — chrono, knowledge_graph, briefing (`332f569`)
 - **04.08.2026 04:06** — chore: auto-sync 04.08 (`8515757`)
+- **04.08.2026 23:05** — chore: nightly CHRONOLOGY + briefing 04.08 (23:00 UTC) (`15755d8`)
