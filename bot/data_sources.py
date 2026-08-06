@@ -237,6 +237,29 @@ def _canon_org(org):
         return (org or '').title()
 
 
+def _norm_pos(pos):
+    """Normalize personnel positions for dedup/accounting."""
+    p = (pos or '').strip().lower().replace('ё', 'е')
+    if not p:
+        return ''
+    if 'прораб' in p:
+        return 'прораб'
+    if p in ('рабочий', 'рабочие', 'работник') or 'рабоч' in p or 'работник' in p:
+        return 'рабочие'
+    is_supervisor = (
+        re.search(r'\bрук\.', p)
+        or re.search(r'\bруководител', p)
+        or re.search(r'\bрук\s+стр', p)
+    )
+    if p == 'итр' or 'инженер' in p or 'геодезист' in p or 'электрик' in p or is_supervisor:
+        return 'итр'
+    if 'машинист' in p:
+        return 'машинист'
+    if 'водитель' in p:
+        return 'водитель'
+    return p
+
+
 def get_staff(date):
     """Primary: ojr_section1_personnel active window. Fallback: bot_memory_facts.
 
@@ -257,15 +280,57 @@ def get_staff(date):
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT DISTINCT ON (LOWER(organization_name), LOWER(position)) "
-            "       LOWER(organization_name) as org, LOWER(position) as pos, "
-            "       COALESCE(workers_count, 1) as wc, "
-            "       start_date "
-            "FROM ojr_section1_personnel "
-            "WHERE start_date <= %s::date "
-            "  AND (end_date IS NULL OR end_date >= %s::date) "
-            "ORDER BY LOWER(organization_name), LOWER(position), start_date DESC, "
-            "         COALESCE(workers_count, 0) DESC NULLS LAST",
+            """
+            WITH active AS (
+                SELECT
+                    LOWER(organization_name) AS org,
+                    LOWER(position) AS pos,
+                    CASE
+                        WHEN LOWER(COALESCE(position, '')) LIKE '%%прораб%%' THEN 'прораб'
+                        WHEN LOWER(position) IN ('рабочий', 'рабочие', 'работник')
+                             OR LOWER(COALESCE(position, '')) LIKE '%%рабоч%%'
+                             OR LOWER(COALESCE(position, '')) LIKE '%%работник%%' THEN 'рабочие'
+                        WHEN LOWER(position) = 'итр'
+                             OR LOWER(COALESCE(position, '')) LIKE '%%инженер%%'
+                             OR LOWER(COALESCE(position, '')) LIKE '%%геодезист%%'
+                             OR LOWER(COALESCE(position, '')) LIKE '%%электрик%%'
+                             OR LOWER(COALESCE(position, '')) ~ '(^|[[:space:]])рук\\.'
+                             OR LOWER(COALESCE(position, '')) ~ '(^|[[:space:]])руководител'
+                             OR LOWER(COALESCE(position, '')) ~ '(^|[[:space:]])рук[[:space:]]+стр' THEN 'итр'
+                        WHEN LOWER(COALESCE(position, '')) LIKE '%%машинист%%' THEN 'машинист'
+                        WHEN LOWER(COALESCE(position, '')) LIKE '%%водитель%%' THEN 'водитель'
+                        ELSE LOWER(COALESCE(position, ''))
+                    END AS norm_pos,
+                    COALESCE(workers_count, 1) AS wc,
+                    start_date,
+                    CASE
+                        WHEN sync_source = 'wa' THEN 3
+                        WHEN sync_source = 'qa' THEN 2
+                        ELSE 1
+                    END AS source_rank
+                FROM ojr_section1_personnel
+                WHERE start_date <= %s::date
+                  AND (end_date IS NULL OR end_date >= %s::date)
+                  AND is_active = TRUE
+            ),
+            reliable_orgs AS (
+                SELECT DISTINCT org
+                FROM active
+                WHERE source_rank >= 2
+            ),
+            filtered AS (
+                SELECT active.*
+                FROM active
+                LEFT JOIN reliable_orgs USING (org)
+                WHERE reliable_orgs.org IS NULL OR active.source_rank >= 2
+            )
+            SELECT DISTINCT ON (org, norm_pos)
+                   org, pos, norm_pos, wc, start_date
+            FROM filtered
+            ORDER BY org, norm_pos, start_date DESC,
+                     source_rank DESC,
+                     COALESCE(wc, 0) DESC NULLS LAST
+            """,
             (ds, ds)
         )
         rows = cur.fetchall()
@@ -274,14 +339,14 @@ def get_staff(date):
             raw: dict[str, dict[str, int]] = {}
             for row in rows:
                 org = row['org'] or ''
-                pos = row['pos'] or ''
+                pos = row.get('norm_pos') or _norm_pos(row.get('pos'))
                 wc = int(row.get('wc') or 1)
                 if wc <= 0:
                     wc = 1
                 nm = _canon_org(org)
                 if nm not in raw:
                     raw[nm] = {'t': 0, 'i': 0, 'w': 0}
-                is_itr = 'итр' in pos or 'инженер' in pos or 'рук' in pos
+                is_itr = pos == 'итр'
                 if is_itr:
                     raw[nm]['i'] += wc
                 else:
@@ -586,32 +651,66 @@ def get_aibikon_headcount(date=None):
 
 
 def _aibikon_ojr_fallback(date=None):
-    """Fallback: read АйБиКон headcount from ojr_section1_personnel."""
+    """Fallback: read АйБиКон headcount using the same OJR aggregation as staff()."""
     try:
-        ds = date.strftime('%Y-%m-%d') if date else datetime.now(BISHKEK_TZ).strftime('%Y-%m-%d')
-        conn = _get_conn()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(
-            "SELECT COUNT(*) as cnt FROM ojr_section1_personnel "
-            "WHERE LOWER(organization_name) = 'айбикон' "
-            "AND start_date <= %s::date AND (end_date IS NULL OR end_date >= %s::date)",
-            (ds, ds)
-        )
-        row = cur.fetchone()
-        cur.close()
-        if row and row.get('cnt', 0) > 0:
-            print(f"[DS TABEL] OJR fallback: {row['cnt']} АйБиКон from ojr_section1_personnel", flush=True)
-            return {'total': row['cnt'], 'by_prof': {}, 'is_fallback': True}
+        staff_date = date or datetime.now(BISHKEK_TZ).date()
+        org = get_staff(staff_date).orgs.get('АйБиКон')
+        if org and org.total > 0:
+            print(
+                f"[DS TABEL] OJR fallback: {org.total} АйБиКон from get_staff aggregation",
+                flush=True,
+            )
+            return {'total': org.total, 'by_prof': {}, 'is_fallback': True}
     except Exception as e:
         print(f"[DS TABEL OJR FALLBACK ERR] {e}", flush=True)
     return None
 
 
 def get_equipment(date):
-    """Primary: QA facts 'техника'. Fallback: empty dict."""
+    """Primary: ojr_section3_work_log category='техника'. Fallback: QA facts."""
     try:
-        f = _qa_legacy(date, 'техника')
         equip = {'Самосвал': 0, 'Экскаватор': 0, 'Фронтальный погрузчик': 0, 'Каток': 0, 'Бетононасос': 0}
+        ds = date.strftime('%Y-%m-%d')
+        conn = _get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT work_name, volume
+            FROM ojr_section3_work_log
+            WHERE work_date = %s::date
+              AND category = 'техника'
+        """, (ds,))
+        rows = cur.fetchall()
+        cur.close()
+        if rows:
+            needles = [
+                ('самосвал', 'Самосвал'),
+                ('экскаватор', 'Экскаватор'),
+                ('погрузчик', 'Фронтальный погрузчик'),
+                ('каток', 'Каток'),
+                ('бетононасос', 'Бетононасос'),
+            ]
+            recognized = False
+            for row in rows:
+                name = (row.get('work_name') or '').lower()
+                try:
+                    count = int(float(row.get('volume') or 0))
+                except (TypeError, ValueError):
+                    count = 0
+                if count <= 0:
+                    count = 1
+                matched = [(needle, label) for needle, label in needles if needle in name]
+                if not matched:
+                    continue
+                recognized = True
+                per_type_count = 1 if len(matched) >= 2 else count
+                for _, label in matched:
+                    equip[label] = max(equip[label], per_type_count)
+            if recognized:
+                print(f"[DS EQUIPMENT] {equip} from ojr_section3_work_log", flush=True)
+                return EquipmentData(items=equip)
+            print("[DS EQUIPMENT] ojr rows without recognized equipment; falling back to QA", flush=True)
+
+        f = _qa_legacy(date, 'техника')
         if not f:
             print(f"[DS EQUIPMENT] no facts", flush=True)
             return EquipmentData(items=equip)

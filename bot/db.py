@@ -1,5 +1,6 @@
 import ipaddress
 import os
+import re
 import subprocess
 
 import psycopg2, psycopg2.extras
@@ -691,6 +692,43 @@ def normalize_org_name(org_name):
     return raw
 
 
+def _norm_personnel_position_key(position):
+    p = (position or '').strip().lower().replace('ё', 'е')
+    if not p:
+        return ''
+    if 'прораб' in p:
+        return 'прораб'
+    if p in ('рабочий', 'рабочие', 'работник') or 'рабоч' in p or 'работник' in p:
+        return 'рабочие'
+    is_supervisor = (
+        re.search(r'\bрук\.', p)
+        or re.search(r'\bруководител', p)
+        or re.search(r'\bрук\s+стр', p)
+    )
+    if p == 'итр' or 'инженер' in p or 'геодезист' in p or 'электрик' in p or is_supervisor:
+        return 'итр'
+    if 'машинист' in p:
+        return 'машинист'
+    if 'водитель' in p:
+        return 'водитель'
+    return p
+
+
+def _canon_personnel_position(position):
+    key = _norm_personnel_position_key(position)
+    if key == 'рабочие':
+        return 'Рабочие'
+    if key == 'итр':
+        return 'ИТР'
+    if key == 'машинист':
+        return 'Машинист погрузчика'
+    if key == 'водитель':
+        return 'Водитель'
+    if key == 'прораб':
+        return 'Прораб'
+    return (position or '').strip()
+
+
 def _ensure_personnel_schema(cur):
     """Idempotent schema guards for ojr_section1_personnel.
 
@@ -729,10 +767,10 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
 
     Close semantics (CRITICAL — multi-insert / same-day re-entry):
     - Prefer ONE row per (org, position, start_date) with workers_count=N.
-    - Close other open rows for same org+position EXCEPT the row we are
-      about to upsert (same full_name + same start_date). This prevents
+    - Close other open rows for the same org+normalized position EXCEPT the row
+      we are about to upsert (same full_name + same start_date). This prevents
       the qa loop race where insert #2 closed insert #1 with end_date=today-1.
-    - Also closes prior-day open rows (start_date < date_str).
+    - Prior-day rows for unrelated positions stay open.
     """
     conn = get_conn()
     cur = conn.cursor()
@@ -742,26 +780,53 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
         print(f"[DB] personnel schema ensure: {e}", flush=True)
     title_id = _get_active_title_id()
     org_name = normalize_org_name(org_name)
+    raw_position = position
+    position = _canon_personnel_position(position)
+    raw_full_name = full_name
     full_name = full_name if full_name else org_name
+    if raw_full_name:
+        raw_slot = f"{org_name}-{raw_position}" if raw_position else org_name
+        canon_slot = f"{org_name}-{position}" if position else org_name
+        if str(raw_full_name).strip().lower() in {
+            org_name.lower(),
+            raw_slot.lower(),
+            canon_slot.lower(),
+        }:
+            full_name = canon_slot
     # workers_count: explicit arg, else 1 for a single person row
     wc = int(workers_count) if workers_count is not None else None
 
-    # Close other open records for this org+position, but NEVER the slot we
-    # are writing now (same full_name + start_date). Without this exclusion,
-    # parse_qa multi-insert for "Рабочие 8" closed rows 1..7 with end_date=
-    # today-1 and get_staff counted only 1 worker.
+    # Close only records whose normalized position collides with the slot being
+    # written. Prior-day rows for unrelated positions must stay open.
     cur.execute("""
         UPDATE ojr_section1_personnel
         SET end_date = %s::date - INTERVAL '1 day', updated_at = NOW()
         WHERE LOWER(organization_name) = LOWER(%s)
-          AND LOWER(position) = LOWER(%s)
           AND end_date IS NULL
           AND is_active = TRUE
           AND NOT (
               LOWER(COALESCE(full_name, '')) = LOWER(%s)
               AND start_date = %s::date
           )
-    """, (date_str, org_name, position, full_name, date_str))
+          AND start_date <= %s::date
+          AND CASE
+                    WHEN LOWER(position) LIKE '%%прораб%%' THEN 'прораб'
+                    WHEN LOWER(position) IN ('рабочий', 'рабочие', 'работник')
+                         OR LOWER(position) LIKE '%%рабоч%%'
+                         OR LOWER(position) LIKE '%%работник%%' THEN 'рабочие'
+                    WHEN LOWER(position) = 'итр'
+                         OR LOWER(position) LIKE '%%инженер%%'
+                         OR LOWER(position) LIKE '%%геодезист%%'
+                         OR LOWER(position) LIKE '%%электрик%%'
+                         OR LOWER(position) ~ '(^|[[:space:]])рук\\.'
+                         OR LOWER(position) ~ '(^|[[:space:]])руководител'
+                         OR LOWER(position) ~ '(^|[[:space:]])рук[[:space:]]+стр' THEN 'итр'
+                    WHEN LOWER(position) LIKE '%%машинист%%' THEN 'машинист'
+                    WHEN LOWER(position) LIKE '%%водитель%%' THEN 'водитель'
+                    ELSE LOWER(position)
+                 END = %s
+    """, (date_str, org_name, full_name, date_str, date_str,
+          _norm_personnel_position_key(position)))
 
     # Prefer upsert when unique index exists; plain INSERT otherwise.
     cur.execute("""

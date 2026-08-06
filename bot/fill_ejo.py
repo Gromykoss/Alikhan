@@ -24,6 +24,85 @@ BISHKEK_TZ = timezone(timedelta(hours=6))
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
 
+def _refresh_weather_if_stale(date):
+    """Refresh ojr_weather when the stored row for date is older than 6 hours."""
+    ds = date.strftime('%Y-%m-%d')
+    try:
+        from db import get_conn
+        import psycopg2.extras
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            SELECT temp_avg AS temp,
+                   wind_speed AS wind,
+                   wind_direction,
+                   humidity_pct AS humidity,
+                   pressure_hpa AS pressure,
+                   created_at
+            FROM ojr_weather
+            WHERE weather_date = %s::date
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (ds,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row and row.get('created_at'):
+            created_at = row['created_at']
+            now = datetime.now(created_at.tzinfo) if created_at.tzinfo else datetime.now()
+            if created_at >= now - timedelta(hours=6):
+                temp = row.get('temp')
+                wind_speed = row.get('wind')
+                wind_direction = row.get('wind_direction')
+                humidity = row.get('humidity')
+                pressure = row.get('pressure')
+
+                temp_text = f"{round(float(temp))}°C" if temp is not None else '—'
+
+                if wind_speed is None:
+                    wind_text = '—'
+                else:
+                    wind_value = str(float(wind_speed)).replace('.', ',')
+                    if wind_value.endswith(',0'):
+                        wind_value = wind_value[:-2]
+                    wind_text = f"{wind_direction} {wind_value} км/ч" if wind_direction else f"{wind_value} км/ч"
+
+                humidity_text = f"{int(humidity)}%" if humidity is not None else '—'
+
+                if pressure is None:
+                    pressure_text = '—'
+                else:
+                    pressure_value = float(pressure)
+                    if pressure_value > 850:
+                        pressure_value = pressure_value * 0.75006
+                    pressure_text = f"{round(pressure_value)} мм рт.ст."
+
+                if humidity is None:
+                    visibility_text = '—'
+                elif humidity > 90:
+                    visibility_text = '2-3 км'
+                elif humidity > 75:
+                    visibility_text = '5-7 км'
+                elif humidity > 60:
+                    visibility_text = '8-10 км'
+                else:
+                    visibility_text = '10+ км'
+
+                return WeatherData(
+                    temp=temp_text,
+                    wind=wind_text,
+                    humidity=humidity_text,
+                    pressure=pressure_text,
+                    visibility=visibility_text,
+                )
+        if row:
+            print(f"[WEATHER REFRESH] ojr_weather for {ds} is older than 6h; refreshing", flush=True)
+        return get_weather(date)
+    except Exception as e:
+        print(f"[WEATHER REFRESH WARN] {e}", flush=True)
+        return None
+
+
 def calc_completion_pct(ws):
     """Calculate overall completion % across ALL work items (all sections).
     Weighted by plan_volume: sum(plan × completion_rate) / sum(plan) × 100.
@@ -258,7 +337,9 @@ def fill(date):
     template_has_today = str(template_date or '').strip() == date.strftime('%d.%m.%Y')
 
     # ── Data sources ──
-    w = get_weather(date)                          # WeatherData
+    w = _refresh_weather_if_stale(date)  # WeatherData
+    if w is None:
+        w = get_weather(date)
     inc = get_incidents(date).count                # str
     stf = get_staff(date).orgs                     # dict[str, StaffOrg]
     vd = get_volumes(date)                         # VolumeData
