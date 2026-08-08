@@ -312,22 +312,12 @@ def get_staff(date):
                 WHERE start_date <= %s::date
                   AND (end_date IS NULL OR end_date >= %s::date)
                   AND is_active = TRUE
-            ),
-            reliable_orgs AS (
-                SELECT DISTINCT org
-                FROM active
-                WHERE source_rank >= 2
-            ),
-            filtered AS (
-                SELECT active.*
-                FROM active
-                LEFT JOIN reliable_orgs USING (org)
-                WHERE reliable_orgs.org IS NULL OR active.source_rank >= 2
             )
-            SELECT DISTINCT ON (org, norm_pos)
+            SELECT DISTINCT ON (org, CASE WHEN norm_pos = 'итр' THEN pos ELSE norm_pos END)
                    org, pos, norm_pos, wc, start_date
-            FROM filtered
-            ORDER BY org, norm_pos, start_date DESC,
+            FROM active
+            ORDER BY org, CASE WHEN norm_pos = 'итр' THEN pos ELSE norm_pos END,
+                     start_date DESC,
                      source_rank DESC,
                      COALESCE(wc, 0) DESC NULLS LAST
             """,

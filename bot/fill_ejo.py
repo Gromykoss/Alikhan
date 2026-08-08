@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """fill_ejo.py — ЕЖО: погода + QA-факты → 3 листа (новый формат без Фототчет)"""
-import sys, os, re, json, glob
+import sys, os, re, json, glob, shutil
 from datetime import datetime, timedelta, date as dt_date, timezone
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter as _gcl
@@ -22,6 +22,7 @@ from data_sources import (
 BISHKEK_TZ = timezone(timedelta(hours=6))
 
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
+TEMPLATE_PATH = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
 
 def _refresh_weather_if_stale(date):
@@ -830,6 +831,8 @@ def fill(date):
     op = f"/tmp/ЕЖО_{ds}_АйБиКон.xlsx"
     wb.save(op)
     print(f"✅ {op}")
+    shutil.copy2(op, TEMPLATE_PATH)
+    print(f"✅ Шаблон обновлён: {TEMPLATE_PATH}")
     return op
 
 

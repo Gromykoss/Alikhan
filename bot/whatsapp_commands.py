@@ -161,12 +161,22 @@ def get_messages() -> list:
         log("BRIDGE: collectOnlyChats отсутствует — /messages НЕ читаю, тик пропущен")
         return []
     try:
-        resp = requests.get(f"{BRIDGE}/collect-messages?only={PRODUCTION}", timeout=5)
-        if resp.status_code != 200:
-            log(f"BRIDGE HTTP {resp.status_code} (/collect-messages)")
-            return []
-        data = resp.json()
-        return data if isinstance(data, list) else []
+        # Читаем ОБЕ группы: боевую (listen-only) и песочницу (отвечаем).
+        # Два запроса — bridge может не поддерживать comma-separated only=.
+        all_data = []
+        for gid, gname in ((PRODUCTION, "PRODUCTION"), (SANDBOX, "SANDBOX")):
+            try:
+                resp = requests.get(f"{BRIDGE}/collect-messages?only={gid}", timeout=5)
+                if resp.status_code != 200:
+                    log(f"BRIDGE HTTP {resp.status_code} (/collect-messages?only={gname})")
+                    continue
+                data = resp.json()
+                if isinstance(data, list):
+                    all_data.extend(data)
+            except Exception as ge:
+                log(f"BRIDGE ERR ({gname}): {ge}")
+                continue
+        return all_data
     except Exception as e:
         log(f"BRIDGE ERR: {e}")
         return []
@@ -751,7 +761,7 @@ def _save_prod_photo(msg, mid) -> bool:
         tags["media_missing"] = True
     if local_path:
         tags["local_path"] = local_path
-    rid = _insert_media_message(PRODUCTION, sender, "image", mid, tags)
+    rid = _insert_media_message(msg.get("chatId", ""), sender, "image", mid, tags)
     if rid is None:
         log(f"[PRD] PHOTO {mid[:12]} DB FAIL (metadata row not saved) — seen NOT marked")
         return False
@@ -880,12 +890,18 @@ def _save_prod_document(msg, mid) -> bool:
     media_missing = bool(msg.get("mediaMissing"))
     local_path = None if media_missing else _media_local_path(msg)
     sender = msg.get("senderId") or msg.get("senderNumber") or "user"
-    tags = {"msg_id": mid, "file_name": fname}
+    tags = {
+        "msg_id": mid,
+        "file_name": fname,
+        "mime": msg.get("mime") or "application/octet-stream",
+        "sender": sender,
+        "mediaUrls": msg.get("mediaUrls") or [],
+    }
     if media_missing:
         tags["media_missing"] = True
     if local_path:
         tags["local_path"] = local_path
-    rid = _insert_media_message(PRODUCTION, sender, "document", mid, tags)
+    rid = _insert_media_message(msg.get("chatId", ""), sender, "document", mid, tags)
     if rid is None:
         log(f"[PRD] DOC DB FAIL: {fname} ({mid[:12]}) — seen NOT marked")
         return False
@@ -936,22 +952,15 @@ def main():
             continue
 
         chat_id = msg.get("chatId", "")
-        # Свои сообщения из ПЕСОЧНИЦЫ / не-боевых чатов: данных для записи нет —
-        # помечаем seen без БД (иначе ретрай вечно). Данные при этом не теряются.
-        # Песочница: fromMe/fromOwner пропускаем как и раньше (не меняем).
-        if (msg.get("fromMe") or msg.get("fromOwner")) and chat_id != PRODUCTION:
+        # Диспетчер читает ОБЕ группы (PRODUCTION + SANDBOX).
+        # Чужие чаты — пропускаем (ack без БД).
+        if chat_id not in (PRODUCTION, SANDBOX):
             confirmed.append(mid)
             ack_ids.append(mid)
             continue
-        # Диспетчер получает из очереди ТОЛЬКО боевую (/collect-messages?only=PRODUCTION).
-        # Песочницу обслуживает Hermes-шлюз — сюда она не попадает.
-        if chat_id != PRODUCTION:
-            confirmed.append(mid)
-            ack_ids.append(mid)
-            continue
-        # fromMe/fromOwner ИЗ БОЕВОЙ (120363400682390076@g.us): свои сообщения
-        # несут данные (отчёты, фото, документы) — сохраняем как обычные
-        # prod-события (текст → save_message, фото/документы → их обработчики)
+        # fromMe/fromOwner из ОБЕИХ групп: свои сообщения несут данные
+        # (отчёты, фото, документы) — сохраняем как обычные события
+        # (текст → save_message, фото/документы → их обработчики)
         # и ТОЛЬКО ПОСЛЕ записи в БД ack'аем. Ack без записи = потеря данных.
 
         grp = "PRD"
@@ -974,7 +983,7 @@ def main():
             tags = {"msg_id": mid, "media_type": mtype}
             if local_path:
                 tags["local_path"] = local_path
-            ok = _insert_media_message(PRODUCTION, sender, mtype, mid, tags) is not None
+            ok = _insert_media_message(chat_id, sender, mtype, mid, tags) is not None
         # --- Текст ---
         else:
             text = extract_text(msg)
@@ -985,7 +994,7 @@ def main():
                 # seen НЕ помечаем и мост НЕ ack'аем (ретрай на следующем тике).
                 # Песочница сюда не попадает (continue выше) — не меняется.
                 tags = {"msg_id": mid}
-                rid = _insert_media_message(PRODUCTION, sender, "empty", mid, tags)
+                rid = _insert_media_message(chat_id, sender, "empty", mid, tags)
                 if rid is None:
                     log(f"[{grp}] EMPTY {mid[:12]}... DB FAIL (arrival not saved) — seen NOT marked, retry next tick")
                     continue
