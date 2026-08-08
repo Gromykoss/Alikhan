@@ -790,3 +790,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - `~/.hermes/cron/jobs.json` — обновлён промпт ffcc5f112fff- **08.08.2026 12:38** — chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md (`7331301`)
 - **08.08.2026 12:40** — chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md, NexusOS memory-слой (`daea757`)
 - **08.08.2026 12:43** — chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md, NexusOS memory-слой (`333592d`)
+- **08.08.2026 12:52** — chore: sync 08.08 — AGENTS.md audit (MGT_maccha), bridge fixes, ЕЖО template, KG update (`7961365`)
