@@ -1,5 +1,113 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 08.08.2026 — Харденинг VPS + разделение очередей bridge + echo_loop_guard
+
+### Статус систем
+- **Bridge:** ✅ connected, scriptHash `b9199a75`, collectOnlyChats на месте, очереди разделены (queueLength + collectQueueLength)
+- **Gateway:** ✅ перезапущен после харденинга
+- **Диспетчер:** ✅ принимает сообщения из обеих групп
+- **БД:** ✅ OJR-таблицы живы
+
+### Что изменилось
+
+1. **Харденинг VPS** — все порты закрыты на localhost, сервисы перезапущены
+2. **Bridge — разделение очередей** — `/messages` и `/collect-messages` разделены. `collectQueueLength` отдельно от `queueLength`. `/health` теперь отдаёт оба поля.
+3. **Bridge — echo_loop_guard (Codex)** — фикс эхо-петли: Baileys возвращает эхо своих сообщений в группах без `fromMe:true` → bridge не детектил → gateway → Alikhan отвечал снова → петля ×9. Добавлен `recentlySentIds` для групповых `!fromMe` в bot-режиме.
+4. **Bridge — collectOnlyChats восстановлен** — `COLLECT_ONLY_CHATS` проброшен в env, диспетчер принимает сообщения.
+5. **AGENTS.md — аудит MGT_maccha** — сокращён 433→215 строк, добавлен раздел «Метрики» (7 KPI: ЕЖО, персонал, bridge uptime, баги, точность, OJR).
+6. **require_mention: false→true** — Alikhan больше не отвечает на сообщения без упоминания (фикс фантомных ответов).
+7. **Bridge scriptHash:** `b9199a75dcc9740c` (новый)
+8. **Buzz-каналы** — home и agent-bus настроены в конфиге
+
+### Коммиты
+- [этот] chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md
+
+### Примечание
+- Первый день активной разработки после 4-дневного затишья (03.08–07.08). Фокус: харденинг инфраструктуры и фикс bridge.
+- Эхо-петля — критический баг, обнаружен Codex при аудите bridge. Фикс предотвращает ×9 дублирование в группах.
+- Метрики в AGENTS.md — первый шаг к KPI-driven мониторингу стройплощадки.
+
+---
+
+## 07.08.2026 (23:00 UTC) — Ночная сводка: спокойный день после насыщенного 06.08
+
+### Статус систем (23:00 UTC)
+- **Hermes Bridge:** ✅ активен (:3000 отвечает, status=connected, queueLength=0, uptime ~9.3ч (33448с), collectOnlyChats на месте)
+- **document-extractor:** ✅ endpoint 8099 отвечает, ok=true
+- **Knowledge Graph:** ⚠️ граф пуст (query_tool возвращает «no entities or edges») — требуется ребилд (cron каждые 6 часов, последний 06.08 18:15)
+- **alikhan.service:** ОСТАНОВЛЕН (v6, Hermes Agent)
+- **Gateway:** ✅ активен (buzz-relay, Caddy, Codex CLI — все процессы живы с 05.08)
+
+### Коммиты за 24 часа
+- **Ноль коммитов.** Последний: `fbb5285` (06.08 04:03 UTC) — chore: auto-sync 06.08.
+- С 06.08 04:03 до 07.08 23:00 — 43 часа без коммитов.
+
+### Что изменилось за день (07.08)
+- **Никаких изменений кода.** Четвёртый спокойный день после волны 06.08.
+- **Bridge:** стабилен. collectOnlyChats держится после фикса 06.08. Повторных сбросов bridge.js не было.
+- **MCP-серверы:** xactions и xapi в parked (не влияет на WhatsApp).
+- **AGENTS.md:** без изменений. PRE-FIX GATE (добавлен 06.08) — актуален.
+- **ALIKHAN_ARCHITECTURE.md:** создан 06.08 (111 строк) — единый источник правды для агентов.
+- **Шаблон ЕЖО:** бэкап (.bak_0806_1316) создан 06.08 при фиксе синхронизации.
+
+### Примечание
+- 07.08 — четвёртый день без кодовых изменений. Система в стабильном состоянии.
+- Все критические фиксы 06.08 (bridge, ЕЖО, табель, персонал) держатся без регрессий.
+- KG требует внимания — ребуилд графа запланирован cron-ом, нужно проверить результат.
+- Gateway и мост работают через адаптер (не systemd-юнит). Юнит намеренно disabled.
+- Тренд: устойчивая стабилизация после миграции v6 (29.07). 4 дня без откатов — рекорд.
+
+---
+
+## 06.08.2026 (23:00 UTC) — Ночная сводка: насыщенный день — bridge, ЕЖО, табель, персонал
+
+### Статус систем (23:00 UTC)
+- **Hermes Bridge:** ✅ активен, порт 3000 отвечает, status=connected, queueLength=0, uptime ~6.8ч (24467с), collectOnlyChats на месте
+- **document-extractor:** ✅ endpoint 8099 отвечает, ok=true
+- **Knowledge Graph:** актуален (сборка 06.08 18:15 UTC, ~131 KB)
+- **alikhan.service:** ОСТАНОВЛЕН (v6, Hermes Agent)
+
+### Коммиты за 24 часа
+- **06.08 04:03** — `fbb5285` chore: auto-sync 06.08 — AGENTS.md (+46 строк Buzz multi-agent), CHRONOLOGY, data_sources.py, db.py, fill_ejo.py, KG, брифинг 05.08, шаблоны ЕЖО
+- С 04:03 до 23:00 — работа в течение дня (без доп. коммитов в репозиторий).
+
+### Что изменилось за день (06.08)
+
+**Bridge — восстановление после обновления hermes-agent:**
+- bridge.js потерял collectOnlyChats после обновления (03.08). Диспетчер пропускал тики.
+- Фикс: collectOnlyChats + /collect-messages endpoint восстановлены. Grok audit → /messages заглушен.
+- CRITICAL правило: после обновления hermes-agent bridge.js сбрасывается — нужен перезапуск gateway.
+
+**ЕЖО — синхронизация шаблона:**
+- fill_ejo.py теперь делает shutil.copy2(out_path, TEMPLATE_PATH) после генерации.
+- Раньше писал в /tmp, шаблон устаревал → опрос показывал старые остатки.
+
+**Персонал — reliable_orgs CTE откачен:**
+- Codex добавил reliable_orgs (source_rank >= 2) в get_staff. Записи sync_source='ejo_v2' фильтровались.
+- Откат: SELECT DISTINCT ON напрямую из active, без reliable_orgs.
+
+**Табель АйБиКон — правило theme=0:**
+- fill.patternType='solid' + fgColor.theme=0 (чёрный) = ВЫХОДНОЙ. theme=7 = РАБОЧИЙ.
+- Восстановлено условие theme != 0. АйБиКон = 3 (рабочих) из табеля.
+
+**Нормализация должностей персонала:**
+- db.py: `_norm_personnel_position_key()` / `_canon_personnel_position()` — прораб, рабочие, ИТР, машинист, водитель
+- data_sources.py: `_norm_pos()` + SQL-нормализация в get_staff CTE
+- Закрытие строк в save_personnel: только коллизии по нормализованной должности
+
+**Техника — OJR как primary источник:**
+- get_equipment() теперь читает ojr_section3_work_log (category='техника'), QA — fallback
+
+**AGENTS.md — Buzz multi-agent правила:**
+- +46 строк правил группового общения в Buzz: 5-шаговый чек перед ответом, запрет отвечать за других агентов, запрет слова «тишина»
+
+### Примечание
+- 06.08 — насыщенный день. 3 отката (Codex без MoA), но все проблемы закрыты.
+- MoA (Codex → Grok adversarial review) обязательно перед применением правок.
+- Система стабильна после правок. Мост: collectOnlyChats вернулся, диспетчер читает сообщения.
+
+---
+
 ## 05.08.2026 (23:00 UTC) — Ночная сводка: третий спокойный день подряд
 
 ### Статус систем (23:00 UTC)
@@ -636,3 +744,45 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **04.08.2026 23:05** — chore: nightly CHRONOLOGY + briefing 04.08 (23:00 UTC) (`15755d8`)
 - **04.08.2026 23:06** — chore: update commit list in CHRONOLOGY.md (04.08 23:05) (`eb9598d`)
 - **05.08.2026 04:03** — chore: auto-sync 05.08 (`b0e9837`)
+- **06.08.2026 04:03** — chore: auto-sync 06.08 (`fbb5285`)
+- **07.08.2026 23:05** — chore: nightly CHRONOLOGY + briefing 07.08 (23:00 UTC) — без коммитов за день
+## 06.08.2026 (04:00—11:00 UTC+6) — Major: bridge restore + ЕЖО fix + табель theme rule
+
+### Bridge: collectOnlyChats + /collect-messages endpoint
+- **Проблема:** после обновления hermes-agent (03.08) bridge.js потерял collectOnlyChats. Диспетчер пропускал тики: «collectOnlyChats отсутствует — /messages НЕ читаю». Бот не отвечал.
+- **Фикс:** добавлен collectOnlyChats массив (WHATSAPP_SANDBOX + WHATSAPP_PRODUCTION) в /health, эндпоинт GET /collect-messages?only=<JID>. Файл: bridge.js.
+- **CRITICAL:** после обновления hermes-agent bridge.js сбрасывается — требуется перезапуск gateway для подхвата.
+- **Grok audit:** FAIL — dual consumer /messages + /collect-messages. Фикс: /messages заглушен (deprecated, всегда []).
+- **Результат:** collectOnlyChats в health ✅, диспетчер читает сообщения ✅.
+
+### ЕЖО: шаблон обновляется после fill_ejo
+- **Проблема:** опрос показывал старые остатки (247,2/478,4 вместо 227,2/453,4), потому что читал TEMPLATE, а fill_ejo писал в /tmp.
+- **Фикс:** fill_ejo.py → shutil.copy2(out_path, TEMPLATE_PATH) после успешной генерации. Делегат: deleg_032d59a0.
+- **Результат:** шаблон синхронизирован. Остатки 2.1.5=227,2, 2.1.10=453,4 ✅.
+
+### Персонал: reliable_orgs CTE обнулил табель
+- **Проблема:** Codex добавил reliable_orgs CTE (source_rank >= 2) в get_staff. Записи sync_source='ejo_v2' для АйБиКон фильтровались → 3 вместо 7.
+- **Фикс:** убрать reliable_orgs CTE из get_staff. SELECT DISTINCT ON напрямую из active.
+- **Результат:** АйБиКон = 7 из OJR (без табеля), 3 из табеля (правильно: theme=0 = выходной).
+
+### Табель АйБиКон: theme=0 vs theme=7 правило
+- **КРИТИЧЕСКОЕ ЗНАНИЕ:** в табеле fill.patternType='solid' + fgColor.theme=0 (чёрный) = ВЫХОДНОЙ. theme=7 (жёлтый/зелёный) = РАБОЧИЙ.
+- **Баг:** я убрал проверку theme != 0 → считались все 6 человек вместо 3.
+- **Откат:** возвращено условие `fill.patternType == 'solid' and fill.fgColor.theme is not None and fill.fgColor.theme != 0`.
+- **Правило НЕ ТРОГАТЬ:** это условие в data_sources.py:618. theme=0 — выходной, theme=7 — рабочий.
+- **Результат:** АйБиКон = 3 (Громыко, Геодезист, Электрик) ✅.
+
+### Ночная проверка WhatsApp моста
+- **Исправлен промпт джобы ffcc5f112fff:** проверка через curl :3000/health вместо systemctl. Запрет systemctl enable.
+
+### Сохранено в memory:
+- MoA обязательно: Codex → Grok adversarial review ДО применения (3 отката за 06.08).
+- theme=0=выходной — НЕ ТРОГАТЬ.
+- fill_ejo копирует в TEMPLATE.
+- bridge.js требует перезапуска gateway после обновления.
+
+### Модифицированные файлы:
+- `~/hermes-agent/scripts/whatsapp-bridge/bridge.js` — collectOnlyChats + /collect-messages
+- `bot/data_sources.py` — get_staff без reliable_orgs, theme!=0 восстановлен
+- `bot/fill_ejo.py` — shutil.copy2 в TEMPLATE
+- `~/.hermes/cron/jobs.json` — обновлён промпт ffcc5f112fff
