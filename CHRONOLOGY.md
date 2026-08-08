@@ -18,14 +18,16 @@
 6. **require_mention: false→true** — Alikhan больше не отвечает на сообщения без упоминания (фикс фантомных ответов).
 7. **Bridge scriptHash:** `b9199a75dcc9740c` (новый)
 8. **Buzz-каналы** — home и agent-bus настроены в конфиге
+9. **NexusOS memory-слой** — внедрён CLI `nexusos` (v0.1.0, asimons81) для долгосрочной памяти агентов. Установлен в venv Hermes Agent. Агенты теперь используют `nexusos_search` + `nexusos_context` для извлечения уроков/контекста/паттернов из vault. Для Alikhan — доступ к lessons.md, decisions.md, patterns.md, state.md в `20_Projects/Alikhan/`.
 
 ### Коммиты
-- [этот] chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md
+- [этот] chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md, NexusOS memory-слой
 
 ### Примечание
 - Первый день активной разработки после 4-дневного затишья (03.08–07.08). Фокус: харденинг инфраструктуры и фикс bridge.
 - Эхо-петля — критический баг, обнаружен Codex при аудите bridge. Фикс предотвращает ×9 дублирование в группах.
 - Метрики в AGENTS.md — первый шаг к KPI-driven мониторингу стройплощадки.
+- NexusOS — кросс-проектный инфраструктурный слой; все проекты (Alikhan, GULAG, RobotMan, RAB9) получили единый механизм долгосрочной памяти.
 
 ---
 
@@ -785,4 +787,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - `~/hermes-agent/scripts/whatsapp-bridge/bridge.js` — collectOnlyChats + /collect-messages
 - `bot/data_sources.py` — get_staff без reliable_orgs, theme!=0 восстановлен
 - `bot/fill_ejo.py` — shutil.copy2 в TEMPLATE
-- `~/.hermes/cron/jobs.json` — обновлён промпт ffcc5f112fff
+- `~/.hermes/cron/jobs.json` — обновлён промпт ffcc5f112fff- **08.08.2026 12:38** — chronology: 08.08.2026 — харденинг VPS, разделение очередей bridge, echo_loop_guard, аудит AGENTS.md (`7331301`)
