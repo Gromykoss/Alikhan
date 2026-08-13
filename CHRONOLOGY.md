@@ -998,3 +998,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **12.08.2026 13:50** — chore: delete dead code - main_waha.py (v5), bridge_wrapper.py (unused), daily_snapshot.py (UTC shift bug) (`497fcb8`)
 - **12.08.2026 23:04** — chrono: 2026-08-12 — ночная сводка, брифинг 12.08 (`69f5523`)
 - **13.08.2026 06:49** — QA: привязка прораба к подрядчику (sender→contractor) + фикс len(int) (`96498e0`)
+- **13.08.2026 06:57** — QA: агрегация персонал-фактов одной позиции (fix last-write-wins) (`4a762f0`)

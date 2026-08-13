@@ -22,10 +22,14 @@ ALLOWED_CATEGORIES = {
 }
 ALLOWED_CONTRACTORS = ['айбикон', 'атантай', 'майкадам', 'наватек']
 
+WORKER_SPECIALTY_RE = re.compile(
+    r'(?:монтажник|монолитчик|каменщик|бетонщик|маляр|арматурщик|сварщик|'
+    r'штукатур|плотник|отделочник|электрик|сантехник|разнорабоч|подсобн)',
+    re.I,
+)
+WORKER_TOTAL_RE = re.compile(r'\b(?:рабоч\w*|работник\w*)\b', re.I)
 WORKER_POSITION_RE = re.compile(
-    r'(?:рабоч|работник|монтажник|монолитчик|каменщик|бетонщик|маляр|'
-    r'арматурщик|сварщик|штукатур|плотник|отделочник|электрик|сантехник|'
-    r'разнорабоч|подсобн)',
+    rf'(?:{WORKER_SPECIALTY_RE.pattern}|{WORKER_TOTAL_RE.pattern})',
     re.I,
 )
 
@@ -144,8 +148,20 @@ def _position_from_personnel_fact(fact_text):
     return 'Сотрудник'
 
 
+def _worker_count_bucket(fact_text):
+    """Classify worker count as explicit total or specialty count."""
+    fact_lower = (fact_text or '').lower().replace('ё', 'е')
+    spec_match = WORKER_SPECIALTY_RE.search(fact_lower)
+    total_match = WORKER_TOTAL_RE.search(fact_lower)
+    if spec_match and (not total_match or spec_match.start() < total_match.start()):
+        return 'specialty'
+    if total_match:
+        return 'total'
+    return None
+
+
 def _aggregate_personnel_facts(facts, sender=None):
-    """Sum personnel facts by canonical contractor and position."""
+    """Aggregate personnel facts by canonical contractor and position."""
     aggregated = {}
     result = []
 
@@ -165,8 +181,24 @@ def _aggregate_personnel_facts(facts, sender=None):
                 'building': b,
                 'fact': f,
                 'count': 0,
+                'worker_total_count': 0,
+                'worker_specialty_count': 0,
             }
-        aggregated[key]['count'] += max(1, n)
+        count = max(1, n)
+        if position == 'Рабочие':
+            if _worker_count_bucket(f) == 'total':
+                aggregated[key]['worker_total_count'] = max(
+                    aggregated[key]['worker_total_count'],
+                    count,
+                )
+            else:
+                aggregated[key]['worker_specialty_count'] += count
+            aggregated[key]['count'] = max(
+                aggregated[key]['worker_total_count'],
+                aggregated[key]['worker_specialty_count'],
+            )
+        else:
+            aggregated[key]['count'] += count
 
     for (org_name, position), item in aggregated.items():
         count = item['count']
@@ -248,7 +280,7 @@ def _parse_sender_personnel_fallback(text, sender=None):
             r'^(итр|рабоч\w*|работник\w*|монтажник\w*|монолитчик\w*|'
             r'каменщик\w*|бетонщик\w*|маляр\w*|арматурщик\w*|сварщик\w*|'
             r'штукатур\w*|плотник\w*|отделочник\w*|электрик\w*|сантехник\w*|'
-            r'разнорабоч\w*|подсобн\w*)\s*[-:—–]?\s*(\d+)\b',
+            r'разнорабоч\w*|подсобн\w*(?:\s+рабоч\w*)?)\s*[-:—–]?\s*(\d+)\b',
             line,
             re.I,
         )
@@ -260,20 +292,37 @@ def _parse_sender_personnel_fallback(text, sender=None):
             position = 'ИТР'
         else:
             position = 'Рабочие'
-        results.append((org_name, position, n, line))
+        results.append((org_name, position, n, line, label))
 
     best = {}
     seen_lines = set()
-    for org, pos, n, line in results:
+    for org, pos, n, line, label in results:
         line_key = (org, line)
         if line_key in seen_lines:
             continue
         seen_lines.add(line_key)
         key = (org, pos)
         if key not in best:
-            best[key] = 0
-        best[key] += n
-    return [(o, p, n) for (o, p), n in best.items()]
+            best[key] = {
+                'count': 0,
+                'worker_total_count': 0,
+                'worker_specialty_count': 0,
+            }
+        if pos == 'Рабочие':
+            if _worker_count_bucket(label) == 'total':
+                best[key]['worker_total_count'] = max(
+                    best[key]['worker_total_count'],
+                    n,
+                )
+            else:
+                best[key]['worker_specialty_count'] += n
+            best[key]['count'] = max(
+                best[key]['worker_total_count'],
+                best[key]['worker_specialty_count'],
+            )
+        else:
+            best[key]['count'] += n
+    return [(o, p, item['count']) for (o, p), item in best.items()]
 
 
 # ─── VOR code extraction ─────────────────────────────────────────────────────

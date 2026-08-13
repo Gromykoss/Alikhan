@@ -122,6 +122,104 @@ def test_grok_personnel_specialties_aggregate_before_save():
     ]
 
 
+def test_grok_personnel_workers_total_and_specialties_not_double_counted():
+    facts = [
+        ('общая', 'персонал', 'Рабочие 23'),
+        ('общая', 'персонал', 'Монтажники 13'),
+        ('общая', 'персонал', 'Монолитчики 10'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
+    ]
+
+
+def test_grok_personnel_first_match_total_before_inline_specialties():
+    facts = [
+        ('общая', 'персонал', 'Рабочие 23 (монтажники 13, монолитчики 10)'),
+        ('общая', 'персонал', 'Монтажники 13'),
+        ('общая', 'персонал', 'Монолитчики 10'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
+    ]
+
+
+def test_grok_personnel_specialties_without_total_sum_to_workers():
+    facts = [
+        ('общая', 'персонал', 'Монтажники 13'),
+        ('общая', 'персонал', 'Монолитчики 10'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
+    ]
+
+
+def test_grok_personnel_raznorabochie_count_as_specialty():
+    facts = [
+        ('общая', 'персонал', 'Монтажники 13'),
+        ('общая', 'персонал', 'Монолитчики 5'),
+        ('общая', 'персонал', 'Разнорабочие 5'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
+    ]
+
+
+def test_grok_personnel_podsobnye_rabochie_count_as_specialty():
+    facts = [
+        ('общая', 'персонал', 'Подсобные рабочие 8'),
+        ('общая', 'персонал', 'Монтажники 13'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 21 рабочих'),
+    ]
+
+
+def test_grok_personnel_workers_total_without_specialties_preserved():
+    facts = [
+        ('общая', 'персонал', '23 рабочих'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
+    ]
+
+
 def test_sender_personnel_unknown_sender_without_contractor_rejected():
     text = 'Итр-3\nМонтажники-13\nМонолитчики-10'
 
@@ -135,4 +233,31 @@ def test_sender_personnel_deduplicates_identical_lines():
     assert sorted(facts) == [
         ('майкадам', 'ИТР', 3),
         ('майкадам', 'Рабочие', 23),
+    ]
+
+
+def test_sender_personnel_workers_total_and_specialties_not_double_counted():
+    text = 'Рабочие-23\nМонтажники-13\nМонолитчики-10'
+    facts = _parse_sender_personnel_fallback(text, sender='203672197812426@lid')
+
+    assert facts == [
+        ('майкадам', 'Рабочие', 23),
+    ]
+
+
+def test_sender_personnel_classifies_label_not_full_line():
+    text = 'Рабочие-23 монтажники-13\nМонтажники-13\nМонолитчики-10'
+    facts = _parse_sender_personnel_fallback(text, sender='203672197812426@lid')
+
+    assert facts == [
+        ('майкадам', 'Рабочие', 23),
+    ]
+
+
+def test_sender_personnel_specialties_sum_without_total():
+    text = 'Разнорабочие 5\nМонтажники 13'
+    facts = _parse_sender_personnel_fallback(text, sender='203672197812426@lid')
+
+    assert facts == [
+        ('майкадам', 'Рабочие', 18),
     ]
