@@ -144,6 +144,42 @@ def _position_from_personnel_fact(fact_text):
     return 'Сотрудник'
 
 
+def _aggregate_personnel_facts(facts, sender=None):
+    """Sum personnel facts by canonical contractor and position."""
+    aggregated = {}
+    result = []
+
+    for b, c, f in facts:
+        if c != 'персонал':
+            result.append((b, c, f))
+            continue
+
+        org_name = _contractor_from_fact_or_sender(f, sender=sender)
+        position = _position_from_personnel_fact(f)
+        num_match = re.search(r'(\d+)', f)
+        n = int(num_match.group(1)) if num_match else 1
+        key = (org_name, position)
+
+        if key not in aggregated:
+            aggregated[key] = {
+                'building': b,
+                'fact': f,
+                'count': 0,
+            }
+        aggregated[key]['count'] += max(1, n)
+
+    for (org_name, position), item in aggregated.items():
+        count = item['count']
+        fact = item['fact']
+        if org_name:
+            fact = f"{org_name} {position} {count}" if position != 'Рабочие' else f"{org_name} {count} рабочих"
+            if position == 'ИТР':
+                fact = f"{org_name} ИТР {count}"
+        result.append((item['building'], 'персонал', fact))
+
+    return result
+
+
 # ─── Simple pattern fallback ─────────────────────────────────────────────────
 
 def _parse_no_patterns(text):
@@ -575,6 +611,7 @@ def parse_qa(gid, text, date_str=None, sender=None):
             count += 1
 
         # Save validated Grok facts — route by category
+        all_grok_facts = _aggregate_personnel_facts(all_grok_facts, sender=sender)
         print(f"[QA SAVE] Routing {len(all_grok_facts)} grok-validated facts to DB tables", flush=True)
         for b, c, f in all_grok_facts:
             print(f"[QA SAVE] fact category='{c}' building='{b}' text='{f[:80]}'", flush=True)

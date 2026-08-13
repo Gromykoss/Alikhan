@@ -10,7 +10,11 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import pytest
-from qa import _extract_vor_codes, _parse_sender_personnel_fallback
+from qa import (
+    _aggregate_personnel_facts,
+    _extract_vor_codes,
+    _parse_sender_personnel_fallback,
+)
 
 
 def test_plan_na_zavtra():
@@ -95,6 +99,26 @@ def test_sender_personnel_specialties_collapse_to_workers():
     assert sorted(facts) == [
         ('майкадам', 'ИТР', 3),
         ('майкадам', 'Рабочие', 23),
+    ]
+
+
+def test_grok_personnel_specialties_aggregate_before_save():
+    facts = [
+        ('общая', 'персонал', 'ИТР 3'),
+        ('общая', 'персонал', 'Монтажники 13'),
+        ('общая', 'персонал', 'Монолитчики 10'),
+        ('общая', 'техника', 'кран 1 ед'),
+    ]
+
+    aggregated = _aggregate_personnel_facts(
+        facts,
+        sender='203672197812426@lid',
+    )
+
+    assert aggregated == [
+        ('общая', 'техника', 'кран 1 ед'),
+        ('общая', 'персонал', 'майкадам ИТР 3'),
+        ('общая', 'персонал', 'майкадам 23 рабочих'),
     ]
 
 
