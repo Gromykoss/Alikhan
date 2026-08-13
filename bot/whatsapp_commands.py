@@ -119,9 +119,11 @@ def load_seen() -> set:
 
 
 def save_seen(ids: set):
+    """Save seen IDs capped at 1000 entries to prevent unbounded growth (AUDIT-B10)."""
     try:
+        capped = list(ids)[-1000:]  # keep last 1000 entries
         with open(SEEN_FILE, "w") as f:
-            json.dump(list(ids), f)
+            json.dump(capped, f)
     except Exception as e:
         log(f"SAVE_SEEN ERR: {e}")
 
@@ -484,18 +486,18 @@ def is_qa_text(text: str) -> bool:
     return any(w in t for w in triggers)
 
 
-def handle_qa(text: str, chat_id: str):
+def handle_qa(text: str, chat_id: str, sender=None):
     log(f"QA [{chat_id[-12:]}]: '{text[:80]}'")
     try:
         from qa import parse_qa
         today = bishkek_date_str()
         # ВАЖНО: parse_qa(gid, text, date_str) — gid ПЕРВЫМ аргументом.
         # Раньше было parse_qa(text, chat_id, today) — gid=текст, text=chat_id.
-        facts = parse_qa(chat_id, text, today)
+        facts = parse_qa(chat_id, text, today, sender=sender)
         if facts and chat_id == SANDBOX:
-            send_message(chat_id, f"✅ Принято: {len(facts)} фактов")
+            send_message(chat_id, f"✅ Принято: {facts} фактов")
         elif facts:
-            log(f"QA: {len(facts)} facts (prod, silent)")
+            log(f"QA: {facts} facts (prod, silent)")
     except Exception as e:
         log(f"QA ERR: {e}\n{traceback.format_exc()}")
         if chat_id == SANDBOX:
@@ -880,6 +882,50 @@ def _ocr_document_tags(rid, local_path):
                 pass
 
 
+def _save_section5_asbuilt_doc(rid, fname, local_path):
+    """Best-effort вставка документа в ojr_section5_asbuilt_docs (Раздел 5 ОЖР —
+    исполнительная документация). Дедуп по file_message_id. Ошибки НЕ пробрасываются:
+    документ уже сохранён в bot_memory_messages, ack/seen не меняются.
+    doc_number='' и doc_date=Бишкек-сегодня — обе колонки NOT NULL в схеме."""
+    conn = None
+    try:
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+        trow = cur.fetchone()
+        title_id = trow[0] if trow else 1
+        cur.execute(
+            "SELECT 1 FROM ojr_section5_asbuilt_docs WHERE file_message_id = %s LIMIT 1",
+            (rid,))
+        if cur.fetchone():
+            log(f"[PRD] DOC section5 already logged (row {rid})")
+        else:
+            doc_date = datetime.now(BISHKEK_TZ).strftime("%Y-%m-%d")
+            cur.execute(
+                "INSERT INTO ojr_section5_asbuilt_docs "
+                "(title_id, doc_type, doc_number, doc_date, doc_name, file_message_id, "
+                " file_path, status, created_at) "
+                "VALUES (%s, 'документ', '', %s::date, %s, %s, %s, 'получен', NOW())",
+                (title_id, doc_date, fname, rid, local_path))
+            conn.commit()
+            log(f"[PRD] DOC section5 ok (row {rid})")
+        cur.close()
+    except Exception as e:
+        log(f"[PRD] DOC section5 ERR: {e} (row {rid})")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def _save_prod_document(msg, mid) -> bool:
     """Документ из боевой: bot_memory_messages (метаданные ВСЕГДА, local_path — если кэш есть).
     mediaMissing:true → метаданные с file_path=NULL + лог MEDIA MISSING, ack'ается
@@ -915,6 +961,9 @@ def _save_prod_document(msg, mid) -> bool:
     # Best-effort — ошибки extractor'а/БД не влияют на ack/seen (документ уже сохранён).
     if local_path and os.path.splitext(local_path)[1].lower() in DOC_OCR_EXTS:
         _ocr_document_tags(rid, local_path)
+    # Раздел 5 ОЖР (исполнительная документация) — best-effort, ПОСЛЕ успешной записи
+    # в bot_memory_messages. Дедуп по file_message_id; ошибки не влияют на ack/seen.
+    _save_section5_asbuilt_doc(rid, fname, local_path)
     return True
 
 
@@ -928,7 +977,7 @@ def _save_prod_text(text, chat_id, mid, sender) -> bool:
         log(f"RAW TEXT ERR: {e} — seen NOT marked, retry next tick")
         return False
     if is_qa_text(text):
-        handle_qa(text, chat_id)
+        handle_qa(text, chat_id, sender=sender)
     return True
 
 

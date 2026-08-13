@@ -5,9 +5,9 @@ v2.1 (2026-07-18): RAG fixes from P1P2 report
   - Few-shot prompt with examples
   - Retry + audit log for Grok failures
 """
-import sys, os, re, time, json as _json
+import sys, os, re, time, json as _json, traceback
 from datetime import datetime, timezone, timedelta
-from bridge_wrapper import EVO, KEY
+from config import EVO, KEY, SENDER_TO_CONTRACTOR  # Bridge API (was bridge_wrapper, removed)
 SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 BISHKEK_TZ = timezone(timedelta(hours=6))
@@ -21,6 +21,13 @@ ALLOWED_CATEGORIES = {
     'земляные работы', 'документация', 'материалы', 'план', 'объём'
 }
 ALLOWED_CONTRACTORS = ['айбикон', 'атантай', 'майкадам', 'наватек']
+
+WORKER_POSITION_RE = re.compile(
+    r'(?:рабоч|работник|монтажник|монолитчик|каменщик|бетонщик|маляр|'
+    r'арматурщик|сварщик|штукатур|плотник|отделочник|электрик|сантехник|'
+    r'разнорабоч|подсобн)',
+    re.I,
+)
 
 # Default for unknown buildings
 DEFAULT_BUILDING = 'общая'
@@ -37,8 +44,8 @@ def _audit_log(entry_type, data):
         }
         with open('/tmp/alikhan_qa_audit.log', 'a') as f:
             f.write(_json.dumps(entry, ensure_ascii=False) + '\n')
-    except Exception:
-        pass  # audit log is best-effort
+    except Exception as e:
+        print(f"[QA AUDIT] Failed to write audit log: {e}", flush=True)  # audit log is best-effort
 
 
 # ─── is_qa detection ─────────────────────────────────────────────────────────
@@ -109,11 +116,32 @@ def validate_category(value):
     return None
 
 
-def validate_personnel_fact(fact_text):
-    """Personnel facts MUST contain a known contractor name."""
+def validate_personnel_fact(fact_text, sender=None):
+    """Personnel facts must contain contractor or come from a mapped sender."""
     if not fact_text:
         return False
-    return any(cnt in fact_text.lower() for cnt in ALLOWED_CONTRACTORS)
+    if any(cnt in fact_text.lower() for cnt in ALLOWED_CONTRACTORS):
+        return True
+    return bool(sender and SENDER_TO_CONTRACTOR.get(sender))
+
+
+def _contractor_from_fact_or_sender(fact_text, sender=None):
+    fact_lower = (fact_text or '').lower()
+    for cnt in ALLOWED_CONTRACTORS:
+        if cnt in fact_lower:
+            return cnt
+    if sender:
+        return SENDER_TO_CONTRACTOR.get(sender)
+    return None
+
+
+def _position_from_personnel_fact(fact_text):
+    fact_lower = (fact_text or '').lower()
+    if 'итр' in fact_lower:
+        return 'ИТР'
+    if WORKER_POSITION_RE.search(fact_lower):
+        return 'Рабочие'
+    return 'Сотрудник'
 
 
 # ─── Simple pattern fallback ─────────────────────────────────────────────────
@@ -152,20 +180,63 @@ def _parse_personnel_fallback(text):
         for m in re.finditer(rf'{o}\s+(\d+)\s*рабоч|{o}\s*рабоч\w*\s*(\d+)', t, re.I):
             n = next((int(g) for g in m.groups() if g), None)
             if n:
-                results.append((org, 'Рабочий', n))
+                results.append((org, 'Рабочие', n))
         m = re.search(rf'{o}\s+итр\s*(\d+)[,\s]+рабоч\w*\s*(\d+)', t, re.I)
         if m:
             results.append((org, 'ИТР', int(m.group(1))))
-            results.append((org, 'Рабочий', int(m.group(2))))
+            results.append((org, 'Рабочие', int(m.group(2))))
         m2 = re.search(rf'{o}\s+(\d+)\s*итр[,\s]+(\d+)\s*рабоч', t, re.I)
         if m2:
             results.append((org, 'ИТР', int(m2.group(1))))
-            results.append((org, 'Рабочий', int(m2.group(2))))
+            results.append((org, 'Рабочие', int(m2.group(2))))
     best = {}
     for org, pos, n in results:
         key = (org, pos)
         if key not in best or n > best[key]:
             best[key] = n
+    return [(o, p, n) for (o, p), n in best.items()]
+
+
+def _parse_sender_personnel_fallback(text, sender=None):
+    """Parse personnel lines without contractor when sender has a contractor mapping."""
+    org_name = SENDER_TO_CONTRACTOR.get(sender) if sender else None
+    if not org_name:
+        return []
+
+    results = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip().lower().replace('ё', 'е')
+        if not line:
+            continue
+        m = re.match(
+            r'^(итр|рабоч\w*|работник\w*|монтажник\w*|монолитчик\w*|'
+            r'каменщик\w*|бетонщик\w*|маляр\w*|арматурщик\w*|сварщик\w*|'
+            r'штукатур\w*|плотник\w*|отделочник\w*|электрик\w*|сантехник\w*|'
+            r'разнорабоч\w*|подсобн\w*)\s*[-:—–]?\s*(\d+)\b',
+            line,
+            re.I,
+        )
+        if not m:
+            continue
+        label = m.group(1)
+        n = int(m.group(2))
+        if label == 'итр':
+            position = 'ИТР'
+        else:
+            position = 'Рабочие'
+        results.append((org_name, position, n, line))
+
+    best = {}
+    seen_lines = set()
+    for org, pos, n, line in results:
+        line_key = (org, line)
+        if line_key in seen_lines:
+            continue
+        seen_lines.add(line_key)
+        key = (org, pos)
+        if key not in best:
+            best[key] = 0
+        best[key] += n
     return [(o, p, n) for (o, p), n in best.items()]
 
 
@@ -255,12 +326,14 @@ def _extract_vor_codes(text):
 
 # ─── Grok prompt builder ─────────────────────────────────────────────────────
 
-def _build_qa_prompt(user_text):
+def _build_qa_prompt(user_text, sender=None):
     """Build the Grok prompt with few-shot examples for QA fact extraction.
 
     Returns prompt string. The few-shot examples improve recall by showing
     Grok exactly what structured output should look like.
     """
+    personnel_rule = "Если подрядчик не указан для персонала — извлекай факт: подрядчик будет определён по отправителю." if sender and SENDER_TO_CONTRACTOR.get(sender) else "Если подрядчик не указан для персонала — НЕ извлекай этот факт (будет отклонён)."
+
     prompt = f"""Извлеки ВСЕ факты из ответа прораба. Если сомневаешься — извлекай. Лучше лишний факт, чем пропущенный.
 Верни ТОЛЬКО JSON-массив объектов, без пояснений, без markdown.
 
@@ -269,7 +342,7 @@ def _build_qa_prompt(user_text):
 
 ПРАВИЛА:
 1. ИТР и рабочие — РАЗНЫЕ факты. «Атантай ИТР 1, рабочих 6» → ДВА объекта.
-2. Если подрядчик не указан для персонала — НЕ извлекай этот факт (будет отклонён).
+2. {personnel_rule}
 3. building определяй по явному упоминанию: «АБК» или «Общежитие». Если не указано → «общая».
 4. category выбирай из разрешённого списка. Если факт не подходит ни под одну категорию — не извлекай.
 5. Не выдумывай данные. Только то, что явно указано в тексте.
@@ -329,7 +402,7 @@ def _smart_chunk(text, max_chars=3000):
 
 # ─── Main parse function ─────────────────────────────────────────────────────
 
-def parse_qa(gid, text, date_str=None):
+def parse_qa(gid, text, date_str=None, sender=None):
     """Parse QA message and save facts to DB.
 
     Pipeline:
@@ -375,12 +448,12 @@ def parse_qa(gid, text, date_str=None):
 
             while retry_attempts < MAX_RETRIES and grok_result is None:
                 if retry_attempts == 0:
-                    prompt = _build_qa_prompt(chunk)
+                    prompt = _build_qa_prompt(chunk, sender=sender)
                 else:
                     # Retry with clarifying prompt
                     prompt = (
                         f"ПРЕДЫДУЩАЯ ПОПЫТКА НЕ УДАЛАСЬ. Пожалуйста, верни СТРОГО JSON-массив.\n\n"
-                        f"{_build_qa_prompt(chunk)}"
+                        f"{_build_qa_prompt(chunk, sender=sender)}"
                     )
 
                 try:
@@ -427,17 +500,23 @@ def parse_qa(gid, text, date_str=None):
                             f = parts[2]
                             if not c:
                                 continue  # skip hallucinated categories in pipe format
-                            if c == 'персонал' and not validate_personnel_fact(f):
+                            if c == 'персонал' and not validate_personnel_fact(f, sender=sender):
                                 print(f"[QA VALIDATE] Rejected incomplete personnel: '{f}' — no contractor", flush=True)
                                 continue
                             all_grok_facts.append((b, c, f))
                 # Always try personnel regex on original user chunk when Grok JSON failed
                 for org_name, position, n in _parse_personnel_fallback(chunk):
-                    fact = f"{org_name} {position} {n}" if position != 'Рабочий' else f"{org_name} {n} рабочих"
+                    fact = f"{org_name} {position} {n}" if position != 'Рабочие' else f"{org_name} {n} рабочих"
                     if position == 'ИТР':
                         fact = f"{org_name} ИТР {n}"
                     all_grok_facts.append(('общая', 'персонал', fact))
                     print(f"[QA PIPE FALLBACK] personnel from text: {fact}", flush=True)
+                for org_name, position, n in _parse_sender_personnel_fallback(chunk, sender=sender):
+                    fact = f"{org_name} {position} {n}" if position != 'Рабочие' else f"{org_name} {n} рабочих"
+                    if position == 'ИТР':
+                        fact = f"{org_name} ИТР {n}"
+                    all_grok_facts.append(('общая', 'персонал', fact))
+                    print(f"[QA PIPE FALLBACK] personnel from sender: {fact}", flush=True)
                 continue
 
             # Valid JSON list — validate each fact
@@ -452,7 +531,7 @@ def parse_qa(gid, text, date_str=None):
                     continue  # skip empty facts
 
                 # Personnel validation
-                if c == 'персонал' and not validate_personnel_fact(f):
+                if c == 'персонал' and not validate_personnel_fact(f, sender=sender):
                     print(f"[QA VALIDATE] Rejected incomplete personnel: '{f}' — no contractor", flush=True)
                     _audit_log('rejected_personnel', {'fact': f})
                     continue
@@ -462,6 +541,22 @@ def parse_qa(gid, text, date_str=None):
 
         if all_grok_facts:
             print(f"[QA Grok] Structured: {len(all_grok_facts)} validated facts from JSON", flush=True)
+
+        sender_personnel = _parse_sender_personnel_fallback(text, sender=sender)
+        if sender_personnel:
+            existing_personnel = {
+                (_contractor_from_fact_or_sender(f, sender=sender), _position_from_personnel_fact(f))
+                for _, c, f in all_grok_facts
+                if c == 'персонал'
+            }
+            for org_name, position, n in sender_personnel:
+                if (org_name, position) in existing_personnel:
+                    continue
+                fact = f"{org_name} {position} {n}" if position != 'Рабочие' else f"{org_name} {n} рабочих"
+                if position == 'ИТР':
+                    fact = f"{org_name} ИТР {n}"
+                all_grok_facts.append(('общая', 'персонал', fact))
+                print(f"[QA SENDER FALLBACK] personnel from sender: {fact}", flush=True)
 
         # Step 5: Save everything to DB — route by category to OJR tables
         conn = get_conn()
@@ -488,20 +583,13 @@ def parse_qa(gid, text, date_str=None):
                 # Save to OJR personnel table
                 from db import save_personnel
                 # Try to parse org name + ITR/workers from fact text
-                fact_lower = f.lower()
-                for cnt in ALLOWED_CONTRACTORS:
-                    if cnt in fact_lower:
-                        org_name = cnt
-                        break
-                else:
-                    org_name = 'айбикон'  # default
+                org_name = _contractor_from_fact_or_sender(f, sender=sender)
+                if not org_name:
+                    print(f"[QA VALIDATE] Rejected incomplete personnel at save: '{f}' — no contractor", flush=True)
+                    _audit_log('rejected_personnel_save', {'fact': f, 'sender': sender})
+                    continue
                 # Determine if ITR or worker
-                if 'итр' in fact_lower:
-                    position = 'ИТР'
-                elif 'рабоч' in fact_lower:
-                    position = 'Рабочий'
-                else:
-                    position = 'Сотрудник'
+                position = _position_from_personnel_fact(f)
                 # Parse headcount from fact (e.g. "8 рабочих" → 8, "ИТР 1" → 1)
                 num_match = re.search(r'(\d+)', f)
                 n = int(num_match.group(1)) if num_match else 1
@@ -528,11 +616,20 @@ def parse_qa(gid, text, date_str=None):
             elif c == 'техника':
                 # Equipment goes to bot_memory_facts, NOT work_log
                 print(f"[QA SAVE] → bot_memory_facts (техника)", flush=True)
-                cur.execute(
-                    "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) "
-                    "VALUES (%s, %s, %s, %s, %s, %s) "
-                    "ON CONFLICT (chat_id, fact_date, building, category, fact) DO NOTHING",
-                    (gid, today, b if b != 'общая' else 'общая', 'техника', f, 'qa'))
+                try:
+                    cur.execute(
+                        "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) "
+                        "VALUES (%s, %s, %s, %s, %s, %s) "
+                        "ON CONFLICT (chat_id, fact_date, building, category, fact) DO NOTHING",
+                        (gid, today, b if b != 'общая' else 'общая', 'техника', f, 'qa'))
+                except Exception as e:
+                    print(f"[QA SAVE ERR] bot_memory_facts INSERT failed: {e}", flush=True)
+                    traceback.print_exc()
+                    _audit_log('bot_memory_facts_insert_error', {
+                        'error': str(e),
+                        'fact': f,
+                        'group_id': gid,
+                    })
                 count += 1
             elif c in ('план', 'объём'):
                 # These go to work_log — extract VOR code, require volume > 0
@@ -558,7 +655,8 @@ def parse_qa(gid, text, date_str=None):
         # (covers Grok JSON fail / empty pipe where workers count still must be stored)
         if count == 0:
             from db import save_personnel
-            for org_name, position, n in _parse_personnel_fallback(text):
+            fallback_personnel = _parse_personnel_fallback(text) + _parse_sender_personnel_fallback(text, sender=sender)
+            for org_name, position, n in fallback_personnel:
                 print(f"[QA FALLBACK] personnel org='{org_name}' pos='{position}' count={n}", flush=True)
                 # Single row + workers_count (same anti-race as main path)
                 slot_name = f"{org_name}-{position}" if position else org_name
@@ -578,7 +676,7 @@ def parse_qa(gid, text, date_str=None):
                             save_material(gid, today, f, building=b if b != 'общая' else None)
                         elif c == 'персонал':
                             # Prefer parsed counts; generic single row only if no regex hit
-                            if not _parse_personnel_fallback(text):
+                            if not fallback_personnel:
                                 save_personnel(gid, today, 'АйБиКон', 'АйБиКон', 'Сотрудник',
                                                sync_source='qa', workers_count=1)
                         else:
@@ -606,5 +704,6 @@ def parse_qa(gid, text, date_str=None):
 
     except Exception as e:
         print(f"[QA ERR] {e}", flush=True)
+        traceback.print_exc()
         _audit_log('parse_error', {'error': str(e), 'text_preview': text[:100] if text else 'N/A'})
         return 0

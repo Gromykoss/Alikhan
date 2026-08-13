@@ -10,7 +10,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import pytest
-from qa import _extract_vor_codes
+from qa import _extract_vor_codes, _parse_sender_personnel_fallback
 
 
 def test_plan_na_zavtra():
@@ -78,11 +78,37 @@ def test_grok_hallucination_filter():
     """Verify volumes() in fill_ejo skips category='монтаж' facts."""
     # This test verifies the filter logic by checking that only 'объём'/'план'
     # categories contribute to volumes. We simulate DB facts.
-    from fill_ejo import volumes
+    from fill_ejo import get_volumes
     # Note: full DB integration test would require test DB; here we just
     # ensure the function exists and basic import works. The filter is
     # documented in qa.py parse flow and fill_ejo volumes query.
-    assert callable(volumes)
+    assert callable(get_volumes)
     # Placeholder assertion - real verification happens in integration with
     # bot_memory_facts where category != 'монтаж'
     assert True  # filter confirmed in source: volumes() only uses объём/план
+
+
+def test_sender_personnel_specialties_collapse_to_workers():
+    text = 'Итр-3\nМонтажники-13\nМонолитчики-10'
+    facts = _parse_sender_personnel_fallback(text, sender='203672197812426@lid')
+
+    assert sorted(facts) == [
+        ('майкадам', 'ИТР', 3),
+        ('майкадам', 'Рабочие', 23),
+    ]
+
+
+def test_sender_personnel_unknown_sender_without_contractor_rejected():
+    text = 'Итр-3\nМонтажники-13\nМонолитчики-10'
+
+    assert _parse_sender_personnel_fallback(text, sender='unknown@lid') == []
+
+
+def test_sender_personnel_deduplicates_identical_lines():
+    text = 'Итр-3\nИтр-3\nМонтажники-13\nМонтажники-13\nМонолитчики-10'
+    facts = _parse_sender_personnel_fallback(text, sender='203672197812426@lid')
+
+    assert sorted(facts) == [
+        ('майкадам', 'ИТР', 3),
+        ('майкадам', 'Рабочие', 23),
+    ]

@@ -25,7 +25,15 @@ OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 WTTR_URL = "https://wttr.in/42.2,72.5?format=%C+%t+%w+%h+%P&lang=ru"
 
 # ── Instance ──
-EVO_INSTANCE = "alikhan"
+# ── Bridge API (Hermes Bridge) ──
+EVO = "http://127.0.0.1:3000"   # Bridge URL (for legacy Evolution API compatibility)
+KEY = "bridge"                   # Bridge API key (default: "bridge")
+
+# ── QA sender attribution ──
+SENDER_TO_CONTRACTOR = {
+    "203672197812426@lid": "майкадам",  # Алексей
+    "244817581838465@lid": "айбикон",  # Максат maksatmoldokulov27
+}
 
 # ── Paths ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
