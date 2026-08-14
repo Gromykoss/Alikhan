@@ -663,7 +663,16 @@ def _clean_body(msg: dict) -> str:
     return body
 
 
-def _insert_media_message(chat_id, sender, message_type, mid, tags):
+def _message_time_from_timestamp(timestamp):
+    try:
+        if timestamp is None:
+            raise ValueError("missing timestamp")
+        return datetime.fromtimestamp(float(timestamp), tz=timezone.utc)
+    except Exception:
+        return datetime.now(timezone.utc)
+
+
+def _insert_media_message(chat_id, sender, message_type, mid, tags, timestamp=None):
     """bot_memory_messages: content=mid (дедуп), tags=jsonb. Возвращает id."""
     conn = None
     try:
@@ -676,11 +685,12 @@ def _insert_media_message(chat_id, sender, message_type, mid, tags):
         row = cur.fetchone()
         if row:
             return row[0]
+        message_time = _message_time_from_timestamp(timestamp)
         cur.execute(
-            "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at) "
-            "VALUES (%s, %s, 'user', %s, %s, %s, %s) RETURNING id",
+            "INSERT INTO bot_memory_messages (chat_id, sender, role, message_type, content, tags, created_at, message_time) "
+            "VALUES (%s, %s, 'user', %s, %s, %s, %s, %s) RETURNING id",
             (chat_id, sender, message_type, mid,
-             json.dumps(tags, ensure_ascii=False), datetime.now(BISHKEK_TZ)))
+             json.dumps(tags, ensure_ascii=False), datetime.now(BISHKEK_TZ), message_time))
         rid = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -763,7 +773,7 @@ def _save_prod_photo(msg, mid) -> bool:
         tags["media_missing"] = True
     if local_path:
         tags["local_path"] = local_path
-    rid = _insert_media_message(msg.get("chatId", ""), sender, "image", mid, tags)
+    rid = _insert_media_message(msg.get("chatId", ""), sender, "image", mid, tags, msg.get("timestamp"))
     if rid is None:
         log(f"[PRD] PHOTO {mid[:12]} DB FAIL (metadata row not saved) — seen NOT marked")
         return False
@@ -947,7 +957,7 @@ def _save_prod_document(msg, mid) -> bool:
         tags["media_missing"] = True
     if local_path:
         tags["local_path"] = local_path
-    rid = _insert_media_message(msg.get("chatId", ""), sender, "document", mid, tags)
+    rid = _insert_media_message(msg.get("chatId", ""), sender, "document", mid, tags, msg.get("timestamp"))
     if rid is None:
         log(f"[PRD] DOC DB FAIL: {fname} ({mid[:12]}) — seen NOT marked")
         return False
@@ -1032,7 +1042,7 @@ def main():
             tags = {"msg_id": mid, "media_type": mtype}
             if local_path:
                 tags["local_path"] = local_path
-            ok = _insert_media_message(chat_id, sender, mtype, mid, tags) is not None
+            ok = _insert_media_message(chat_id, sender, mtype, mid, tags, msg.get("timestamp")) is not None
         # --- Текст ---
         else:
             text = extract_text(msg)
@@ -1043,7 +1053,7 @@ def main():
                 # seen НЕ помечаем и мост НЕ ack'аем (ретрай на следующем тике).
                 # Песочница сюда не попадает (continue выше) — не меняется.
                 tags = {"msg_id": mid}
-                rid = _insert_media_message(chat_id, sender, "empty", mid, tags)
+                rid = _insert_media_message(chat_id, sender, "empty", mid, tags, msg.get("timestamp"))
                 if rid is None:
                     log(f"[{grp}] EMPTY {mid[:12]}... DB FAIL (arrival not saved) — seen NOT marked, retry next tick")
                     continue

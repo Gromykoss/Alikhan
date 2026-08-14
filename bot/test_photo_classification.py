@@ -184,7 +184,7 @@ setattr(fake_db, "get_conn", lambda: fake_conn_holder["conn"])
 sys.modules["db"] = fake_db
 
 inserted_memory = []
-wc._insert_media_message = lambda chat, sender, mtype, mid, tags: (
+wc._insert_media_message = lambda chat, sender, mtype, mid, tags, timestamp: (
     inserted_memory.append((chat, sender, mtype, mid, tags)) or 1001
 )
 orig_classify = wc._classify_photo_via_vision
