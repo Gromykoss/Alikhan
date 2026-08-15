@@ -6,6 +6,8 @@
 
 ## ⛔ CRITICAL GATES — ЧИТАЙ ПЕРВЫМ
 
+**0. ЯЗЫК: все мысли (reasoning), ответы и обсуждения — ТОЛЬКО на русском. Без исключений.**
+
 ### ⛔ DELEGATION GATE — ПРАВИЛО №0 (25.07.2026)
 
 **Alikhan = ОРКЕСТРАТОР, не исполнитель.** MoA Auto: `skill_view('moa-auto')`.
@@ -22,6 +24,16 @@
 
 Отвечай **только** на прямое `@ТвойПрофиль`. Без `@` — молчи (кроме `default_profile`).
 Не лезь в чужую зону. Не дублируй. ⛔ Запрещено слово «тишина» (эхо-петля).
+
+### ⛔ ПРАВИЛО ВОЗВРАТА В TELEGRAM (ОБЯЗАТЕЛЬНО)
+
+Если работаешь с Сергеем по своему проекту в своей Telegram-группе и понадобилось **уйти в Buzz** (уточнить у другого агента, решить инфраструктурную проблему):
+
+1. Ушёл в Buzz — решил вопрос — **ОБЯЗАТЕЛЬНО вернись в свою Telegram-группу**.
+2. Продолжи работу с Сергеем / доложи результат там, где начал.
+3. Buzz — **временный инструмент уточнения**, НЕ конечная точка. Не застревай: тебя ждёт ответ Сергею в Telegram.
+
+**Проверка перед отправкой в Buzz:** «Ухожу за уточнением → вернусь в Telegram и закрою вопрос с Сергеем». Нет ответа в Telegram = работа НЕ закончена.
 
 ---
 
@@ -90,6 +102,50 @@ Alikhan работает напрямую как агент Hermes.
 
 ---
 
+## 🖥️ Инфраструктура
+
+### Сервер
+- **VPS:** srv1622697 (Yandex Cloud), 2 vCPU, 15 GB RAM, 193 GB SSD
+- **OS:** Ubuntu 24.04, ядро 6.8.0
+
+### Сервисы (systemd user)
+
+| Сервис | Роль |
+|--------|------|
+| `hermes-whatsapp-bridge` | WhatsApp Bridge (Baileys, :3000, mode=bot) |
+| `alikhan-document-extractor` | Распознавание документов (:8099) |
+| `hermes-gateway` | Мультиплексор платформ (WhatsApp, Telegram, Discord, Buzz) |
+| `alikhan.service` | **ОСТАНОВЛЕН** (v6 — Hermes Agent напрямую) |
+
+### База данных (Docker)
+
+- **Контейнер:** `evolution-postgres` (порт 5432, internal)
+- **База:** `evolution_db`, пользователь: `evolution`
+- **Таблицы ОЖР (19):** `ojr_section1_personnel`, `ojr_section3_work_log`, `ojr_section4_checks`, `ojr_section5_asbuilt_docs`, `ojr_section6_gosstroynadzor`, `ojr_weather`, `ojr_photo_log`, `ojr_daily_summary`, `ojr_materials`, `ojr_incidents`, `ojr_section2_equipment`, `ojr_section7_author_supervision`, `ojr_section8_commissioning`, `ojr_section9_calendar_plan`, `ojr_section10_safety`, `ojr_section11_environment`, `ojr_section12_quality`, `ojr_section13_asbuilt`, `ojr_section14_defects`
+- **Legacy:** `bot_memory_messages` (443 записи), `bot_memory_facts` (266), `bot_schedule_phases`, `bot_poll_state`, `bot_calendar_events`, `bot_building_profiles`
+
+### API / endpoints
+
+| Сервис | URL | Назначение |
+|--------|-----|-----------|
+| WhatsApp Bridge | `http://127.0.0.1:3000` | `/health`, `/messages` (опрос), `/send` (отправка), `/collect-messages` |
+| Document Extractor | `http://127.0.0.1:8099` | `/health`, `/extract` (распознавание xlsx/pdf) |
+| Open-Meteo | `https://api.open-meteo.com` | Погода (координаты 42.284, 72.765) |
+| Google Sheets | API (сервисный аккаунт) | Табель персонала |
+
+### Data flow
+
+```
+Прораб (WhatsApp) → Bridge :3000 → collect-journal → диспетчер
+  ├── QA-факты → bot_memory_facts → ojr_section1/3
+  ├── Фото → ojr_photo_log
+  ├── Документы → extractor :8099 → текст
+  └── Погода → Open-Meteo API → ojr_weather
+
+ЕЖО: ojr_section3 + ojr_weather + ojr_photo_log → fill_ejo.py → Excel → WhatsApp
+```
+
+
 ## ⛔ PRE-COMMIT / PRE-FIX GATE (MANDATORY)
 
 ### Автоматический хук (`.git/hooks/pre-commit`)
@@ -120,8 +176,9 @@ Alikhan работает напрямую как агент Hermes.
 2. Build plan (Goal Mode) для задач >20 строк
 3. Preserve security: НЕ в боевую группу, НЕ менять secrets/DB
 4. Verification: `py_compile` → `pytest test_ejo_simulation.py` → sandbox → CHRONOLOGY.md
-5. No production restart без approval
-6. `git status` перед работой — не перезаписывать чужие правки
+5. **⛔ CHRONOLOGY АВТОМАТИЧЕСКИ** — после ЛЮБОГО фикса/инцидента сразу обнови CHRONOLOGY.md (датированная запись: причина→что сделал→как проверил→файлы). Не по напоминанию, не в конец сессии. Часть фикса.
+6. No production restart без approval
+7. `git status` перед работой — не перезаписывать чужие правки
 
 ---
 

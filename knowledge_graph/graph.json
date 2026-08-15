@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-09T00:16:43.233785+00:00",
+  "built_at": "2026-08-15T08:00:37.016016+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 266,
-    "edges": 439,
+    "nodes": 311,
+    "edges": 508,
     "projects": 1,
-    "events": 29,
+    "events": 47,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -15,7 +15,7 @@
     "services": 3,
     "templates": 4,
     "decisions": 3,
-    "tasks": 5
+    "tasks": 6
   },
   "nodes": [
     [
@@ -751,7 +751,139 @@
       }
     ],
     [
-      "event/2026-08-08/Харденинг VPS + разделение очередей bridge + echo_",
+      "event/2026-08-14/media-сообщения сохраняют message_time",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-14",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "media-сообщения сохраняют message_time",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-13/Бэклог июля НЕ потерян: сырьё жило в bot_memory_me",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-13",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Бэклог июля НЕ потерян: сырьё жило в bot_memory_messages",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-13/Инцидент «сообщения не доходили» + маппинг прораба",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Инцидент «сообщения не доходили» + маппинг прораба на подрядчика",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-12/Полный аудит: 5x аудит → 28 багов → 28 fix → 0 баг",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-12",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Полный аудит: 5x аудит → 28 багов → 28 fix → 0 багов",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-12/Ночная сводка: полный аудит → 28 багов → 0 багов,",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Ночная сводка: полный аудит → 28 багов → 0 багов, queueLength 44→0",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-11/Ночная сводка: третий спокойный день, queueLength",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-11",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: третий спокойный день, queueLength растёт",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-10/Ночная сводка: спокойный день, bridge scriptHash о",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-10",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Ночная сводка: спокойный день, bridge scriptHash обновился",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-09/Спокойный день: очистка мусора, AGENTS.md расширен",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-09",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Спокойный день: очистка мусора, AGENTS.md расширен",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-08/Дополнение: цепочка фото и drain 60",
       {
         "type": "event"
       }
@@ -763,13 +895,25 @@
       }
     ],
     [
+      "Дополнение: цепочка фото и drain 60",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-08/Харденинг VPS + разделение очередей bridge + echo_",
+      {
+        "type": "event"
+      }
+    ],
+    [
       "Харденинг VPS + разделение очередей bridge + echo_loop_guard",
       {
         "type": "description"
       }
     ],
     [
-      "event/2026-08-07/Ночная сводка: спокойный день после насыщенного 06",
+      "event/2026-08-07/Односторонняя связь (503 на исходящих)",
       {
         "type": "event"
       }
@@ -781,13 +925,25 @@
       }
     ],
     [
+      "Односторонняя связь (503 на исходящих)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-07/Ночная сводка: спокойный день после насыщенного 06",
+      {
+        "type": "event"
+      }
+    ],
+    [
       "Ночная сводка: спокойный день после насыщенного 06.08",
       {
         "type": "description"
       }
     ],
     [
-      "event/2026-08-06/Ночная сводка: насыщенный день — bridge, ЕЖО, табе",
+      "event/2026-08-06/Дополнение: stale WS, 3 фото→1, listener/pre-key",
       {
         "type": "event"
       }
@@ -799,13 +955,25 @@
       }
     ],
     [
+      "Дополнение: stale WS, 3 фото→1, listener/pre-key",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-06/Ночная сводка: насыщенный день — bridge, ЕЖО, табе",
+      {
+        "type": "event"
+      }
+    ],
+    [
       "Ночная сводка: насыщенный день — bridge, ЕЖО, табель, персонал",
       {
         "type": "description"
       }
     ],
     [
-      "event/2026-08-05/Ночная сводка: третий спокойный день подряд",
+      "event/2026-08-05/Расхождение справок экологии + lifecycle_guard",
       {
         "type": "event"
       }
@@ -817,13 +985,25 @@
       }
     ],
     [
+      "Расхождение справок экологии + lifecycle_guard",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-05/Ночная сводка: третий спокойный день подряд",
+      {
+        "type": "event"
+      }
+    ],
+    [
       "Ночная сводка: третий спокойный день подряд",
       {
         "type": "description"
       }
     ],
     [
-      "event/2026-08-04/Ночная сводка: второй спокойный день подряд",
+      "event/2026-08-04/Обновление hermes-agent стёрло кастомный bridge.js",
       {
         "type": "event"
       }
@@ -832,6 +1012,18 @@
       "2026-08-04",
       {
         "type": "date"
+      }
+    ],
+    [
+      "Обновление hermes-agent стёрло кастомный bridge.js",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-04/Ночная сводка: второй спокойный день подряд",
+      {
+        "type": "event"
       }
     ],
     [
@@ -967,6 +1159,18 @@
       }
     ],
     [
+      "event/2026-07-29/Дополнение к миграции: операционка (не архитектура",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Дополнение к миграции: операционка (не архитектура v6)",
+      {
+        "type": "description"
+      }
+    ],
+    [
       "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
       {
         "type": "event"
@@ -992,6 +1196,36 @@
     ],
     [
       "Полный аудит и стабилизация (Hermes-driven)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-25/Дополнение: инциденты дня аудита (в основной запис",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Дополнение: инциденты дня аудита (в основной записи нет)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-27/Контур безопасности + утечки секретов + второй цик",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-27",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Контур безопасности + утечки секретов + второй цикл ЕЖО",
       {
         "type": "description"
       }
@@ -1183,6 +1417,36 @@
       }
     ],
     [
+      "event/2026-07-28/Дополнение к ночной сводке (Diamond + утечка xAI)",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Дополнение к ночной сводке (Diamond + утечка xAI)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-07-30/Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-07-30",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      {
+        "type": "description"
+      }
+    ],
+    [
       "event/2026-08-06/Major: bridge restore + ЕЖО fix + табель theme rul",
       {
         "type": "event"
@@ -1250,6 +1514,12 @@
     ],
     [
       "task/T-159",
+      {
+        "type": "task"
+      }
+    ],
+    [
+      "task/T-184",
       {
         "type": "task"
       }
@@ -1779,6 +2049,13 @@
     },
     {
       "source": "db_table/ojr_section3_work_log",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section3_work_log",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1898,6 +2175,13 @@
     },
     {
       "source": "decision/ojr-migration",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/ojr-migration",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1954,6 +2238,13 @@
     },
     {
       "source": "decision/hermes-bridge-migration",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "decision/hermes-bridge-migration",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -1999,6 +2290,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/bridge_wrapper",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -2388,6 +2686,13 @@
     },
     {
       "source": "bot_component/fill_ejo",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/fill_ejo",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -2618,6 +2923,13 @@
       "confidence": 0.9
     },
     {
+      "source": "bot_component/daily_snapshot",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "bot_component/stt",
       "target": "bot/stt.py",
       "predicate": "located_at",
@@ -2644,6 +2956,13 @@
       "predicate": "referenced_in",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "bot_component/alerter",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "db_table/bot_memory_facts",
@@ -2685,6 +3004,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_facts",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.88
     },
     {
@@ -2773,6 +3099,13 @@
     },
     {
       "source": "db_table/ojr_photo_log",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_photo_log",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -2818,6 +3151,13 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "template/ejo",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {
@@ -2968,6 +3308,13 @@
       "confidence": 0.88
     },
     {
+      "source": "db_table/ojr_section4_checks",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
       "source": "db_table/ojr_section5_asbuilt_docs",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2982,6 +3329,13 @@
       "confidence": 0.88
     },
     {
+      "source": "db_table/ojr_section5_asbuilt_docs",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
       "source": "db_table/ojr_section6_gosstroynadzor",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -2993,6 +3347,13 @@
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section6_gosstroynadzor",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
       "confidence": 0.88
     },
     {
@@ -3084,6 +3445,13 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_messages",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.88
     },
     {
@@ -3416,6 +3784,195 @@
       "confidence": 0.9
     },
     {
+      "source": "event/2026-08-14/media-сообщения сохраняют message_time",
+      "target": "2026-08-14",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-14/media-сообщения сохраняют message_time",
+      "target": "media-сообщения сохраняют message_time",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-14/media-сообщения сохраняют message_time",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-13/Бэклог июля НЕ потерян: сырьё жило в bot_memory_me",
+      "target": "2026-08-13",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-13/Бэклог июля НЕ потерян: сырьё жило в bot_memory_me",
+      "target": "Бэклог июля НЕ потерян: сырьё жило в bot_memory_messages",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-13/Бэклог июля НЕ потерян: сырьё жило в bot_memory_me",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-13/Инцидент «сообщения не доходили» + маппинг прораба",
+      "target": "2026-08-13",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-13/Инцидент «сообщения не доходили» + маппинг прораба",
+      "target": "Инцидент «сообщения не доходили» + маппинг прораба на подрядчика",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-13/Инцидент «сообщения не доходили» + маппинг прораба",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-12/Полный аудит: 5x аудит → 28 багов → 28 fix → 0 баг",
+      "target": "2026-08-12",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-12/Полный аудит: 5x аудит → 28 багов → 28 fix → 0 баг",
+      "target": "Полный аудит: 5x аудит → 28 багов → 28 fix → 0 багов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-12/Полный аудит: 5x аудит → 28 багов → 28 fix → 0 баг",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-12/Ночная сводка: полный аудит → 28 багов → 0 багов,",
+      "target": "2026-08-12",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-12/Ночная сводка: полный аудит → 28 багов → 0 багов,",
+      "target": "Ночная сводка: полный аудит → 28 багов → 0 багов, queueLength 44→0",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-12/Ночная сводка: полный аудит → 28 багов → 0 багов,",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-11/Ночная сводка: третий спокойный день, queueLength",
+      "target": "2026-08-11",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-11/Ночная сводка: третий спокойный день, queueLength",
+      "target": "Ночная сводка: третий спокойный день, queueLength растёт",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-11/Ночная сводка: третий спокойный день, queueLength",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-10/Ночная сводка: спокойный день, bridge scriptHash о",
+      "target": "2026-08-10",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-10/Ночная сводка: спокойный день, bridge scriptHash о",
+      "target": "Ночная сводка: спокойный день, bridge scriptHash обновился",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-10/Ночная сводка: спокойный день, bridge scriptHash о",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-09/Спокойный день: очистка мусора, AGENTS.md расширен",
+      "target": "2026-08-09",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-09/Спокойный день: очистка мусора, AGENTS.md расширен",
+      "target": "Спокойный день: очистка мусора, AGENTS.md расширен",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-09/Спокойный день: очистка мусора, AGENTS.md расширен",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-08/Дополнение: цепочка фото и drain 60",
+      "target": "2026-08-08",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-08/Дополнение: цепочка фото и drain 60",
+      "target": "Дополнение: цепочка фото и drain 60",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-08/Дополнение: цепочка фото и drain 60",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-08-08/Харденинг VPS + разделение очередей bridge + echo_",
       "target": "2026-08-08",
       "predicate": "occurred_on",
@@ -3431,6 +3988,27 @@
     },
     {
       "source": "event/2026-08-08/Харденинг VPS + разделение очередей bridge + echo_",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-07/Односторонняя связь (503 на исходящих)",
+      "target": "2026-08-07",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-07/Односторонняя связь (503 на исходящих)",
+      "target": "Односторонняя связь (503 на исходящих)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-07/Односторонняя связь (503 на исходящих)",
       "target": "project/alikhan",
       "predicate": "referenced_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
@@ -3458,6 +4036,27 @@
       "confidence": 0.85
     },
     {
+      "source": "event/2026-08-06/Дополнение: stale WS, 3 фото→1, listener/pre-key",
+      "target": "2026-08-06",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-06/Дополнение: stale WS, 3 фото→1, listener/pre-key",
+      "target": "Дополнение: stale WS, 3 фото→1, listener/pre-key",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-06/Дополнение: stale WS, 3 фото→1, listener/pre-key",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-08-06/Ночная сводка: насыщенный день — bridge, ЕЖО, табе",
       "target": "2026-08-06",
       "predicate": "occurred_on",
@@ -3479,6 +4078,27 @@
       "confidence": 0.85
     },
     {
+      "source": "event/2026-08-05/Расхождение справок экологии + lifecycle_guard",
+      "target": "2026-08-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-05/Расхождение справок экологии + lifecycle_guard",
+      "target": "Расхождение справок экологии + lifecycle_guard",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-05/Расхождение справок экологии + lifecycle_guard",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-08-05/Ночная сводка: третий спокойный день подряд",
       "target": "2026-08-05",
       "predicate": "occurred_on",
@@ -3494,6 +4114,27 @@
     },
     {
       "source": "event/2026-08-05/Ночная сводка: третий спокойный день подряд",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-04/Обновление hermes-agent стёрло кастомный bridge.js",
+      "target": "2026-08-04",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-04/Обновление hermes-agent стёрло кастомный bridge.js",
+      "target": "Обновление hermes-agent стёрло кастомный bridge.js",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-04/Обновление hermes-agent стёрло кастомный bridge.js",
       "target": "project/alikhan",
       "predicate": "referenced_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
@@ -3689,6 +4330,27 @@
       "confidence": 0.85
     },
     {
+      "source": "event/2026-07-29/Дополнение к миграции: операционка (не архитектура",
+      "target": "2026-07-29",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-29/Дополнение к миграции: операционка (не архитектура",
+      "target": "Дополнение к миграции: операционка (не архитектура v6)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-29/Дополнение к миграции: операционка (не архитектура",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-07-26/ОЖР-миграция: персонал/фото/готовность (production",
       "target": "2026-07-26",
       "predicate": "occurred_on",
@@ -3725,6 +4387,48 @@
     },
     {
       "source": "event/2026-07-25/Полный аудит и стабилизация (Hermes-driven)",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-25/Дополнение: инциденты дня аудита (в основной запис",
+      "target": "2026-07-25",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-25/Дополнение: инциденты дня аудита (в основной запис",
+      "target": "Дополнение: инциденты дня аудита (в основной записи нет)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-25/Дополнение: инциденты дня аудита (в основной запис",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-27/Контур безопасности + утечки секретов + второй цик",
+      "target": "2026-07-27",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-27/Контур безопасности + утечки секретов + второй цик",
+      "target": "Контур безопасности + утечки секретов + второй цикл ЕЖО",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-27/Контур безопасности + утечки секретов + второй цик",
       "target": "project/alikhan",
       "predicate": "referenced_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
@@ -3983,6 +4687,48 @@
       "confidence": 0.85
     },
     {
+      "source": "event/2026-07-28/Дополнение к ночной сводке (Diamond + утечка xAI)",
+      "target": "2026-07-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-28/Дополнение к ночной сводке (Diamond + утечка xAI)",
+      "target": "Дополнение к ночной сводке (Diamond + утечка xAI)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-28/Дополнение к ночной сводке (Diamond + утечка xAI)",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-07-30/Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      "target": "2026-07-30",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-07-30/Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      "target": "Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-07-30/Корень даты «всегда 29.07»: цепочка UTC без TZ",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "event/2026-08-06/Major: bridge restore + ЕЖО fix + табель theme rul",
       "target": "2026-08-06",
       "predicate": "occurred_on",
@@ -4110,6 +4856,13 @@
     },
     {
       "source": "task/T-159",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "task/T-184",
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",

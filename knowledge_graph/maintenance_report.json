@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-09T00:16:43.250711+00:00",
-  "graph_built_at": "2026-08-09T00:16:43.233785+00:00",
+  "generated_at": "2026-08-15T08:00:37.032286+00:00",
+  "graph_built_at": "2026-08-15T08:00:37.016016+00:00",
   "graph_stats": {
-    "nodes": 266,
-    "edges": 439,
+    "nodes": 311,
+    "edges": 508,
     "projects": 1,
-    "events": 29,
+    "events": 47,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -14,7 +14,7 @@
     "services": 3,
     "templates": 4,
     "decisions": 3,
-    "tasks": 5
+    "tasks": 6
   },
   "checks": {
     "stale_nodes": [],
