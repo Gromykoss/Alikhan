@@ -5,7 +5,17 @@
 - **Проблема:** `_insert_media_message` писал image/document/video/empty в `bot_memory_messages` без `message_time`; дневные сводки по `(message_time AT TIME ZONE 'Asia/Bishkek')::date` не видели эти записи.
 - **Фикс:** `bot/whatsapp_commands.py` — добавлен безопасный конвертер bridge `timestamp` (unix seconds) в UTC `timestamptz`, колонка `message_time` включена в INSERT, timestamp проброшен во все вызовы `_insert_media_message`.
 - **Проверка:** `python3 -m py_compile bot/whatsapp_commands.py` — OK.
-- **Не делалось:** коммит, рестарт сервисов, изменения схемы/БД.
+- **Коммит:** `178a363` (08:30 UTC) — fix: media-записи сохраняют message_time. Файлы: `bot/whatsapp_commands.py` (+26/−?), `bot/test_photo_classification.py` (мок → 6-й арг), `CHRONOLOGY.md`.
+- **Не делалось:** рестарт сервисов, изменения схемы/БД.
+
+### Ночная сводка (23:00 UTC)
+- **Bridge:** ✅ connected, `queueLength=0`, uptime ~11ч, scriptHash `6830e1f5ecbf5470`.
+- **document-extractor:** ✅ :8099 ok=true.
+- **Gateway:** ✅ active.
+- **БД:** `bot_memory_messages` последняя запись **14.08 16:31** (Asia/Bishkek) — данные текущие, разрывов нет.
+- **Диск:** 40% (76G из 193G).
+- **Тесты:** 18 passed / 1 failed. `test_qa_parser.py::test_grok_hallucination_filter` — ImportError (`save_weather` не в `db.py`), предсуществующий (не связан с today's fix).
+- **Коммиты за сутки:** один `178a363`. Незакоммиченная куча правок с 09.08 (удаление venv/.bak/бэкапов) — по-прежнему висит.
 
 ## 13.08.2026 — Бэклог июля НЕ потерян: сырьё жило в bot_memory_messages
 
@@ -1233,3 +1243,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **13.08.2026 07:32** — QA: first-match классификация итог/специальность (защита от задвоения 46) (`477e2cc`)
 - **13.08.2026 07:34** — chrono: 13.08 — инцидент bridge + маппинг прораба на подрядчика, фиксы QA (`fe5d4e8`)
 - **13.08.2026 12:49** — docs: перенести устаревшую v5-документацию и чужеродный CLAUDE.md в archive/ (`fc4bb62`)
+- **14.08.2026 08:30** — fix: media-записи сохраняют message_time из bridge timestamp (`178a363`)
+- **15.08.2026 10:43** — feat: enforced authority model (claim-gate + production send-deny) (`bfa9b2f`)

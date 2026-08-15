@@ -309,6 +309,74 @@ def secret_name_denied(name: str) -> bool:
     return normalized in SECRET_NAMES
 
 
+def guard_tool_call(tool_name: str, args: dict) -> tuple[bool, str]:
+    """Проверяет tool call на файловую границу профиля Alikhan."""
+
+    tool = tool_name or ""
+    payload = args if isinstance(args, dict) else {}
+
+    if tool in (
+        "read_file",
+        "write_file",
+        "patch",
+        "search_files",
+        "skill_manage",
+        "skill_view",
+    ):
+        stack = [payload]
+        paths = []
+        while stack:
+            current = stack.pop()
+            if isinstance(current, dict):
+                path = current.get("path")
+                if isinstance(path, str) and path:
+                    paths.append(path)
+                stack.extend(current.values())
+            elif isinstance(current, (list, tuple)):
+                stack.extend(current)
+
+        for path in paths:
+            if secret_path_denied(path):
+                return (
+                    False,
+                    f"Файловая граница: путь {path} вне разрешённой зоны Alikhan",
+                )
+        return True, ""
+
+    if tool == "terminal":
+        command = payload.get("command")
+        if not isinstance(command, str) or not command:
+            return True, ""
+
+        denied_fragments = (
+            "~/robot-man",
+            "/home/hermes-workspace/robot-man",
+            "~/gooolag",
+            "/home/hermes-workspace/gooolag",
+            "~/gulag",
+            "/home/hermes-workspace/gulag",
+            "~/rab9",
+            "/home/hermes-workspace/rab9",
+            "~/.hermes/secrets",
+            ".hermes/secrets.env",
+            "secrets.env",
+            "~/.hermes/credentials",
+            ".hermes/credentials",
+            "buzz-message-router",
+            "hermes-agent-lab",
+            "~/hermes-agent-lab",
+        )
+        for fragment in denied_fragments:
+            if fragment in command:
+                return (
+                    False,
+                    f"Файловая граница: command затрагивает {fragment} — вне зоны Alikhan",
+                )
+        return True, ""
+
+    return True, ""
+
+
 def _source_covers_required_tables(source: str, claim_kind: str) -> bool:
     """Проверяет, что SELECT-доказательство покрывает таблицы для типа данных."""
 
@@ -353,6 +421,7 @@ __all__ = [
     "Verdict",
     "authority_level",
     "can_send",
+    "guard_tool_call",
     "is_mutation_allowed",
     "secret_name_denied",
     "secret_path_denied",
