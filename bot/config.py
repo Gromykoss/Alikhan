@@ -12,8 +12,11 @@ from datetime import datetime
 SIM_DATE = None  # was "2026-06-30" — closed
 
 # ── WhatsApp Groups ──
-SANDBOX   = os.environ.get("WHATSAPP_SANDBOX", "")   # Testing group
-PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "")  # Production group
+# Канонические ID (единый источник правды для authority.py и whatsapp_commands.py).
+# env-переменные — только override; дефолт НЕ пустой, чтобы guard не разъехался,
+# если env забыт (fail-closed: боевая всегда идентифицируется правильно).
+SANDBOX   = os.environ.get("WHATSAPP_SANDBOX", "120363179621030401@g.us")      # Testing group
+PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "120363400682390076@g.us")  # Production group
 
 # ── API URLs ──
 EVO_URL = "http://127.0.0.1:3000"

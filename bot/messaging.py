@@ -12,12 +12,16 @@ import os
 import base64
 import subprocess
 import urllib.request
-from bridge_wrapper import EVO, KEY
+from config import EVO, KEY
+from authority import can_send
 
 # ── Text ──
 
 def send_msg(chat_id, text):
     """Send text message via Evolution API. Truncates at 3800 chars."""
+    if not can_send(chat_id, actor="messaging"):
+        print(f"[SEND BLOCKED] {chat_id[:20]} denied by authority.can_send (fail-closed)", flush=True)
+        return False
     try:
         body = json.dumps({"number": chat_id, "text": str(text or "")[:3800]}).encode()
         req = urllib.request.Request(f"{EVO}/message/sendText/alikhan", data=body, method='POST')
@@ -34,6 +38,9 @@ def send_msg(chat_id, text):
 
 def send_voice(chat_id, text):
     """Generate TTS audio via edge-tts and send. Falls back to text on failure."""
+    if not can_send(chat_id, actor="messaging"):
+        print(f"[SEND BLOCKED] {chat_id[:20]} denied by authority.can_send (fail-closed)", flush=True)
+        return False
     try:
         mp3_path = "/tmp/tts_output.mp3"
         subprocess.run(["edge-tts", "--voice", "ru-RU-SvetlanaNeural", "--text", text,
@@ -55,6 +62,9 @@ def send_voice(chat_id, text):
 
 def send_document(chat_id, filepath, filename=None):
     """Send a document via Evolution API with error checking. Returns True if sent."""
+    if not can_send(chat_id, actor="messaging"):
+        print(f"[SEND BLOCKED] {chat_id[:20]} denied by authority.can_send (fail-closed)", flush=True)
+        return False
     try:
         with open(filepath, "rb") as f:
             b64_enc = base64.b64encode(f.read()).decode()

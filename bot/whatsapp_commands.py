@@ -7,6 +7,8 @@
 """
 import sys, os, json, time, requests, re, base64, traceback
 from datetime import datetime, timezone, timedelta
+from authority import can_send
+from config import SANDBOX, PRODUCTION
 
 BISHKEK_TZ = timezone(timedelta(hours=6))
 
@@ -20,8 +22,6 @@ def bishkek_date():
 
 
 BRIDGE = "http://127.0.0.1:3000"
-SANDBOX = "120363179621030401@g.us"
-PRODUCTION = "120363400682390076@g.us"
 SEEN_FILE = "/tmp/alikhan_seen.json"
 LOG_FILE = "/tmp/alikhan_commands.log"
 
@@ -185,10 +185,8 @@ def get_messages() -> list:
 
 
 def send_message(chat_id: str, text: str) -> bool:
-    if chat_id == PRODUCTION:
-        # ⛔ Client-side collect-only guard: боевая группа listen-only.
-        # НИКОГДА не отправляем, даже если мост не вернёт 403.
-        log(f"SEND BLOCKED: PRODUCTION listen-only (client guard), text '{text[:40]}' skipped")
+    if not can_send(chat_id, actor="whatsapp_dispatcher"):
+        log(f"SEND BLOCKED: {chat_id[-12:]} denied by authority.can_send (fail-closed), text '{text[:40]}' skipped")
         return False
     try:
         resp = requests.post(f"{BRIDGE}/send", json={
@@ -203,9 +201,8 @@ def send_message(chat_id: str, text: str) -> bool:
 
 
 def send_file(chat_id: str, filepath: str, filename: str = None) -> bool:
-    if chat_id == PRODUCTION:
-        # ⛔ Client-side collect-only guard: боевая группа listen-only.
-        log(f"SEND_FILE BLOCKED: PRODUCTION listen-only (client guard), {filename or os.path.basename(filepath)} skipped")
+    if not can_send(chat_id, actor="whatsapp_dispatcher"):
+        log(f"SEND_FILE BLOCKED: {chat_id[-12:]} denied by authority.can_send (fail-closed), {filename or os.path.basename(filepath)} skipped")
         return False
     try:
         fname = filename or os.path.basename(filepath)
