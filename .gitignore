@@ -1,7 +1,29 @@
+# Python
 __pycache__/
 *.py[cod]
-bot/bot.log
-bot/seen_ids.json
-bot/prod_seen_ids.json
-bot/__pycache__/
-docs/_discovery/
+*.egg-info/
+.eggs/
+
+# Виртуальные окружения — НИКОГДА не коммитить
+venv/
+.venv/
+env/
+bot/venv/
+
+# Бэкапы и временные файлы
+*.bak
+*.bak.*
+*.backup*
+*~
+*.tmp
+*.swp
+
+# Артефакты сборки / кэш
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Данные / секреты
+.env
+*.xlsx.backup_*

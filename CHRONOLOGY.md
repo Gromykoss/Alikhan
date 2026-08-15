@@ -1,5 +1,29 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 15.08.2026 — Фото не разбирались в ojr_photo_log: stale bridge + рассинхрон COLLECT_ONLY (песочница)
+
+- **Симптом:** фото за 15.08 не попадали в `ojr_photo_log` (0 записей с `photo_date=today`), при том что файлы реально скачаны в `~/.hermes/image_cache/` (напр. `img_6d39bfd49a82.jpg` 15.08 02:54, ещё 3 от 14.08).
+- **⚠️ Важно (учёт прошлого опыта 13.08):** фото **НЕ считаются «потерянными»** — бинарные файлы на диске целы (`~/.hermes/image_cache/img_*.jpg`). Разбираются они только после того, как bridge отдаст событие через `/collect-messages`. Проверить re-drain/factual бэклог перед любым выводом «потеряно».
+- **Причина (двухслойная):**
+  1. **Stale bridge:** процесс 14.08 11:59 держал порт 3000 с кодом **без** `/collect-messages` (endpoint добавлен в `bridge.js` 14.08 12:10 обновлением `hermes update`). Диспетчер получал 404 → `get_messages()` возвращал `[]` → фото не писались.
+  2. **Рассинхрон env:** `hermes update` 14.08 перевёл gateway на спавн bridge с **профильным scope**-env, где `WHATSAPP_COLLECT_ONLY_CHATS` читался из профильного `.env` = только боевая (строка 531). Песочница `120363179621030401@g.us` выпала из `collectOnlyChats`.
+- **Фикс:**
+  1. Убит stale bridge (pid 3726433) → новый bridge поднялся с `/collect-messages`.
+  2. `~/.hermes/profiles/alikhan/.env:531` выровнен: `WHATSAPP_COLLECT_ONLY_CHATS=120363179621030401@g.us,120363400682390076@g.us` (обе группы). Бэкап: `.env.bak.20260815_photo_fix`.
+  3. Рестарт gateway (приказ Сергея) → bridge поднялся с `collectOnlyChats: [песочница, боевая]`.
+- **Проверка:** `curl :3000/health` → `collectOnlyChats: ["...031@g.us","...076@g.us"]`; `/collect-messages?only=` обе группы → отвечают.
+- **Не делалось:** правка БД/схемы; правка ядра hermes-agent (adapter.py) — env-фикс через профильный `.env`, а не через patch апстрима.
+- **Урок:** ручной фикс ядра Hermes (adapter.py) не переживает `hermes update` — держать конфиг-зависимости (env) в профильном `.env`, НЕ в apстрим-коде. См. PATCHES.md «ПАТЧ 4».
+
+### Итог (продолжение 15.08, после диагностики полной цепочки)
+
+- **Третий слой сбоя — флап bridge по `reason 428` (session conflict):** 7301 рестартов systemd, два процесса (`stale` + `systemd-дубль`) дрались за одну WhatsApp-сессию → каждый рестарт перетирал `creds.json` → `No session found to decrypt message` + `Connection closed (428)` каждые 3 сек. **Фикс:** убит stale bridge (3726433) + `systemctl --user stop/start hermes-whatsapp-bridge` → счётчик `NRestarts` сброшен в 0, bridge стабилен, 428 ушёл **без пере-линковки** (сессия была валидна; QR НЕ потребовался).
+- **Четвёртый (корневой) слой — re-drain журнала привязан только к reconnect:** re-drain `collect_journal.jsonl` → `collectMessageQueue` происходил **только** внутри `connection.update`. При стабильном соединении события застревали в журнале → диспетчер получал `[]` → `GOT 0 msgs`. **Фикс:** Codex (deleg_1b15ec10) добавил идемпотентный re-drain в начало `app.get('/collect-messages')` (дедупликация по `messageId` через `Set`). Проверено Hermes-оператором: `node --check` ✅, diff точечный. Зафиксировано в `PATCHES.md` «ПАТЧ 5».
+- **Результат (вживую):** 3 тестовых фото (пересланы в песочницу) разобрались в БД — `bot_memory_messages` id=4889,4890 (+1), классификация `construction`, `ojr_photo_log` id=2940,2941 `photo_date=2026-08-15`. Цепочка `WhatsApp → bridge → re-drain → диспетчер → классификация → ojr_photo_log` работает сквозь весь контур.
+- **KPI в норме:** фото-фиксация за 15.08 ≥1 выполнена (3 фото). Bridge uptime — стабилен после устранения флапа.
+- **Что НЕ закрыто:** 7 утренних фото боевой группы (пришли 15.08 пока диспетчер был сломан) — их события были в journal, но смыты рестартами до фикса. Переслать заново при необходимости. Тест боевой группы отложен до реального входящего фото (по договорённости с Сергеем).
+- **Урок (доп.):** «фото пропали» ≠ факт — в прошлый раз (13.08) и сейчас фото находились в journal/кэше, а не терялись. Диагностировать по факту до строки, проверять re-drain/factual бэклог до вывода «потеряно».
+
 ## 14.08.2026 — media-сообщения сохраняют message_time
 
 - **Проблема:** `_insert_media_message` писал image/document/video/empty в `bot_memory_messages` без `message_time`; дневные сводки по `(message_time AT TIME ZONE 'Asia/Bishkek')::date` не видели эти записи.
@@ -1246,3 +1270,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **14.08.2026 08:30** — fix: media-записи сохраняют message_time из bridge timestamp (`178a363`)
 - **15.08.2026 10:43** — feat: enforced authority model (claim-gate + production send-deny) (`bfa9b2f`)
 - **15.08.2026 10:55** — feat(authority): guard_tool_call — enforced файловая граница профиля Alikhan (`d4353f8`)
+- **15.08.2026 13:16** — feat(каркас): H4+H5 — claim-gate проверяет counts (count=0 → INCONCLUSIVE) (`75a1bab`)
