@@ -26,6 +26,22 @@ def _parse_avr_month(normalized):
     year = int(match.group(2)) if match.group(2) else datetime.now().year
     return {"month": matches.pop(), "year": year}
 
+def _data_claim_kind(text_l):
+    factual_words = ["рабочих", "техник", "статус", "что сегодня", "происшестви",
+                      "итог", "подведи", "сделано", "персонал", "итр", "инженер",
+                      "потер"]
+    if not any(w in text_l for w in factual_words):
+        return None
+    if any(w in text_l for w in ["рабочих", "персонал", "сколько человек", "итр", "инженер"]):
+        return "personnel_ok"
+    if any(w in text_l for w in ["техник", "оборудован", "машин"]):
+        return "volume_ok"
+    if any(w in text_l for w in ["фото", "фотограф", "сним"]):
+        return "photo_ok"
+    if any(w in text_l for w in ["потер", "не потер"]):
+        return "not_lost"
+    return "data_ok"
+
 def route(text, chat_id, sender=""):
     """Returns (action, reply, voice_triggered)."""
     from handlers import ask_grok
@@ -90,6 +106,14 @@ def route(text, chat_id, sender=""):
         reply = weather_reply
         action = "WEATHER"
     elif db_reply:
+        from claim_gate import assert_data_claim
+        claim_kind = _data_claim_kind(normalized)
+        if claim_kind:
+            passes, verdict, msg = assert_data_claim(claim_kind)
+            if not passes:
+                print(f"[CLAIM GATE] blocked {claim_kind}: {verdict.value}; {msg}", flush=True)
+                return "DB", "Данные проверяются по БД — уточню и отвечу.", voice
+
         # Summarize with Grok
         reply = ask_grok(
             f"Ты — строительный инспектор на площадке ТЗРК Джеруй (один объект). "

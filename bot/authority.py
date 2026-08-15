@@ -111,6 +111,43 @@ class Claim:
     verdict: Verdict = Verdict.INCONCLUSIVE
 
 
+def _extract_counts_sum(value: Any) -> int | None:
+    """Возвращает сумму всех числовых count-значений из Evidence.value.
+
+    Обрабатывает обе структуры, которые может положить build_evidence:
+      - {"counts": {"table1": int, "table2": int, ...}}
+      - {"table1": int, "table2": int, ...}   (value — сам словарь counts)
+
+    Если value не dict, внутри нет числовых значений или структура нечитаема —
+    возвращает None (вызывающий не блокируется, satisfied определяется по source/covers).
+    """
+
+    if not isinstance(value, dict):
+        return None
+
+    # Приоритет: вложенный ключ "counts", если он есть и является dict.
+    inner: Any = value.get("counts")
+    if isinstance(inner, dict):
+        target = inner
+    else:
+        # Иначе считаем, что value сам является словарём counts.
+        target = value
+
+    total = 0
+    found_numeric = False
+    for v in target.values():
+        if isinstance(v, (int, float)):
+            total += int(v)
+            found_numeric = True
+        elif isinstance(v, str):
+            try:
+                total += int(v)
+                found_numeric = True
+            except (ValueError, TypeError):
+                continue
+    return total if found_numeric else None
+
+
 def validate_claim(claim: Claim) -> Verdict:
     """Проверяет заявление агента по контракту честности.
 
@@ -131,12 +168,26 @@ def validate_claim(claim: Claim) -> Verdict:
         return claim.verdict
 
     if claim.kind in DATA_CLAIMS:
-        satisfied = any(
-            item.kind == DATA_EVIDENCE_KIND
-            and bool(item.source)
-            and _source_covers_required_tables(item.source, claim.kind)
-            for item in claim.evidence
-        )
+        satisfied = False
+        for item in claim.evidence:
+            if (
+                item.kind == DATA_EVIDENCE_KIND
+                and bool(item.source)
+                and _source_covers_required_tables(item.source, claim.kind)
+            ):
+                counts_sum = _extract_counts_sum(item.value)
+                if counts_sum is not None:
+                    if counts_sum > 0:
+                        satisfied = True
+                        break
+                    # counts_sum == 0: source валиден, но данных нет — мягкий блок.
+                    if counts_sum == 0:
+                        claim.verdict = Verdict.INCONCLUSIVE
+                        return claim.verdict
+                else:
+                    # Не удалось вычислить сумму — fall back к старой логике (source/covers).
+                    satisfied = True
+                    break
     else:
         satisfied = any(
             item.kind in RUNTIME_EVIDENCE_KINDS and bool(item.source)

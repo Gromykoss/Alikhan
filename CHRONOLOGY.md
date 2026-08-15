@@ -1245,3 +1245,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **13.08.2026 12:49** — docs: перенести устаревшую v5-документацию и чужеродный CLAUDE.md в archive/ (`fc4bb62`)
 - **14.08.2026 08:30** — fix: media-записи сохраняют message_time из bridge timestamp (`178a363`)
 - **15.08.2026 10:43** — feat: enforced authority model (claim-gate + production send-deny) (`bfa9b2f`)
+- **15.08.2026 10:55** — feat(authority): guard_tool_call — enforced файловая граница профиля Alikhan (`d4353f8`)
