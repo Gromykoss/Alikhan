@@ -19,32 +19,13 @@ Usage:
 """
 import base64
 import json
-import os
 import re
 import urllib.request
 from typing import Any, Dict, Optional
 
 XAI_URL = "https://api.x.ai/v1/chat/completions"
-DEFAULT_XAI_KEY = os.environ.get("XAI_API_KEY", os.environ.get("XAI_KEY", ""))
-if not DEFAULT_XAI_KEY:
-    # Fallback (по образцу db.py, строки 8-15): cron-процессы не наследуют env Hermes,
-    # поэтому XAI_API_KEY в os.environ может быть пуст — читаем .env напрямую.
-    # Порядок: secrets.env ПЕРВЫМ — проверено 2026-08-02: ключ в profile .env
-    # отклоняется xAI (HTTP 400 "Incorrect API key"), ключ в secrets.env — рабочий.
-    for env_path in (
-        "/home/hermes-workspace/.hermes/secrets.env",
-        "/home/hermes-workspace/.hermes/profiles/alikhan/.env",
-    ):
-        try:
-            with open(env_path) as f:
-                for line in f:
-                    if line.startswith("XAI_API_KEY="):
-                        DEFAULT_XAI_KEY = line.strip().split("=", 1)[1]
-                        break
-        except Exception:
-            pass
-        if DEFAULT_XAI_KEY:
-            break
+from secret_config import get_secret
+DEFAULT_XAI_KEY = get_secret("XAI_API_KEY", "XAI_KEY", default="")
 
 CHECKLIST_SCHEMA = {
     "weather_visible": "string describing sky conditions (sunny/cloudy/rain/snow/fog)",

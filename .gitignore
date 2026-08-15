@@ -27,3 +27,9 @@ bot/venv/
 # Данные / секреты
 .env
 *.xlsx.backup_*
+
+# Runtime-артефакты (состояние диспетчера, логи)
+bot/bot.log
+bot/seen_ids.json
+bot/prod_seen_ids.json
+*.log

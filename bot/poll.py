@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from db import get_conn
 import psycopg2.extras
 
-from bridge_wrapper import EVO, KEY
+from config import EVO, KEY  # Bridge API (was bridge_wrapper, removed)
 from messaging import send_msg  # unified messaging (AUDIT-011)
 TEMPLATE = "/home/hermes-workspace/Alikhan-migration/bot/templates/ЕЖО_шаблон.xlsx"
 
@@ -65,7 +65,7 @@ def ensure_poll_table():
 def _safe_float(val, fallback=0):
     try:
         if val is not None: return float(val)
-    except: pass
+    except Exception: pass
     return fallback
 
 def _get_work_items_from_template():
@@ -358,7 +358,7 @@ def parse_poll_reply(text, chat_id, poll_date_str=None):
         unit = unit_text.strip().strip(',;')
         try:
             vol = float(vol_str)
-        except:
+        except Exception:
             continue
 
         # Update residual: actual_today = volume done today

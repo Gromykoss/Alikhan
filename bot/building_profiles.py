@@ -32,7 +32,7 @@ def extract_features_from_full_photo(b64, building):
         end = result.rfind('}') + 1
         if start >= 0 and end > start:
             return json.loads(result[start:end])
-    except:
+    except Exception:
         pass
     return {"colors":[],"elements":[],"surroundings":[],"stage":"","markers":[]}
 
@@ -61,7 +61,7 @@ def identify_building_from_fragment(b64):
         result = result.strip()
         if 'АБК' in result: return 'АБК'
         if 'Общежитие' in result: return 'Общежитие'
-    except:
+    except Exception:
         pass
     return None
 

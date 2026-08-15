@@ -3,7 +3,7 @@ import time, requests, json, sys, os, base64, tempfile, subprocess
 import re
 import urllib.request
 from datetime import datetime
-from bridge_wrapper import EVO, KEY
+from config import EVO, KEY  # Bridge API (was bridge_wrapper, removed)
 SANDBOX = os.environ.get("WHATSAPP_SANDBOX", "")
 
 sys.stdout.reconfigure(line_buffering=True)

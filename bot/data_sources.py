@@ -101,17 +101,41 @@ class CodeSource(NamedTuple):
     codes: dict[str, tuple[str, str, str]]  # code→(building, name, unit)
 
 
+import time
+
 # ═══════════════════════════════════════════════════════════════════════
 # Приватные утилиты
 # ═══════════════════════════════════════════════════════════════════════
 
 _DB_CONN = None
+_DB_LAST_CHECK = 0
+_KEEPALIVE_INTERVAL = 60  # ping каждые 60 секунд
+
 
 def _get_conn():
-    """Возвращает открытое соединение (shared)."""
-    global _DB_CONN
+    """Возвращает открытое соединение с keepalive-проверкой (shared).
+
+    Проверяет состояние каждые _KEEPALIVE_INTERVAL секунд.
+    При потере соединения (closed, dropped) — переподключается.
+    """
+    global _DB_CONN, _DB_LAST_CHECK
+    now = time.time()
+    if _DB_CONN is not None and now - _DB_LAST_CHECK > _KEEPALIVE_INTERVAL:
+        try:
+            cur = _DB_CONN.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+            _DB_LAST_CHECK = now
+        except Exception as e:
+            print(f"[DB KEEPALIVE] Connection lost: {e}, reconnecting...", flush=True)
+            try:
+                _DB_CONN.close()
+            except Exception:
+                pass
+            _DB_CONN = None
     if _DB_CONN is None or _DB_CONN.closed:
         _DB_CONN = get_conn()
+        _DB_LAST_CHECK = now
     return _DB_CONN
 
 

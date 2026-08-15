@@ -5,15 +5,9 @@ import subprocess
 
 import psycopg2, psycopg2.extras
 from datetime import datetime, timezone, timedelta
+from secret_config import get_secret
 
-DB_PASS = os.environ.get("DB_PASS", "")
-try:
-    with open('/home/hermes-workspace/.hermes/secrets.env') as f:
-        for line in f:
-            if line.startswith('EVO_DB_PASS=') or line.startswith('DB_PASS='):
-                DB_PASS = line.strip().split('=', 1)[1]
-except:
-    pass
+DB_PASS = get_secret("DB_PASS", "EVO_DB_PASS", default="")
 
 BISHKEK_TZ = timezone(timedelta(hours=6))
 

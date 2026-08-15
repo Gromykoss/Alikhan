@@ -1,17 +1,13 @@
 import db, json, re, requests, os, sys
 import db_memory
-import json
-import re
 from datetime import datetime, timezone, timedelta
 
 BISHKEK_TZ = timezone(timedelta(hours=6))
 
 import psycopg2.extras
-import requests
 
-import db
 from messaging import send_msg  # unified messaging (AUDIT-011)
-from bridge_wrapper import EVO
+from secret_config import get_secret
 
 XAI_URL = "https://api.x.ai/v1/chat/completions"
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -19,33 +15,9 @@ OLLAMA_MODEL = "qwen2.5:14b"  # installed model (verified 17.07.2026)
 
 
 def _load_keys():
-    """Load evo_key and XAI_KEY from secrets.env, fallback to n8n workflow"""
-    secrets = {}
-    try:
-        with open('/home/hermes-workspace/.hermes/secrets.env') as f:
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    k, v = line.strip().split('=', 1)
-                    secrets[k] = v
-    except:
-        pass
-    evo = secrets.get('EVO_KEY', '')
-    xai = secrets.get('XAI_API_KEY', secrets.get('XAI_KEY', ''))
-    if not xai:
-        try:
-            with open('/home/hermes-workspace/Alikhan-migration/n8n-workflows/Алихан_AI-whatsApp_agent.json') as f:
-                workflow = json.load(f)
-            for node in workflow.get("nodes", []):
-                headers = node.get("parameters", {}).get("headerParameters", {}).get("parameters", [])
-                for header in headers:
-                    if header.get("name") == "Authorization":
-                        xai = str(header.get("value", "")).replace("Bearer ", "").strip()
-                        if xai:
-                            break
-                if xai:
-                    break
-        except:
-            pass
+    """Load evo_key and XAI_KEY from env/secrets.env via secret_config (AUDIT: no file reads)."""
+    evo = get_secret("EVO_KEY", "EVOLUTION_API_KEY", default="")
+    xai = get_secret("XAI_API_KEY", "XAI_KEY", default="")
     return evo, xai
 
 evo_key, XAI_KEY = _load_keys()
@@ -341,7 +313,7 @@ def handle_fact_lookup(group, sender, payload):
                 prompt = f"Вопрос: {ctx.get('userMessage')}\nФакты:\n" + "\n".join(lines) + "\n\nОтветь кратко на основе фактов."
                 send_msg(group, ask_grok(prompt, max_tokens=800))
                 return
-        except:
+        except Exception:
             pass
     
     # Fallback: raw message search
@@ -524,7 +496,7 @@ def handle_quoted_document_summary(group, sender, payload):
                 prompt = f"Вопрос пользователя: {ctx.get('text','')}\\n\\nСодержание:{content}\\n\\nОтветь кратко по содержанию."
                 send_msg(group, ask_grok(prompt, max_tokens=700))
                 return
-        except:
+        except Exception:
             pass
         send_msg(group, "Не вижу процитированный документ.")
         return
@@ -559,7 +531,7 @@ def handle_quoted_document_summary(group, sender, payload):
                 rows = db.search_messages(group, q, limit=1)
                 if rows and rows[0].get('content'):
                     break
-            except:
+            except Exception:
                 pass
     
     if rows and rows[0].get('content'):

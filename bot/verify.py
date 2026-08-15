@@ -51,7 +51,7 @@ ISSUES: кратко что не так (или OK если всё хорошо)
             if line.upper().startswith("SCORE:"):
                 try:
                     score = int(line.split(":")[1].strip())
-                except:
+                except Exception:
                     pass
             elif line.upper().startswith("ISSUES:"):
                 issues = line.split(":", 1)[1].strip()
@@ -93,5 +93,5 @@ def verify_qa_facts(facts_text: str, original_text: str) -> bool:
             return True
         print(f"[QA VERIFY] {result}", flush=True)
         return False
-    except:
+    except Exception:
         return True  # fail open — don't block on verification error

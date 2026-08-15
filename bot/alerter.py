@@ -7,10 +7,10 @@ Usage:
     send_alert("Bot down", "main_waha.py process not found")
     send_alert("No messages", "No WhatsApp messages for 15 minutes")
 """
-import os
 import json
 import urllib.request
 from datetime import datetime
+from secret_config import get_secret
 
 # ── Config ──
 TELEGRAM_BOT_TOKEN = None
@@ -19,17 +19,11 @@ ALERT_ENABLED = False
 
 
 def _load_alert_config():
-    """Load Telegram credentials from secrets."""
+    """Load Telegram credentials from secrets via secret_config (AUDIT: no file reads)."""
     global TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, ALERT_ENABLED
     try:
-        with open(os.path.expanduser("~/.hermes/secrets.env")) as f:
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    k, v = line.strip().split('=', 1)
-                    if k == 'ALERT_TELEGRAM_TOKEN':
-                        TELEGRAM_BOT_TOKEN = v
-                    elif k == 'ALERT_TELEGRAM_CHAT_ID':
-                        TELEGRAM_CHAT_ID = v
+        TELEGRAM_BOT_TOKEN = get_secret("ALERT_TELEGRAM_TOKEN", default="")
+        TELEGRAM_CHAT_ID = get_secret("ALERT_TELEGRAM_CHAT_ID", default="")
         if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             ALERT_ENABLED = True
             print("[ALERTER] Telegram alerts configured", flush=True)
@@ -65,6 +59,38 @@ def send_alert(title, message, level="WARNING"):
     except Exception as e:
         print(f"[ALERT FAIL] {title}: {e}", flush=True)
     return False
+
+
+# ── ojr_incidents health check (AUDIT-017) ──
+
+def check_incidents_table():
+    """Check if ojr_incidents table has been empty >3 days. Logs warning if so."""
+    try:
+        import psycopg2.extras
+        from bot.db import get_conn
+        conn = get_conn()
+        cur = conn.cursor(cursor_factory=__import__('psycopg2.extras').extras.RealDictCursor)
+        cur.execute("""
+            SELECT
+                MAX(incident_date) AS last_incident,
+                CURRENT_DATE - MAX(incident_date) AS days_since
+            FROM ojr_incidents
+        """)
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if row and row['last_incident']:
+            days = row['days_since']
+            if days > 3:
+                msg = f"ojr_incidents empty for {days} days (last: {row['last_incident']})"
+                print(f"[ALERTER] WARNING: {msg}", flush=True)
+                send_alert("ojr_incidents empty", msg, level="WARNING")
+        elif row and not row['last_incident']:
+            # Table exists but is completely empty
+            msg = "ojr_incidents table is completely empty"
+            print(f"[ALERTER] WARNING: {msg}", flush=True)
+            send_alert("ojr_incidents empty", msg, level="WARNING")
+    except Exception as e:
+        print(f"[ALERTER] ojr_incidents check failed: {e}", flush=True)
 
 
 # Load config on import

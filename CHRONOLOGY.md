@@ -1271,3 +1271,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **15.08.2026 10:43** — feat: enforced authority model (claim-gate + production send-deny) (`bfa9b2f`)
 - **15.08.2026 10:55** — feat(authority): guard_tool_call — enforced файловая граница профиля Alikhan (`d4353f8`)
 - **15.08.2026 13:16** — feat(каркас): H4+H5 — claim-gate проверяет counts (count=0 → INCONCLUSIVE) (`75a1bab`)
+- **15.08.2026 13:18** — chore: удалить закоммиченный bot/venv/ из git + добавить .gitignore (`655d2b3`)
+- **15.08.2026 13:19** — chore: удалить .bak/.backup файлы (резервные копии кода и ЕЖО-шаблонов) (`09620a0`)
