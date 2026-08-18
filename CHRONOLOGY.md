@@ -1,5 +1,86 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 18.08.2026 — Вторник: синхронизация хронологии (запись устарела на ~70ч)
+
+### Причина
+- Запись CHRONOLOGY.md отстала от реальной даты на ~70 часов (порог 36ч). Последняя запись датирована 17.08, текущая дата Бишкек — **18.08.2026, вторник**. Пришли только фото, текст-сводки по-прежнему не возобновились.
+
+### Что сделал
+- Актуализировал хронологию за 18.08 на основе реального состояния контура (bridge / БД / git), не по памяти.
+
+### Фактическое состояние на 18.08 (проверено прямым SELECT/curl)
+- **Фото:** 2 фото разобраны в `ojr_photo_log` (`photo_date=2026-08-18`, ids 2962–2963). `bot_memory_messages` за 18.08 = 2, оба `message_type='image'`.
+- **Текст-сводки (3-й день подряд, сб+вс+вт):** `bot_memory_facts` за 18.08 = **0**. `last bot_memory_facts date` = 13.08, `ojr_section3_work_log max(work_date)` = 15.08, `ojr_section1_personnel last created` = 15.08. Текст (персонал/объёмы/техника) физически не приходит — не потеря данных.
+- **Bridge:** connected, `queueLength=27`, `collectQueueLength=0`, `collectJournalSize=0`, uptime ~73ч, `scriptHash=b349eb1dffe3570a`. Попыток `/messages`-drain не делалось.
+- **document-extractor:** `:8099` `{"ok": true}`. **Gateway:** active (`gateway run`, PID 3749289 с 15.08; caddy/dns живы).
+
+### Файлы
+- `CHRONOLOGY.md` — добавлена запись 18.08 (дата сверху).
+- Незакоммиченный хвост (с 15.08): `CHRONOLOGY.md`, `knowledge_graph/graph.json`, `knowledge_graph/maintenance_report.json`, `briefings/2026-08-15.md` → `2026-08-17.md`.
+
+### Как проверил
+- `TZ='Asia/Bishkek' date` → 18.08 20:10 вторник. `curl :3000/health` / `:8099/health`. Прямые SELECT по `bot_memory_facts/messages`, `ojr_photo_log`, `ojr_section3_work_log`, `ojr_section1_personnel` (схему колонок снял из `information_schema`). `git log`/`git status`.
+
+---
+
+## 17.08.2026 — Понедельник: 7 боевых фото разобраны, текст по-прежнему не приходит (2-й день)
+
+### Трафик за день
+- **7 фото** из боевой группы `120363400682390076@g.us` пришли за 17.08 (15:26 по Asia/Bishkek) и **полностью разобраны** в `ojr_photo_log` (7 записей, `photo_date=2026-08-17`, ids 2955–2961). Контур фото-фиксации стабилен 2-й боевой день подряд (16.08: 12 фото, 17.08: 7 фото).
+- **0 текстовых сводок**: `bot_memory_facts` = 0 за 17.08, `ojr_section3_work_log` `last_work_date` = 15.08, персонал (`ojr_section1_personnel`) — без новых записей. Все 7 сообщений за сегодня — `message_type=image`, ни одного текстового.
+- ⚠️ **Наблюдаемый тренд (2-й день, вс+пн):** после 15.08 прорабы шлют **только фото, без текстовых сводок** (персонал/объёмы/техника). `last_fact_created` = 13.08. Это не потеря данных — текст физически не приходит в контур (в отличие от инцидентов 13–15.08, где события застревали в journal). Но за 2 дня подряд нулевой `bot_memory_facts` — стоит уточнить у прорабов, возобновляют ли они текстовые сводки на неделе.
+
+### Инфраструктура (ночь 23:00 UTC)
+- **Bridge:** connected, `queueLength=25`, `collectQueueLength=0`, `collectJournalSize=0`, uptime ~58ч, `scriptHash=b349eb1dffe3570a`.
+- **document-extractor:** `:8099` ok=true. **Gateway:** active.
+- **git:** 0 коммитов за 48ч (последний `97893d8` 15.08). Незакоммиченный хвост: `knowledge_graph/graph.json` (+126), `maintenance_report.json`, `CHRONOLOGY.md`, `briefings/2026-08-15.md`, `briefings/2026-08-16.md`.
+
+### Урок
+- Обновление шаблона вывода: `bot_memory_messages.содержимое` в колонке `content`, поле типа — `message_type` (не `mtype`/`body`). Проверка «был ли текст» = `message_type != 'image'`, а не только общее число записей.
+
+## 16.08.2026 — Боевая фото-фиксация заработала сквозь контур (12 фото разобраны) + пересборка knowledge graph
+
+### Боевой успех после вчерашнего фикса re-drain
+- **12 реальных фото** из боевой группы `120363400682390076@g.us` пришли за 16.08 (11:05, 11:28, 16:28 по Asia/Bishkek) и **полностью разобраны** в `ojr_photo_log` (12 записей, `photo_date=2026-08-16`).
+- Это первый сквозной боевой проход после устранения трёхслойного сбоя 15.08 (stale bridge → env-рассинхрон → флап 428) и добавления идемпотентного re-drain в `/collect-messages` (ПАТЧ 5).
+- Цепочка `боевая группа → bridge → re-drain → диспетчер → классификация → ojr_photo_log` подтверждена **на реальном входящем трафике**, не на песочном тесте.
+
+### Что НЕ разобралось (ожидаемо)
+- **0 фактов в `bot_memory_facts`**, **0 записей в `ojr_section3_work_log`** за 16.08 — воскресенье: прорабы прислали только фото, без текстовых сводок (персонал/объёмы/техника). `last_fact_created` = 13.08, `last_work_date` = 15.08.
+- Это не потеря данных: текст просто не приходил (в отличие от инцидентов 13–15.08, где события застревали).
+
+### Knowledge graph (cron)
+- Пересборка каждый 6ч: `nodes` 311→316, `edges` 508→515, `events` 47→49. `maintenance_report.json` + `graph.json` перегенерированы (2026-08-16T20:00 UTC).
+
+### Инфраструктура (ночь 23:00 UTC)
+- **Bridge:** connected, `queueLength=18`, `collectQueueLength=0`, `collectJournalSize=0`, uptime ~34ч.
+- **document-extractor:** `:8099` ok=true. **Gateway:** active.
+- **git:** 0 коммитов за 24ч; незакоммиченный хвост `knowledge_graph/graph.json` (+87) и `maintenance_report.json` продолжает висеть с 15.08.
+
+### Урок
+- Sunday → прорабы шлют только фото. Отсутствие facts/work_log в выходные — норма, проверять «был ли текст» до вывода о потере данных.
+
+## 15.08.2026 — Enforced-модель полномочий (claim-gate + production send-deny) + генеральная чистка репо (день)
+
+### Каркас enforced-полномочий (H1–H5, новые модули)
+- **`bot/authority.py`** (+429) — центральный модуль полномочий: контракт честности, риск-матрица, fail-closed проверки. Без I/O, без чтения env/БД — вызывающий код передаёт уже наблюдённые доказательства. Канонические ID берёт из `config.py` (PRODUCTION/SANDBOX), а не хардкодит. Перечисления: `DATA_EVIDENCE_KIND`, `Claim`, `Evidence`, `Verdict` (SATISFIED / VIOLATED / INCONCLUSIVE).
+- **`bot/claim_gate.py`** (+161) — fail-closed гейт для данных-claims: whitelist таблиц (`bot_memory_messages/facts`, `ojr_section1_personnel`, `ojr_section3_work_log`…), `SELECT count(*)` как наблюдаемое доказательство. Пустая БД (все таблицы = 0) → `Verdict.INCONCLUSIVE`, не SATISFIED.
+- **`bot/router.py`** (+24) — `route()` вызывает `assert_data_claim` перед резюмированием фактов; `_data_claim_kind()` классифицирует текст запроса (personnel_ok / volume_ok / photo_ok / not_lost / data_ok) по ключевым словам.
+- **`bot/messaging.py`, `bot/whatsapp_commands.py`, `bot/config.py`** — интеграция гейта + production send-deny (отправка в боевую группу 120363400682390076@g.us закрыта по умолчанию).
+- **Коммиты:** `bfa9b2f` (feat: enforced authority model), `d4353f8` (feat: guard_tool_call — enforced файловая граница профиля), `75a1bab` (feat: H4+H5 — claim-gate проверяет counts).
+
+### Генеральная чистка репозитория
+- **`655d2b3`** — удалён закоммиченный `bot/venv/` из git (тысячи файлов site-packages), `.gitignore` расширен.
+- **`09620a0`** — удалены `.bak/.backup`-файлы: `bridge_wrapper.py.bak`, `db.py.bak`, `fill_ejo.py.bak`, `main_waha.py.bak*`, `qa.py.bak` + 15 бэкапов ЕЖО-шаблонов (.xlsx.backup 02–20.07, суммарно ~58 MB).
+- **`aeb51c2`** — документация/скрипты + удаление мёртвых артефактов: добавлены `ARCHITECTURE_AUDIT.md` (+645), `DATA_CONTRACT.md` (+27), `docs/_discovery/*`, `docs/full-audit-2026-08-12.md`; скрипты `bridge_48h_restart.sh`, `daily_parse_gap_check.py`; удалены `wamux` и n8n `Calendar_Reminders.json`.
+
+### Документация + knowledge graph
+- **`c55d3b7`** — актуализация `AGENTS.md` (язык-правило, правило возврата в Telegram, секции инфраструктуры/БД/API/data-flow), пересборка `bot/CONTRACTS.md` (v6), пересобран `knowledge_graph/graph.json`.
+- **`97893d8` / `8df1623`** — служебные индексные коммиты хронологии.
+
+### Незакоммичено (хвост)
+- `knowledge_graph/graph.json` (+47), `knowledge_graph/maintenance_report.json` — пересборка графа, ещё не закоммичена.
+
 ## 15.08.2026 — Фото не разбирались в ojr_photo_log: stale bridge + рассинхрон COLLECT_ONLY (песочница)
 
 - **Симптом:** фото за 15.08 не попадали в `ojr_photo_log` (0 записей с `photo_date=today`), при том что файлы реально скачаны в `~/.hermes/image_cache/` (напр. `img_6d39bfd49a82.jpg` 15.08 02:54, ещё 3 от 14.08).
@@ -1277,3 +1358,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **15.08.2026 13:20** — docs: актуализация AGENTS/CONTRACTS (v6) + пересобранный knowledge graph (`c55d3b7`)
 - **15.08.2026 13:20** — chore: документация/скрипты + удаление мёртвых артефактов (wamux, n8n reminder) (`aeb51c2`)
 - **15.08.2026 13:20** — chrono: индекс коммитов разбора рабочего дерева (15.08) (`8df1623`)
+- **15.08.2026 13:21** — chrono: индекс коммита 8df1623 (`97893d8`)
