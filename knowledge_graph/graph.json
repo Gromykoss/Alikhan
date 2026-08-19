@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-15T08:00:37.016016+00:00",
+  "built_at": "2026-08-19T02:00:36.771148+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 311,
-    "edges": 508,
+    "nodes": 325,
+    "edges": 524,
     "projects": 1,
-    "events": 47,
+    "events": 52,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,90 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-18/Вторник: синхронизация хронологии (запись устарела",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-18",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Вторник: синхронизация хронологии (запись устарела на ~70ч)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-17/Понедельник: 7 боевых фото разобраны, текст по-пре",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-17",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Понедельник: 7 боевых фото разобраны, текст по-прежнему не приходит (2-й день)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-16/Боевая фото-фиксация заработала сквозь контур (12",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-16",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Боевая фото-фиксация заработала сквозь контур (12 фото разобраны) + пересборка knowledge graph",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-15/Enforced-модель полномочий (claim-gate + productio",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-15",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Enforced-модель полномочий (claim-gate + production send-deny) + генеральная чистка репо (день)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-15/Фото не разбирались в ojr_photo_log: stale bridge",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Фото не разбирались в ojr_photo_log: stale bridge + рассинхрон COLLECT_ONLY (песочница)",
       {
         "type": "description"
       }
@@ -2888,6 +2972,13 @@
       "confidence": 0.9
     },
     {
+      "source": "bot_component/messaging",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
       "source": "bot_component/handlers",
       "target": "bot/handlers.py",
       "predicate": "located_at",
@@ -3782,6 +3873,111 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-18/Вторник: синхронизация хронологии (запись устарела",
+      "target": "2026-08-18",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-18/Вторник: синхронизация хронологии (запись устарела",
+      "target": "Вторник: синхронизация хронологии (запись устарела на ~70ч)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-18/Вторник: синхронизация хронологии (запись устарела",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-17/Понедельник: 7 боевых фото разобраны, текст по-пре",
+      "target": "2026-08-17",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-17/Понедельник: 7 боевых фото разобраны, текст по-пре",
+      "target": "Понедельник: 7 боевых фото разобраны, текст по-прежнему не приходит (2-й день)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-17/Понедельник: 7 боевых фото разобраны, текст по-пре",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-16/Боевая фото-фиксация заработала сквозь контур (12",
+      "target": "2026-08-16",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-16/Боевая фото-фиксация заработала сквозь контур (12",
+      "target": "Боевая фото-фиксация заработала сквозь контур (12 фото разобраны) + пересборка knowledge graph",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-16/Боевая фото-фиксация заработала сквозь контур (12",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-15/Enforced-модель полномочий (claim-gate + productio",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Enforced-модель полномочий (claim-gate + productio",
+      "target": "Enforced-модель полномочий (claim-gate + production send-deny) + генеральная чистка репо (день)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Enforced-модель полномочий (claim-gate + productio",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-15/Фото не разбирались в ojr_photo_log: stale bridge",
+      "target": "2026-08-15",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-15/Фото не разбирались в ojr_photo_log: stale bridge",
+      "target": "Фото не разбирались в ojr_photo_log: stale bridge + рассинхрон COLLECT_ONLY (песочница)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-15/Фото не разбирались в ojr_photo_log: stale bridge",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-14/media-сообщения сохраняют message_time",
