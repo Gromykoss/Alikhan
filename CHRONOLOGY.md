@@ -1,5 +1,32 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 19.08.2026 — Среда: найден вероятный корень 6-дневного молчания текст-сводок — прораб шлёт .docx, extractor не парсит текст
+
+### Главный вывод
+- `bot_memory_facts` = **0 уже 6-й день** (`last_fact_created` = 13.08 12:02). Сегодня найден вероятный корень: прораб `241455008329920@lid` присылает сводки персонала **вложением .docx**, а document-extractor `:8099/extract-document` для .docx возвращает **только metadata, без текста** → данные не доходят до QA → `ojr_section1_personnel`/`ojr_section3` стоят с 15.08.
+
+### Трафик 19.08 (боевая группа)
+- **1 документ** `19.08.2026.docx` (14:22 Бишкек, sender `241455008329920@lid`): `extract_ok=true`, но `extracted_text = "[document metadata: filename=..., bytes=14152]"` — **без текста**.
+- **1 фото** (09:58 Бишкек) → классифицировано `unrelated` «Постороннее фото — фото официального документа» → корректно **НЕ** попало в `ojr_photo_log` (максимум остался 18.08).
+
+### Корень (проверено напрямую, не по памяти)
+- Ручное извлечение текста из .docx (zipfile → `word/document.xml`) даёт реальный **список персонала**: Молдалиев К.Б. (1988), Ильяс Алманбетов Т. (2002), Шекеев Р.М. (1988), Арпеков А.А. (2003), Баякеев Э.Д. (1974), Таалай Уулу Чубак (2000), Дайырбек Уулу Сыймык (1999, водитель) + транспорт HUNDAI оранжевый 07KG418AEN.
+- `curl :8099/extract-document` на этот .docx → `{"ok":true, "text":"[document metadata: ...]"}` — **extractor не извлекает текст из .docx** (в отличие от .xlsx: файлы «Ежедневный отчет» от 15.08 распарсились как «### Sheet: Ежедневный отчет…»).
+- Тот же sender `241455008329920@lid` шлёт .docx с metadata-only extraction с **13.08** (id 4876, 4883) — совпадает с датой остановки фактов (13.08). Цепочка: прораб → .docx → extractor без текста → facts/personnel не растут.
+
+### Состояние данных (без изменений, 6-й день)
+- `bot_memory_facts` last = 13.08 12:02 · `ojr_section3_work_log` max `work_date` = 15.08 · `ojr_section1_personnel` last = 15.08 19:31 · `ojr_photo_log` max `photo_date` = 18.08.
+
+### Инфраструктура
+- **Bridge:** connected, `queueLength=29`, `collectQueueLength=0`, `collectJournalSize=0`, uptime ~106ч, `scriptHash=b349eb1dffe3570a`, `collectOnlyChats` = обе группы. `/messages`-drain не делался.
+- **document-extractor:** `:8099` ok=true (но .docx → metadata-only). **Gateway:** active (PID 1776737).
+- **git:** 2 коммита за 48ч — `c7699df` (chrono 18.08), `60f87a0` (daily-sync auto-commit, 19.08 04:00 UTC, закоммитил briefings 15–17). Незакоммиченный хвост: `CHRONOLOGY.md`, `knowledge_graph/graph.json`, `knowledge_graph/maintenance_report.json` (KG cron 19.08 20:00 UTC).
+
+### Действие (эскалация, не ручная правка)
+- ⚠️ **Рекомендация Сергею:** фикс document-extractor — добавить парсинг текста `.docx` (python-docx / zipfile) в `:8099/extract-document` (правка `document_extractor.py`, зона Hermes/Codex Build), ИЛИ договориться с прорабом слать персонал `.xlsx`/текстом. НЕ ручная правка БД — данные физически на диске, не потеряны.
+
+---
+
 ## 18.08.2026 — Вторник: синхронизация хронологии (запись устарела на ~70ч)
 
 ### Причина
@@ -1360,3 +1387,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **15.08.2026 13:20** — chrono: индекс коммитов разбора рабочего дерева (15.08) (`8df1623`)
 - **15.08.2026 13:21** — chrono: индекс коммита 8df1623 (`97893d8`)
 - **18.08.2026 14:11** — chrono: 2026-08-18 — синхронизация хронологии (запись устарела ~70ч) (`c7699df`)
+- **19.08.2026 04:00** — daily-sync: auto-commit (`60f87a0`)

@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-19T02:00:36.771148+00:00",
+  "built_at": "2026-08-20T02:00:41.893271+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 325,
-    "edges": 524,
+    "nodes": 328,
+    "edges": 527,
     "projects": 1,
-    "events": 52,
+    "events": 53,
     "bugs": 26,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,24 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-19/Среда: найден вероятный корень 6-дневного молчания",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-19",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Среда: найден вероятный корень 6-дневного молчания текст-сводок — прораб шлёт .docx, extractor не парсит текст",
       {
         "type": "description"
       }
@@ -3873,6 +3891,27 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-19/Среда: найден вероятный корень 6-дневного молчания",
+      "target": "2026-08-19",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-19/Среда: найден вероятный корень 6-дневного молчания",
+      "target": "Среда: найден вероятный корень 6-дневного молчания текст-сводок — прораб шлёт .docx, extractor не парсит текст",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-19/Среда: найден вероятный корень 6-дневного молчания",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-18/Вторник: синхронизация хронологии (запись устарела",
