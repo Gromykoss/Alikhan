@@ -1,13 +1,13 @@
 {
-  "built_at": "2026-08-20T02:00:41.893271+00:00",
+  "built_at": "2026-08-29T08:00:15.308704+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 328,
-    "edges": 527,
+    "nodes": 358,
+    "edges": 558,
     "projects": 1,
-    "events": 53,
-    "bugs": 26,
+    "events": 63,
+    "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
     "db_tables": 21,
@@ -746,6 +746,174 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-28/OJR питается ejo_v2-импортом стабильно (27+28.08 з",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-28",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "OJR питается ejo_v2-импортом стабильно (27+28.08 закрыты); текстовый приём 7-й день мёртв; gateway рестарт 28.08 08:05 UTC",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-27/Приём данных по-прежнему только файлами (ejo_v2);",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-27",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Приём данных по-прежнему только файлами (ejo_v2); decrypt-ошибок нет 3-й день; новый подрядчик Алтын-Тас в персонале",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-25/OJR-данные пошли обходным путём (импорт файлов ЕЖО",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-25",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "OJR-данные пошли обходным путём (импорт файлов ЕЖО, метка ejo_v2); текстовый приём 4-й день мёртв",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-24/Тишина по приёму 3-й день: decrypt-ошибки перекину",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-24",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Тишина по приёму 3-й день: decrypt-ошибки перекинулись на боевую группу; gateway переведён под systemd",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-23/Тишина по приёму 2-й день: bridge «connected», но",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-23",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Тишина по приёму 2-й день: bridge «connected», но сессия не расшифровывает входящие; watchdog всё ещё сломан",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-22/Bridge простой ~5ч (11:30–16:35 UTC): watchdog не",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-22",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Bridge простой ~5ч (11:30–16:35 UTC): watchdog не восстановил (баг v5→v6)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-21/ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноз",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-21",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноза) + карта контуров для будущих update",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-21/Фикс .docx-извлечения + реестр пропусков (закрыта",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Фикс .docx-извлечения + реестр пропусков (закрыта эскалация от 19.08)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-20/Релинк сессии (428/440) → bridge переехал на порт",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-20",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Релинк сессии (428/440) → bridge переехал на порт 3003, диспетчер читает 3000 → приём снова упал",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-20/Четверг: восстановлен приём сообщений в обеих груп",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Четверг: восстановлен приём сообщений в обеих группах — hash-гейт рассинхронизировался после pre-key патча на bridge.js",
       {
         "type": "description"
       }
@@ -1624,6 +1792,18 @@
       "task/T-184",
       {
         "type": "task"
+      }
+    ],
+    [
+      "bug/memory-recurring-6",
+      {
+        "type": "bug"
+      }
+    ],
+    [
+      "### Что произошло (по логам, не по памяти)",
+      {
+        "type": "description"
       }
     ],
     [
@@ -3208,13 +3388,6 @@
     },
     {
       "source": "db_table/ojr_photo_log",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_photo_log",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -3891,6 +4064,216 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-28/OJR питается ejo_v2-импортом стабильно (27+28.08 з",
+      "target": "2026-08-28",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-28/OJR питается ejo_v2-импортом стабильно (27+28.08 з",
+      "target": "OJR питается ejo_v2-импортом стабильно (27+28.08 закрыты); текстовый приём 7-й день мёртв; gateway рестарт 28.08 08:05 UTC",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-28/OJR питается ejo_v2-импортом стабильно (27+28.08 з",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-27/Приём данных по-прежнему только файлами (ejo_v2);",
+      "target": "2026-08-27",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-27/Приём данных по-прежнему только файлами (ejo_v2);",
+      "target": "Приём данных по-прежнему только файлами (ejo_v2); decrypt-ошибок нет 3-й день; новый подрядчик Алтын-Тас в персонале",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-27/Приём данных по-прежнему только файлами (ejo_v2);",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-25/OJR-данные пошли обходным путём (импорт файлов ЕЖО",
+      "target": "2026-08-25",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-25/OJR-данные пошли обходным путём (импорт файлов ЕЖО",
+      "target": "OJR-данные пошли обходным путём (импорт файлов ЕЖО, метка ejo_v2); текстовый приём 4-й день мёртв",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-25/OJR-данные пошли обходным путём (импорт файлов ЕЖО",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-24/Тишина по приёму 3-й день: decrypt-ошибки перекину",
+      "target": "2026-08-24",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-24/Тишина по приёму 3-й день: decrypt-ошибки перекину",
+      "target": "Тишина по приёму 3-й день: decrypt-ошибки перекинулись на боевую группу; gateway переведён под systemd",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-24/Тишина по приёму 3-й день: decrypt-ошибки перекину",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-23/Тишина по приёму 2-й день: bridge «connected», но",
+      "target": "2026-08-23",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-23/Тишина по приёму 2-й день: bridge «connected», но",
+      "target": "Тишина по приёму 2-й день: bridge «connected», но сессия не расшифровывает входящие; watchdog всё ещё сломан",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-23/Тишина по приёму 2-й день: bridge «connected», но",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-22/Bridge простой ~5ч (11:30–16:35 UTC): watchdog не",
+      "target": "2026-08-22",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-22/Bridge простой ~5ч (11:30–16:35 UTC): watchdog не",
+      "target": "Bridge простой ~5ч (11:30–16:35 UTC): watchdog не восстановил (баг v5→v6)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-22/Bridge простой ~5ч (11:30–16:35 UTC): watchdog не",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-21/ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноз",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноз",
+      "target": "ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноза) + карта контуров для будущих update",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноз",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-21/Фикс .docx-извлечения + реестр пропусков (закрыта",
+      "target": "2026-08-21",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-21/Фикс .docx-извлечения + реестр пропусков (закрыта",
+      "target": "Фикс .docx-извлечения + реестр пропусков (закрыта эскалация от 19.08)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-21/Фикс .docx-извлечения + реестр пропусков (закрыта",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-20/Релинк сессии (428/440) → bridge переехал на порт",
+      "target": "2026-08-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-20/Релинк сессии (428/440) → bridge переехал на порт",
+      "target": "Релинк сессии (428/440) → bridge переехал на порт 3003, диспетчер читает 3000 → приём снова упал",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-20/Релинк сессии (428/440) → bridge переехал на порт",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-20/Четверг: восстановлен приём сообщений в обеих груп",
+      "target": "2026-08-20",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-20/Четверг: восстановлен приём сообщений в обеих груп",
+      "target": "Четверг: восстановлен приём сообщений в обеих группах — hash-гейт рассинхронизировался после pre-key патча на bridge.js",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-20/Четверг: восстановлен приём сообщений в обеих груп",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-19/Среда: найден вероятный корень 6-дневного молчания",
@@ -5102,6 +5485,20 @@
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
       "confidence": 0.88
+    },
+    {
+      "source": "bug/memory-recurring-6",
+      "target": "### Что произошло (по логам, не по памяти)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/memory-recurring-6",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "bug/memory-recurring-5",

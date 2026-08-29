@@ -1,5 +1,325 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 28.08.2026 — OJR питается ejo_v2-импортом стабильно (27+28.08 закрыты); текстовый приём 7-й день мёртв; gateway рестарт 28.08 08:05 UTC
+
+### Что произошло (по логам/БД, не по памяти)
+- **Текстовый приём мёртв 7-й день:** `bot_memory_messages` = 0 за сутки (max = 21.08 07:06, total 647). `bot_memory_facts` = 0 (15-й день, last = 13.08). В gateway journal за сутки — 0 строк `inbound message`, 0 decrypt/Bad MAC.
+- **OJR — данные пошли за 27.08 и 28.08 (ejo_v2):**
+  - `ojr_section3_work_log` +12 строк за сутки: за 27.08 — 5, за 28.08 — 7. Все `contractor` пустой — атрибуция по подрядчикам по-прежнему теряется.
+  - `ojr_section1_personnel` +8 строк (ejo_v2): за 27.08 — АйБиКон 1, Майкадам 2; за 28.08 — АйБиКон 1, Майкадам 2, **Алтын-Тас 2** (второй день подряд — субподрядчик закрепился в персонале).
+- **Погода течёт:** `ojr_weather` = 40, есть записи за 27.08 и 28.08 (t≈13.0°C, без осадков) ✅.
+- `ojr_photo_log` = 0 (10-й день; max photo_date = 18.08). В `cache/documents` за сутки новых файлов не появилось.
+- **Bridge стабилен:** `curl :3000/health` → `connected`, uptime ~15ч, queueLength=0.
+- **Gateway рестартован 28.08 08:05 UTC** (systemd `hermes-gateway.service`, MainPID 3428787). После рестарта — 0 decrypt-ошибок. Кто рестартовал — в журнале не зафиксировано (см. GATEWAY RESTART BAN — доложить оператору).
+- `document-extractor` :8099 → `{ok: true}` ✅.
+
+### ⛔ Незакрытые баги (зона Hermes/Codex)
+1. **Текстовый приём** — 7-й день: 0 inbound, ejo_v2-импорт без атрибуции (contractor пуст, source_fact_id=NULL).
+2. **watchdog_bridge.py** — не чинен (single-shot `_failure_count`, мёртвый v5-юнит в `bridge_48h_restart.sh`).
+3. **Рестарт gateway 28.08 08:05 UTC** — вне процедуры (бан на рестарты, только оператор). Требует пояснения.
+
+### Данные (ночь 23:06 UTC, 29.08 05:06 Бишкек)
+- `bot_memory_messages` = 0 (7-й день); `bot_memory_facts` = 0 (15-й день).
+- `ojr_section3_work_log` = 12 за сутки (27.08: 5, 28.08: 7, ejo_v2).
+- `ojr_section1_personnel` = 8 за сутки (ejo_v2; 28.08: АйБиКон/Майкадам/Алтын-Тас).
+- `ojr_photo_log` = 0 (10-й день); `ojr_weather` ✅ (28.08 есть).
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (8-й день; последний `702c074` 20.08 04:03).
+- Хвост: `bot/whatsapp_commands.py` (+280/−44, с 21.08), `CHRONOLOGY.md`, `knowledge_graph/*` (авто), untracked: `scripts/migrate_passes_to_register.py`, `briefings/2026-08-20..27.md`.
+
+### Инфраструктура
+- `hermes-gateway.service` active (PID 3428787, с 28.08 08:05 UTC — рестарт).
+- `document-extractor` :8099 → `{ok: true}` ✅.
+
+---
+
+## 27.08.2026 — Приём данных по-прежнему только файлами (ejo_v2); decrypt-ошибок нет 3-й день; новый подрядчик Алтын-Тас в персонале
+
+### Что произошло (по логам/БД, не по памяти)
+- **Текстовый приём мёртв 6-й день:** `bot_memory_messages` = 0 за сутки (max = 21.08 07:06, total 647). `bot_memory_facts` = 0 (last = 13.08, total 227, 14-й день).
+- **OJR питается файлами ЕЖО через ejo_v2-импорт:**
+  - `ojr_section3_work_log` — 6 строк за work_date 26.08, `created_by='ejo_v2'`, импорт 26.08 10:08 UTC. За 27.08 записей пока нет (день не закрыт / импорт не запускался).
+  - `ojr_section1_personnel` — 6 строк за 26.08 (10:08 UTC, ejo_v2): **АйБиКон 2, Майкадам 2, Алтын-Тас 2**. ⚠️ Первый раз в ОЖР появляется подрядчик **Алтын-Тас** — уточнить у прорабов, новый ли это субподрядчик на площадке.
+  - `contractor` в section3 по-прежнему пустой, `source_fact_id=NULL` — данные идут мимо QA-пайплайна (атрибуция по подрядчикам в отчётах теряется).
+- **Документы поступают в cache регулярно:** за 26–27.08 — xlsx ЕЖО за 26.08, PDF-акты `2-31-1 IBCON` №435–439 (26.08 и 27.08, 04:29–08:34 UTC), docx-отчёты за 27.08.
+- **Bridge стабилен:** `curl :3000/health` → `connected`, uptime ~20.7ч (старт ~26.08 18:20 UTC), queueLength=0. В gateway journal за 24ч — **0 строк decrypt/Bad MAC** (первый многодневный период без decrypt-ошибок). Рестартов gateway за 26–27.08 не было.
+- **Погода течёт:** `ojr_weather` +1 (27.08 02:00 UTC) ✅ — единственный автоматический поток.
+- `ojr_photo_log` = 0 (9-й день; max photo_date = 18.08).
+
+### ⛔ Незакрытые баги (зона Hermes/Codex)
+1. **Текстовый приём** — 6-й день: 0 inbound в БД, ejo_v2-импорт без атрибуции (пустой contractor, NULL source_fact_id).
+2. **watchdog_bridge.py** — не чинен: single-shot `_failure_count` всегда =1, `bridge_48h_restart.sh` бьёт в мёртвый v5-юнит. (Сейчас не критично — мост стабилен, но защита отсутствует.)
+3. **`hermes-whatsapp-bridge` unit не в running** — bridge.js живёт внутри gateway-сессии alikhan; systemd-надзора за мостом фактически нет.
+
+### Данные (ночь 23:00 UTC, 27.08 05:00 Бишкек)
+- `bot_memory_messages` = 0 (6-й день); `bot_memory_facts` = 0 (14-й день).
+- `ojr_section3_work_log` = 6 (за 26.08, ejo_v2); за 27.08 — пока 0.
+- `ojr_section1_personnel` = 6 (за 26.08: АйБиКон/Майкадам/Алтын-Тас по 2).
+- `ojr_photo_log` = 0 (9-й день); `ojr_weather` = 1 ✅.
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (7-й день; последний `702c074` 20.08 04:03).
+- Хвост: `bot/whatsapp_commands.py` (+280/−44, с 21.08), `CHRONOLOGY.md`, `knowledge_graph/*` (авто), untracked: `scripts/migrate_passes_to_register.py`, `briefings/2026-08-20..25.md`.
+
+### Инфраструктура
+- `hermes-gateway.service` active (PID 76508, без рестартов за 48ч); в журнале шум от других профилей (robot-man terminal-запросы, LLM 524/timeout, MCP warnings) — на WhatsApp не влияет.
+- `document-extractor` :8099 → `{ok: true}` ✅.
+
+---
+
+## 25.08.2026 — OJR-данные пошли обходным путём (импорт файлов ЕЖО, метка ejo_v2); текстовый приём 4-й день мёртв
+
+### Что произошло (по логам/БД, не по памяти)
+- **Текстовый приём по-прежнему мёртв (4-й день):** диспетчер весь день логирует `GOT 0 msgs, 211 seen` — `seen.json` застрял на 21.08 07:06 (211 записей, mtime не меняется). В gateway journal за 25.08 — 0 строк `inbound message`.
+- **НО в OJR впервые за 5 дней пошли данные — через файлы ЕЖО:** `ojr_section3_work_log` +29 строк за сутки, `ojr_section1_personnel` +18 строк. Все с пометкой `created_by/sync_source='ejo_v2'`.
+  - 05:41 UTC — **backfill прошлых дней:** section3 за 21.08 (7), 23.08 (8), 24.08 (8); personnel за 21/23/24 (14 строк).
+  - 12:12 UTC — **свежие за 25.08:** section3 (6 строк), personnel (4 строки: АйБиКон ИТР 3 + Рабочие 1, Майкадам ИТР 1 + Рабочие 24).
+- **Источник — файлы ЕЖО из WhatsApp:** `cache/documents/` пополнился 25.08 файлами прорабов — xlsx ЕЖО (21/23/24/25.08), PDF-акты `2-31-1 IBCON` (07:53–08:34), docx-отчёты (06:51, 07:15). Мост скачивает документы в cache; импорт в OJR делает внешний процесс. **Метки `ejo_v2` в кодовой базе нет** (grep пусто), диспетчер и `document-extractor`-сервис в момент импорта не работали → вероятен ручной/агентский импорт; точный источник не установлен.
+- **Bridge:** `connected`, uptime ~9.5ч. Gateway рестартован сегодня 13:29 UTC (3-й день подряд рестарт), bridge PID 136894 стартовал 13:30:52.
+- **Decrypt-ошибок за 25.08 НЕТ** (последняя 24.08 09:27 UTC) — положительный сдвиг. Но реконнекты `Connection closed (428/503)` продолжаются (последний 503 в 21:49 UTC).
+
+### ⛔ Незакрытые баги (зона Hermes/Codex)
+1. **watchdog_bridge.py** — 5-й день не чинит мост: single-shot счётчик `_failure_count` всегда `=1`, порог `FAIL_THRESHOLD=3` недостижим; `bridge_48h_restart.sh` бьёт в мёртвый v5-юнит (`Failed to connect to bus: No medium found`).
+2. **Текстовый приём мёртв на уровне сессии.** Decrypt-ошибки ушли (24.08), но приём не восстановился: 0 inbound, `seen.json` не двигается. Сессия после релинка 20.08 так и не стабильна.
+3. **ejo_v2-импорт без атрибуции:** section3 идёт с пустым `contractor` и `source_fact_id=NULL` — данные обходят QA-пайплайн и не привязаны к подрядчику (риск: ЕЖО-отчёт не разложит работы по подрядчикам).
+
+### Данные (ночь 23:00 UTC, 26.08 05:00 Бишкек)
+- `bot_memory_messages` = 0 (4-й день; max = 21.08 07:06).
+- `bot_memory_facts` = 0 (12-й день; last = 13.08).
+- `ojr_section3_work_log` = 29 за сутки ✅ (backfill 21/23/24 = 23 + свежие 25.08 = 6).
+- `ojr_section1_personnel` = 18 за сутки ✅ (backfill = 14 + свежие 25.08 = 4).
+- `ojr_photo_log` = 0 (7-й день; max photo_date = 18.08).
+- `ojr_pass_register` = 32 (без изменений).
+- `ojr_weather` = 1 ✅ (max = 25.08 02:00).
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (5-й день; последний `702c074` 20.08 04:03).
+- Хвост 5-й день: `bot/whatsapp_commands.py` (+280/−44), `CHRONOLOGY.md`, `scripts/migrate_passes_to_register.py` (untracked), `briefings/2026-08-20..24.md` (untracked), `knowledge_graph/*` (авто-пересборка 20:00 UTC — единственное изменение файлов за 25.08).
+
+### Инфраструктура
+- Gateway = systemd `hermes-gateway.service` (MainPID 135505, active since 13:29:37). Юниты `hermes-gateway-alikhan`/`-gulag` — inactive; мост алikhan-сессии спавнит общий gateway (bridge.js PID 136894, `--session .../profiles/alikhan/whatsapp/session --mode bot`).
+- В gateway journal (общий, все профили) — шум: LLM 524/503 (Nous inference), OpenRouter payment error, MCP xapi keepalive fail. На WhatsApp-приём Alikhan не влияет.
+- `document-extractor` :8099 → `{ok: true}` (но журнал сервиса за 25.08 пуст — импорт шёл не через него).
+
+---
+
+## 24.08.2026 — Тишина по приёму 3-й день: decrypt-ошибки перекинулись на боевую группу; gateway переведён под systemd
+
+### Что произошло (по логам/БД, не по памяти)
+- Bridge в течение 24.08 был DOWN с ~09:15 до ~11:56 UTC (~2.7ч): `watchdog_bridge.py` фиксировал `Bridge DOWN (failure #1)` в 09:15, 09:45 и 11:55 UTC. Счётчик, как всегда, застревает на `#1`.
+- Восстановлен **рестартом gateway** ~11:54–11:56 UTC: systemd-юнит `hermes-gateway.service` активен с 11:54:59 (Main PID 1457613), bridge PID 1459083 стартовал 11:56:18. На 23:02 UTC `curl :3000/health` → `connected, uptime 39946 (~11.1ч), scriptHash 32dfb86c3a8a173b`, queueLength=0.
+- **Сдвиг симптома:** decrypt-ошибки (`No session found to decrypt message` + `Bad MAC`) теперь бьют и по **боевой** группе `120363400682390076@g.us` (участник `244817581838465@lid` / phone `996557261164`), а не только по песочнице, как 23.08. Последняя в 09:27:46 UTC, всего 9 decrypt-ошибок в `bridge.log`. После рестарта 11:56 новых decrypt-ошибок нет, но реконнекты `Connection closed (428/503)` продолжаются (последний 503 в 21:39:54 UTC).
+- Приём в БД по-прежнему мёртв: диспетчер весь день логирует `GOT 0 msgs, 211 seen` — `seen.json` застрял на 21.08 07:06 (211 записей, mtime не меняется).
+
+### ⛔ Баг watchdog — НЕ починен (4-й день, зона Hermes/Codex)
+1. `_failure_count` — по-прежнему в single-shot-процессе (cron `*/5`), всегда `=1` («failure #1»), порог `FAIL_THRESHOLD=3` недостижим → автоперезапуск не триггерится.
+2. `scripts/bridge_48h_restart.sh` (cron `0 2 */2`) бьёт в мёртвый v5-юнит: `bridge_restart.log` 24.08 02:00 → `systemctl --user restart hermes-whatsapp-bridge` → `Failed to connect to bus: No medium found`.
+3. `bot/watchdog_bridge.py` mtime 18.07 — файл не трогали. Фикса нет.
+
+### Данные (ночь 23:00 UTC, день Бишкек 24.08)
+- `bot_memory_messages` = 0 (3-й день; max = 21.08, total 647).
+- `bot_memory_facts` = 0 (11-й день; last = 13.08, total 227).
+- `ojr_section3_work_log` = 0 (4-й день; max work_date = 20.08).
+- `ojr_section1_personnel` = 0 новых (max created_at = 21.08).
+- `ojr_photo_log` = 0 (6-й день; max photo_date = 18.08).
+- `ojr_pass_register` = 32 (без изменений, max pass_date = 21.09).
+- `ojr_weather` = 1 (max = 24.08) ✅ единственное, что течёт (36 строк всего).
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (последний `702c074` 20.08 04:03) — 4-е сутки без коммита.
+- Хвост 4-й день: `bot/whatsapp_commands.py` (+280/−44, mtime 21.08 09:40), `CHRONOLOGY.md`, `scripts/migrate_passes_to_register.py` (untracked), `briefings/2026-08-20..23.md` (untracked), `knowledge_graph/*` (авто). Единственное изменение за 24.08 — авто-пересборка KG (24.08 20:00 UTC).
+
+### Инфраструктура (новое)
+- **Gateway теперь systemd-управляемый** (`hermes-gateway.service`, `enabled`, active since 24.08 11:54:59) — восстановление после отвала теперь за systemd, не за watchdog. Рестарт 11:55 и поднял мост.
+- В `errors.log` каждые ~5 мин падает MCP `nexusos` (`Connection closed`, паркуется) — фиктивный сервер, шум, не влияет на WhatsApp.
+- `document-extractor` :8099 → `{ok: true}` ✅.
+
+---
+
+## 23.08.2026 — Тишина по приёму 2-й день: bridge «connected», но сессия не расшифровывает входящие; watchdog всё ещё сломан
+
+### Что произошло (по логам/БД, не по памяти)
+- Bridge в течение 23.08 флапал: `watchdog_bridge.py` фиксировал `Bridge DOWN (failure #1)` в 04:50, 09:15 и 17:10 UTC. Счётчик, как и прежде, застревает на `#1` — автоперезапуск не срабатывает.
+- Восстановлен ~17:11 UTC **ручным рестартом gateway** (`gateway.log` 17:11:55 `Starting Hermes Gateway...` → 17:12:10 `✓ whatsapp connected (profile: alikhan)`). Сейчас `curl :3000/health` → `connected, uptime 21032 (~5.8ч), scriptHash 32dfb86c3a8a173b`.
+- Сессия WhatsApp остаётся нестабильной: в `bridge.log` рекуррентные `Connection closed (428/440)`, `stream errored out (503)` и — ключевое — `No session found to decrypt message` + `Bad MAC` для песочницы `120363179621030401@g.us`. Bridge отдаёт `connected`, но входящие сообщения не расшифровываются → приём фактически мёртв.
+
+### ⛔ Баг watchdog — НЕ починен (3-й день, зона Hermes/Codex)
+1. `_failure_count` — по-прежнему в single-shot-процессе (cron `*/5`), счётчик всегда `=1` («failure #1»), порог `FAIL_THRESHOLD=3` недостижим.
+2. Рестарт бьёт в мёртвый v5-юнит: `bridge_restart.log` 23.08 02:00 → `systemctl --user restart hermes-whatsapp-bridge` → `Failed to connect to bus: No medium found`.
+3. `bot/watchdog_bridge.py` mtime 18.07 — файл не трогали. Фикса нет.
+
+### Данные (ночь 23:00 UTC)
+- `bot_memory_messages` = 0 (2-й день; max = 21.08) — приём молчит.
+- `bot_memory_facts` = 0 (10-й день; last = 13.08, total 227).
+- `ojr_section3_work_log` = 0 (3-й день; max work_date = 20.08).
+- `ojr_section1_personnel` = 0 новых (max created_at = 21.08).
+- `ojr_photo_log` = 0 (5-й день; max photo_date = 18.08).
+- `ojr_pass_register` = 32 (без изменений, max pass_date = 21.09).
+- `ojr_weather` = 1 (max = 23.08) ✅ единственное, что течёт.
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (последний `702c074` 20.08 04:03).
+- Хвост 3-й день: `bot/whatsapp_commands.py` (+280/−44, mtime 21.08), `CHRONOLOGY.md`, `scripts/migrate_passes_to_register.py` (untracked), `briefings/2026-08-20..22.md` (untracked), `knowledge_graph/*` (авто). Единственное изменение за 23.08 — авто-пересборка KG (20:00 UTC).
+
+### Побочное (infra, зона Hermes)
+- При рестарте gateway в логе: `ERROR: Profile 'default' and 'alikhan' both configure telegram with the same credential — refusing to start the duplicate`. Telegram-дубль между профилями; на WhatsApp не влияет, но стоит развести.
+
+---
+
+## 22.08.2026 — Bridge простой ~5ч (11:30–16:35 UTC): watchdog не восстановил (баг v5→v6)
+
+### Что произошло (по логам, не по памяти)
+- `watchdog_bridge.py` (cron `*/5 * * * *`) с 11:30 UTC фиксировал `Bridge DOWN (failure #1)` / `Health check failed: Connection refused` — мост недоступен до ~16:35 UTC.
+- Восстановлен ~16:35 UTC рестартом gateway (bridge PID 455876 стартовал 16:37). Сейчас `curl :3000/health` → `{"status":"connected","queueLength":0,"uptime":23113,"scriptHash":"32dfb86c3a8a173b"}`.
+- Причина отключения в 11:30 **не установлена** (нужна проверка bridge.log). В `whatsapp/bridge.log` видны рекуррентные `Connection closed (428)`, `stream errored out (503)` и `No session found to decrypt message` для песочницы `120363179621030401@g.us` — признаки нестабильной сессии после релинка 20.08.
+
+### ⛔ Баг watchdog (причина, почему 5ч без авто-восстановления)
+`bot/watchdog_bridge.py` в v6 не способен восстановить мост:
+1. **Счётчик сбрасывается:** cron запускает скрипт в single-shot-режиме, `_failure_count` — глобал процесса → каждый тик `=1` («failure #1»), порог `FAIL_THRESHOLD=3` никогда не достигается → рестарт не триггерится.
+2. **systemd-цель мертва:** даже при достижении порога `_restart_bridge()` шлёт `systemctl --user restart hermes-whatsapp-bridge` — юнит в v6 `inactive` (мост спавнит gateway), а cron не достаёт user-bus («Failed to connect to bus: No medium found» в `bridge_restart.log`).
+
+### Данные (ночь 23:00 UTC)
+- `bot_memory_facts` = 0 (9-й день, last = 13.08) — .docx-фикс в коде, живой поток так и не пошёл.
+- `bot_memory_messages` = 0 за 22.08 (last = 21.08 13:06) — приём молчал весь день (bridge лежал).
+- `ojr_photo_log` = 0 (4-й день, max = 18.08).
+- `ojr_section1_personnel` = 0 новых, `ojr_section3_work_log` = 0 (max work_date = 20.08).
+- `ojr_weather` = 1 (max = 22.08) ✅ погода течёт.
+
+### Git / незакоммиченное
+- 0 коммитов за сутки (последний `702c074` 20.08 04:03).
+- Хвост с 21.08 всё ещё не закоммичен (2-й день): `bot/whatsapp_commands.py` (+280/−44), `CHRONOLOGY.md`, `scripts/migrate_passes_to_register.py` (новый), `briefings/2026-08-20.md` + `2026-08-21.md` (untracked), `knowledge_graph/*` (авто).
+
+---
+
+## 21.08.2026 — ЗАКРЫТ инцидент «ответ в песочнице» (2 дня диагноза) + карта контуров для будущих update
+
+### Итог (чтобы в следующий раз НЕ тратить 2 дня)
+Проблема «Сергей пишет в песочницу — Алихан не отвечает» имела **две независимые причины**, обе теперь закрыты:
+
+| Контур | Кто обслуживает | Группа | Режим | Статус |
+|--------|----------------|--------|-------|--------|
+| **Сбор в БД (ОЖР)** | Диспетчер `whatsapp_commands.py` | Боевая `120363400682390076@g.us` | только читает, НЕ отвечает | ✅ работает (`COLLECTED 33`, `ACK 33`) |
+| **Ответ агента** | Hermes gateway (inbound→LLM→send) | Песочница `120363179621030401@g.us` | слушает И отвечает (текст + команды) | ✅ работает (07:20:18 inbound → 07:20:22 response 65 chars) |
+
+### Причина 1 (корень «нет ответа») — `require_mention: True` без `free_response_chats`
+`_should_process_message` (`whatsapp_common.py:409-417`) для групповых чатов требует: `free_response_chats` **или** `require_mention=False` **или** `/`-команду **или** нативный @упоминание. При `require_mention=True` + пустом `free_response_chats` обычный текст отбрасывался → inbound `platform=whatsapp` не порождался → ответ не запускался.
+- **Фикс:** `~/.hermes/profiles/alikhan/config.yaml` → `platforms.whatsapp.extra.free_response_chats: [120363179621030401@g.us]`. Плюс рестарт gateway (adapter читает config только при connect).
+- **Доказательство:** `gateway.log` 07:20:18 `inbound message: platform=whatsapp chat=...031@g.us msg='Алихан проверка связи'` → 07:20:22 `response ready ... 65 chars`.
+
+### Причина 2 (разграничение) — диспетчер и gateway делили обе группы
+Диспетчер поллил обе группы, gateway читал `/messages` без `?only=` — оба могли красть чужой трафик. Разведено: диспетчер → только боевая (`for gid in ((PRODUCTION,),)`), gateway → песочница.
+- **Фикс:** `bot/whatsapp_commands.py` — poll только боевая.
+
+### Что оказалось НЕ причиной (чтобы не чинить это снова)
+- ❌ **Порт** (3003 vs 3000) — был прошлый инцидент, уже закрыт утром.
+- ❌ **scriptHash** (`d6d074...` vs `32dfb...`) — уже синхронизирован, диспетчер переведён на `_bridge_contract_ok` (поведенческая проверка, не hash).
+- ❌ **«gateway крадёт очередь» (ПАТЧ 8)** — ОТКАЧЕН. Симптом «GOT 0 msgs» был ошибочно прочитан: проверялся мёртвый `whatsapp/collect_journal.jsonl` (0 байт) вместо активного `whatsapp/session/collect_journal.jsonl` (72 КБ). Диспетчер всё время собирал корректно.
+
+### ⛔ КРИТИЧЕСКИЙ УРОК (главная причина 2-дневной диагностики)
+**Симптом «GOT 0 msgs» / «нет inbound» — это НЕ диагноз.** Перед фиксом обязательно проверь:
+1. **Тот ли файл:** `ls -la ~/.hermes/profiles/alikhan/whatsapp/session/collect_journal.jsonl` — АКТИВНЫЙ path (НЕ `whatsapp/collect_journal.jsonl`, это legacy 0 байт).
+2. **Разделяй два контура:** сбор в БД (диспетчер) ≠ ответ агента (gateway inbound). «Не отвечает» = чини контур ответа, НЕ контур сбора.
+3. **Проверяй inbound по факту:** `grep "platform=whatsapp" gateway.log` — нет строки = не порождается inbound (проблема в гейте обработки, не в мосте).
+
+### Обновлено сопутствующее
+- `~/.hermes/PATCHES.md` — ПАТЧ 8 помечен ❌ ОТКАЧЕН, добавлен ПАТЧ 9 (free_response_chats + разграничение) с чек-листом проверки после update.
+- `bridge.js` — pre-key refresh закоммичен `1a619a509` (hash стабилизирован).
+
+---
+
+## 21.08.2026 — Фикс .docx-извлечения + реестр пропусков (закрыта эскалация от 19.08)
+
+### Закрыта эскалация .docx-extractor (висит с 19.08)
+- Прораб `241455008329920@lid` присылает персонал вложением `.docx`, а extractor `:8099/extract-document` для `.docx` отдавал **только metadata** (`[document metadata: ...]`, без текста) → `bot_memory_facts` стоят с 13.08.
+- **Фикс (локально, без зависимости от extractor-сервиса):** в `bot/whatsapp_commands.py` добавлен `_extract_docx_text()` — парсит `word/document.xml` напрямую (zipfile + `xml.etree.ElementTree`). В `_ocr_document_tags` добавлен fallback: если расширение `.docx` и текст пуст или `[document metadata:` → переизвлечь текст локально.
+
+### Новый реестр пропусков `ojr_pass_register`
+- Документы-пропуска (транспорт) теперь маршрутизируются в **отдельную таблицу** `ojr_pass_register`, а не в Раздел 5 ОЖР (исполнительная документация).
+- Новые функции в `whatsapp_commands.py`: `_is_pass_document()` (эвристика «список» + «водитель»), `_parse_pass_document()` (дата, ФИО водителя, госномер, примечания), `_save_pass_register()` (дедуп по `file_message_id`).
+- Миграция: `scripts/migrate_passes_to_register.py` (125 строк, idempotent — дедуп по `pass_date + full_name + vehicle_plate`, строки Раздела 5 не удаляет).
+
+### Данные (ночь 23:00 UTC)
+- `ojr_pass_register` = **32 записи** (`pass_date` 21.08–21.09): водители с госномерами (напр. Мырзабеков Чубак Камчыбекович, `07KG402ABN`).
+- `ojr_section1_personnel` — 16 записей `sync_source='ejo_v2'` созданы 21.08 14:59: Майкадам 21 раб.+1 ИТР, АйБиКон 4 ИТР+1 раб., Алтын-Тас 3 раб.+1 ИТР (дубли по датам/сменам).
+- `ojr_section3_work_log` — backfilled до 20.08: 17.08 (8 строк), 18.08 (8), 20.08 (7).
+- `bot_memory_facts` last = **13.08** (8-й день) — .docx-фикс должен восстановить поток, но новые facts на момент ночи ещё не появились (документы 21.08 13:05 Бишкек ещё в обработке/следующем тике).
+- `ojr_photo_log` max = 18.08 (0 фото за 19–21.08).
+
+### Файлы
+- `bot/whatsapp_commands.py` (+280/−44) — разграничение контуров (инцидент) + .docx-извлечение + реестр пропусков.
+- `scripts/migrate_passes_to_register.py` (новый, 125 строк).
+
+---
+
+## 20.08.2026 (вечер) — Релинк сессии (428/440) → bridge переехал на порт 3003, диспетчер читает 3000 → приём снова упал
+
+### Что произошло (по логам/файлам, не по памяти)
+- После утреннего фикса hash-гейта (замена на capability-контракт `_bridge_contract_ok`) во второй половине дня WhatsApp-сессия ушла в **session conflict**: `bridge.log` — `stream errored out (reason 440: conflict type=replaced)`, затем повторяющиеся `Connection closed (reason: 428)`.
+- Ход релинка (артефакты в `profiles/alikhan/whatsapp/`): `QR_scan_this.png` (13:47 UTC) → бэкап `session.bak.20260820_163639_prerelink` (16:36) → бэкап `session.bak_042_broken_164419` (16:44) → релинк `session.relink_20260820_171616` (17:16 UTC).
+- После релинка **bridge поднялся на порту 3003** (gateway PID 1631859 спавнит `bridge.js --port 3003`, PID 1634125), тогда как `config.yaml:26` всё ещё `bridge_port: 3000`.
+
+### Текущий инцидент (НЕ закрыт, зона Hermes)
+- `curl :3003/health` → `{"status":"connected","scriptHash":"32dfb86c3a8a173b","queueLength":0}` — мост жив, но на **3003**.
+- `curl :3000/health` → **Connection refused**; `ss -ltnp` слушает только 3003.
+- Диспетчер `bot/whatsapp_commands.py` хардкодит `BRIDGE = "http://127.0.0.1:3000"` → с **13:34 UTC** каждый тик `BRIDGE HEALTH ERR ... Connection refused ... мост не подтверждён, тик пропущен`, `GOT 0 msgs`.
+- **Последнее обработанное сообщение:** 07:26 UTC (13:26 Бишкек). Входящие WhatsApp не читаются ~10 часов.
+
+### Данные (SELECT, ночь 23:05 UTC)
+- `bot_memory_messages` last = 07:25 UTC, за 20.08 всего **2** (оба утренние).
+- `bot_memory_facts` last = **13.08** (7-й день; .docx-extractor эскалация от 19.08 не закрыта).
+- `ojr_section3_work_log` max work_date = 16.08. `ojr_photo_log` max = 18.08 (0 фото за 20.08).
+- `ojr_section1_personnel` — **ручной backfill за 16.08** внесён 20.08 14:33 UTC (Алтын-Тас 3 раб.+1 ИТР, Майкадам 15 раб.+1 ИТР, АйБиКон 3 ИТР) — не live-трафик.
+
+### Корень (гипотеза → подтвердить Hermes)
+- Рассогласование порта: gateway после релинка спавнит bridge на 3003, диспетчер ждёт 3000. Либо вернуть bridge на 3000, либо обновить `BRIDGE` до 3003. ⚠️ **НЕ чиню сам** — рестарт gateway / смена порта bridge = зона Hermes (правило №11).
+
+### Файлы / артефакты
+- `bot/whatsapp_commands.py` (+64 строки незакоммичено: capability-контракт, hash-гейт убран).
+- `bridge.js` mtime 14:48, `sha256=32dfb86c3a8a173b…` (pre-key refresh).
+- Артефакты релинка: `session.relink_20260820_171616/`, `session.bak.*` (2 шт).
+
+---
+
+## 20.08.2026 — Четверг: восстановлен приём сообщений в обеих группах — hash-гейт рассинхронизировался после pre-key патча на bridge.js
+
+### Корень (доказан до строки, не по памяти)
+- После обновления Hermes v0.20.1→v0.20.4 (18.08) и применения ПАТЧ 7 (durable queue `/messages?only=`) под-агент Alikhan в **13:03** добавил в `whatsapp_commands.py` константу `EXPECTED_BRIDGE_SCRIPTHASH = "d6d074291e8a808b"` (hash bridge.js на тот момент).
+- Затем в **14:48** на `bridge.js` поверх ПАТЧ 7 пере-применили pre-key refresh патч (`refreshPreKeysIfPossible`, 29 строк — защита от 428/479, из старого коммита `57403223e`). Это изменило sha256 файла → bridge стал отдавать `scriptHash=32dfb86c3a8a173b` вместо `d6d074291e8a808b`.
+- Диспетчер fail-closed: `if health.scriptHash != EXPECTED_BRIDGE_SCRIPTHASH: return []` → каждый тик `GOT 0 msgs`, сообщения из обеих групп (песочница `...031@g.us` + боевая `...076@g.us`) не читались.
+
+### Диагноз-слои (проверено по файлам/логам)
+- **Слой A (корень):** hash-контракт рассинхронизирован. ПАТЧ 7 цел (commit `8c9d09384` в git, `message_queue.js` есть, 13/13 тестов pass, `/messages?only=` и `/messages-ack` работают, `/collect-messages` → 404 как ожидалось в v0.20.4).
+- **Слой B (шум, не корень):** одиночный `smax-invalid (479)` от песочницы в 14:48 (момент респавна bridge после pre-key патча). `count=1`, не persistent. Второго держателя сессии нет, `NRestarts=0`, только одна активная `creds.json` (`profiles/alikhan/whatsapp/session/`, 14:49), две другие заморожены с 29.07. Признаков session-conflict нет.
+
+### Фикс (1 строка)
+- `bot/whatsapp_commands.py:25` — `EXPECTED_BRIDGE_SCRIPTHASH`: `"d6d074291e8a808b"` → `"32dfb86c3a8a173b"` (+ комментарий про pre-key refresh).
+- Никаких «слетевших» патчей не было: durable-queue на месте, один лишь контракт hash не синхронизировали после поверхностного pre-key патча.
+
+### Как проверил
+- `curl :3000/health` → `connected`, `scriptHash="32dfb86c3a8a173b"`, queueLength=0.
+- Живой лог `/tmp/alikhan_commands.log`: 14:55:59 последняя строка `scriptHash != d6d074 — НЕ читаю`; 14:57:59 уже `START → GOT 0 msgs → DONE` **без** fail-closed (gейт пройден).
+- `py_compile whatsapp_commands.py` → PY_COMPILE_OK.
+- `sha256sum bridge.js` (первые 16) == live `/health` scriptHash == `32dfb86c3a8a173b` — файл на диске и запущенный процесс совпадают (нет stale bridge).
+
+### Урок (важный)
+- **Hash-гейт «точное равенство» хрупок:** любой будущий рабочий патч на `bridge.js` (даже 29 строк защитного кода) меняет sha256 → диспетчер снова fail-closed, пока не обновят `EXPECTED_BRIDGE_SCRIPTHASH`. В следующий раз при любом патче `bridge.js` — **синхронно** обновлять константу в `whatsapp_commands.py`, а не по факту поломки.
+- pre-key refresh (`refreshPreKeysIfPossible`) — легитимный кастомный патч (есть в git `57403223e`, отсутствует в upstream `origin/main`). При `hermes update` его надо пере-применять (см. `~/.hermes/PATCHES.md`).
+
+### Устойчивый фикс (замена hash-гейта на capability-контракт)
+- Хрупкий `if scriptHash != EXPECTED_BRIDGE_SCRIPTHASH: return []` заменён на `_bridge_contract_ok()` — проверка моста по **поведению** endpoints, а не по byte-hash файла:
+  - `/collect-messages` → должен быть 404 (мёртв в v0.20.4). Иначе (старый splice-мост) → fail-closed.
+  - `/messages-ack` → должен существовать (любой код кроме 404). Иначе → fail-closed.
+- Теперь любой будущий рабочий патч `bridge.js` (меняющий scriptHash) НЕ роняет приём.
+- Проверено live: `/collect-messages`=404, `/messages-ack`=400 → contract_ok=True, лог диспетчера `START→GOT→DONE` без «НЕ читаю».
+- `EXPECTED_BRIDGE_SCRIPTHASH` оставлена как документирующая константа (не используется в гейте).
+
+### Файлы
+- `bot/whatsapp_commands.py` (1 строка, hash-константа).
+- `~/.hermes/hermes-agent/scripts/whatsapp-bridge/bridge.js` (+29 строк pre-key refresh, незакоммичено — как working-tree хвост).
+
+---
+
 ## 19.08.2026 — Среда: найден вероятный корень 6-дневного молчания текст-сводок — прораб шлёт .docx, extractor не парсит текст
 
 ### Главный вывод
@@ -1388,3 +1708,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **15.08.2026 13:21** — chrono: индекс коммита 8df1623 (`97893d8`)
 - **18.08.2026 14:11** — chrono: 2026-08-18 — синхронизация хронологии (запись устарела ~70ч) (`c7699df`)
 - **19.08.2026 04:00** — daily-sync: auto-commit (`60f87a0`)
+- **20.08.2026 04:03** — auto-sync infra 20260820 (`702c074`)
