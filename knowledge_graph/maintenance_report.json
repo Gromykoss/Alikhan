@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-29T20:00:03.617969+00:00",
-  "graph_built_at": "2026-08-29T20:00:03.559049+00:00",
+  "generated_at": "2026-08-30T20:00:28.024688+00:00",
+  "graph_built_at": "2026-08-30T20:00:28.002268+00:00",
   "graph_stats": {
-    "nodes": 358,
-    "edges": 558,
+    "nodes": 361,
+    "edges": 561,
     "projects": 1,
-    "events": 63,
+    "events": 64,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
