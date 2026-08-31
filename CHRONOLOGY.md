@@ -1,5 +1,39 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 31.08.2026 — Office webhook forward для строительных вопросов прорабов
+
+### Причина
+- Нужно пересылать явные строительные вопросы из WhatsApp офисному Оркестратору через webhook, не перехватывая QA-факты, ответы опроса, команды, фото и документы.
+
+### Что сделано
+- Добавлен `bot/office_forward.py`: детерминированная классификация вопросов по темам `кровля` / `наружка` / `материалы` / `смета` / `общее`, POST `forward_to_office()` с `Authorization: Bearer <key>`, timeout 10s, без вывода секретов.
+- `bot/secret_config.py` научен читать локальный `bot/secret_config.json` через общий `get_secret()`; поддержаны требуемые ключи `office_webhook_url`, `office_webhook_key` и текущие legacy-алиасы.
+- `bot/whatsapp_commands.py`: в `_save_prod_text()` добавлен синхронный вызов webhook после сохранения сырого текста; сбой webhook возвращает `False`, чтобы `message_id` не попал в seen/ACK и ушёл на retry.
+- `bot/secret_config.json` добавлен в `.gitignore`.
+- Добавлены `bot/test_office_forward.py` и `scripts/test_office_forward_sandbox.py`.
+- После adversarial review: `forward_to_office()` ждёт async-тред до таймаута, успехом считает только HTTP 2xx, делает retry по тому же `message_id`, режет `text` до 4000 символов и пишет обезличенные ошибки через `log()` диспетчера.
+- Классификатор усилен: служебные слова и команды проверяются по границам слов, `никто`/`ежо?`/`как обычно рабочие 7`/`25т` не форвардятся, poll-ответы больше не определяются по простому паттерну `\d+т`.
+- `bot/secret_config.json` мигрирован на канонические ключи `office_webhook_url` / `office_webhook_key`; `scripts/test_office_forward_sandbox.py` использует `classify_office_question()`, контракт `office_forward` добавлен в `bot/CONTRACTS.md`.
+- После adversarial review round 2: daemon fire-and-forget убран; default `join_timeout=25` покрывает `2 x 10s` retry-бюджет с запасом, topic-keywords проверяются по границам слов (`акт` не матчится в `факт`), `?` проверяется до QA-отсечки по `=`, лог `queued=` заменён на `sent=`.
+
+### Проверка
+- `python3 -m py_compile bot/*.py` — PASS.
+- `python3 -m pytest bot/test_office_forward.py -v` — 18 passed.
+- `python3 -m py_compile bot/*.py && python3 -m pytest bot/test_office_forward.py -q` — 21 passed.
+- `python3 scripts/test_office_forward_sandbox.py` — 4 POST в sandbox webhook, все HTTP 200.
+- `python3 -m pytest bot/test_contracts.py bot/test_smoke.py bot/test_office_forward.py -v` — 25 passed, 5 failed на старых/внешних проблемах: stale `bridge_wrapper/main_waha` контракты, дубликаты personnel в БД, отсутствующий процесс `main_waha`.
+
+### Файлы
+- `.gitignore`
+- `bot/secret_config.py`
+- `bot/office_forward.py`
+- `bot/whatsapp_commands.py`
+- `bot/test_office_forward.py`
+- `bot/CONTRACTS.md`
+- `scripts/test_office_forward_sandbox.py`
+
+---
+
 ## 30.08.2026 — Стабильная ночь без изменений: 0 коммитов, 0 inbound, OJR мёртв 2-й день (последние данные 28.08); погода течёт
 
 ### Что произошло (по логам/БД, не по памяти)
@@ -1761,3 +1795,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **29.08.2026 23:01** — chrono: 2026-08-29 — авто-синхронизация (`ba5cc11`)
 - **29.08.2026 23:01** — chrono: индекс коммита ba5cc11 (`f2cbe1f`)
 - **30.08.2026 23:03** — chrono: 2026-08-30 — авто-синхронизация (`eadc5ae`)
+- **30.08.2026 23:03** — chrono: индекс коммита eadc5ae (`94432f7`)
+- **31.08.2026 15:10** — docs+infra: офисный мост с Grok Bot (Оркестратор/Кровельщик/Наружник): webhook-маршрут office-reply (profile-bound, ответ через агента), приёмник офиса проверен ping 200, секрета передан, секция «Грок-бот помощник» добавлена в AGENTS.md (Hermes)

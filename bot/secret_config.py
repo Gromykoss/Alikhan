@@ -8,11 +8,16 @@ printed by this module.
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 
 SECRET_FILES = (
     Path.home() / ".hermes" / "secrets.env",
     Path("/home/hermes-workspace/.hermes/secrets.env"),
+)
+
+SECRET_JSON_FILES = (
+    Path(__file__).with_name("secret_config.json"),
 )
 
 
@@ -41,6 +46,18 @@ def _read_secret_file(name: str) -> str:
     return ""
 
 
+def _read_json_file(path: Path) -> dict[str, str]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v).strip() for k, v in data.items() if v is not None}
+
+
 def get_secret(*names: str, default: str = "", required: bool = False) -> str:
     for name in names:
         value = os.environ.get(name, "").strip()
@@ -53,6 +70,15 @@ def get_secret(*names: str, default: str = "", required: bool = False) -> str:
 
     for name in names:
         value = file_values.get(name, "").strip()
+        if value:
+            return value
+
+    json_values: dict[str, str] = {}
+    for path in SECRET_JSON_FILES:
+        json_values.update(_read_json_file(path))
+
+    for name in names:
+        value = json_values.get(name, "").strip()
         if value:
             return value
 

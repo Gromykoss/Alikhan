@@ -5,8 +5,9 @@
 ВСЕ сообщения логируются.
 Ролевая модель: admin > operator > viewer.
 """
-import sys, os, json, time, requests, re, base64, traceback
+import sys, os, json, time, requests, re, base64, traceback, zipfile
 from datetime import datetime, timezone, timedelta
+from xml.etree import ElementTree
 from authority import can_send
 from config import SANDBOX, PRODUCTION
 
@@ -22,6 +23,7 @@ def bishkek_date():
 
 
 BRIDGE = "http://127.0.0.1:3000"
+EXPECTED_BRIDGE_SCRIPTHASH = "32dfb86c3a8a173b"  # bridge A+ (v0.20.4 + /messages?only= durability) + pre-key refresh (428/479 fix). Откат к старому коду → splice-all → не читаем.
 SEEN_FILE = "/tmp/alikhan_seen.json"
 LOG_FILE = "/tmp/alikhan_commands.log"
 
@@ -130,47 +132,75 @@ def save_seen(ids: set):
 def send_collect_ack(ids: list) -> bool:
     """Подтвердить мосту успешную обработку батча (durability, аудит).
 
-    POST {BRIDGE}/collect-ack {"ids": [...]} — мост удаляет эти id из своего
-    файлового журнала. Не-ack id восстанавливаются после рестарта моста
-    (re-drain в collectQueue) → диспетчер ретраит их следующим тиком.
+    POST {BRIDGE}/messages-ack {"messageIds": [...]} — мост удаляет эти id из
+    своего журнала. Не-ack id восстанавливаются после рестарта моста
+    (re-drain в очередь) → диспетчер ретраит их следующим тиком.
     Вызывается ТОЛЬКО с успешно обработанными id (confirmed[]); упавшие
     БД-записи в список не попадают."""
     if not ids:
         return True
     try:
-        resp = requests.post(f"{BRIDGE}/collect-ack", json={"ids": ids}, timeout=5)
+        resp = requests.post(f"{BRIDGE}/messages-ack", json={"messageIds": ids}, timeout=5)
         ok = resp.status_code == 200
-        log(f"ACK {len(ids)} ids → /collect-ack: {'OK' if ok else f'HTTP {resp.status_code}'}")
+        log(f"ACK {len(ids)} ids → /messages-ack: {'OK' if ok else f'HTTP {resp.status_code}'}")
         return ok
     except Exception as e:
         log(f"ACK ERR: {e} — ids останутся в журнале моста (re-drain после рестарта)")
         return False
 
+def _bridge_contract_ok(health: dict) -> bool:
+    """Проверить мост по ПОВЕДЕНИЮ, а не по byte-hash файла.
+
+    Устойчиво к любым будущим патчам bridge.js (pre-key refresh и т.п.),
+    которые меняют scriptHash, но сохраняют durable-queue контракт.
+    По-прежнему fail-closed против отката моста на старый splice-мост
+    (v0.20.1 dual-consumer — тот /collect-messages отдаёт данные, а не 404).
+
+    Критерии правильного моста (v0.20.4 A+, durable /messages?only=):
+    1) /collect-messages — мёртв (404). Старый cross-consumer мост отдал бы
+       данные → блокируем (иначе gateway и диспетчер крадут друг у друга).
+    2) /messages-ack — существует (любой код кроме 404: 200 на валидный,
+       400 на пустой список). Его отсутствие = не-A+ мост → блокируем.
+    """
+    try:
+        r = requests.get(f"{BRIDGE}/collect-messages?only={PRODUCTION}", timeout=3)
+        if r.status_code != 404:
+            log(f"BRIDGE: /collect-messages ответил HTTP {r.status_code} (подозрение на старый splice-мост) — не читаю")
+            return False
+        r2 = requests.post(f"{BRIDGE}/messages-ack", json={"messageIds": []}, timeout=3)
+        if r2.status_code == 404:
+            log("BRIDGE: /messages-ack отсутствует (не-A+ мост) — не читаю")
+            return False
+        return True
+    except Exception as e:
+        log(f"BRIDGE CONTRACT ERR: {e} — мост не подтверждён, тик пропущен")
+        return False
+
+
 def get_messages() -> list:
-    # v4: ТОЛЬКО /collect-messages. /messages?only=<collect-only-JID> на новом
-    # мосту ОПАСЕН: collect-only JID вырезаются из only= → список пустеет →
-    # legacy splice всей очереди шлюза (кража песочницы). Поэтому fallback на
-    # /messages ЗАПРЕЩЁН: при health fail или отсутствии collectOnlyChats
-    # возвращаем [] — следующий тик крона повторит попытку.
+    # v5: /messages?only=<gid> (только боевая). Мост v0.20.4 удалил
+    # /collect-messages и /collect-ack (dual-consumer). Проверка контракта
+    # моста — по ПОВЕДЕНИЮ endpoints (_bridge_contract_ok), НЕ по hash файла:
+    # иначе любой будущий рабочий патч bridge.js (меняющий scriptHash)
+    # снова роняет приём. /messages durable: не-ack id восстанавливаются
+    # (re-drain), only= фильтрует на стороне моста (claim-изоляция).
     try:
         health = requests.get(f"{BRIDGE}/health", timeout=3).json()
     except Exception as e:
-        log(f"BRIDGE HEALTH ERR: {e} — collect-only не подтверждён, тик пропущен")
+        log(f"BRIDGE HEALTH ERR: {e} — мост не подтверждён, тик пропущен")
         return []
-    if not health.get("collectOnlyChats"):
-        # Старый мост / новый без конфига / health не отдал ключ:
-        # НЕ читаем /messages, возвращаем пусто.
-        log("BRIDGE: collectOnlyChats отсутствует — /messages НЕ читаю, тик пропущен")
+    if not _bridge_contract_ok(health):
         return []
     try:
-        # Читаем ОБЕ группы: боевую (listen-only) и песочницу (отвечаем).
-        # Два запроса — bridge может не поддерживать comma-separated only=.
+        # Dispatcher читает ТОЛЬКО боевую группу (listen-only). Песочницу целиком
+        # обслуживает Hermes gateway (отвечает в песочнице) — из poll убрана,
+        # чтобы диспетчер и gateway не крали сообщения друг у друга.
         all_data = []
-        for gid, gname in ((PRODUCTION, "PRODUCTION"), (SANDBOX, "SANDBOX")):
+        for gid, gname in ((PRODUCTION, "PRODUCTION"),):
             try:
-                resp = requests.get(f"{BRIDGE}/collect-messages?only={gid}", timeout=5)
+                resp = requests.get(f"{BRIDGE}/messages?only={gid}", timeout=5)
                 if resp.status_code != 200:
-                    log(f"BRIDGE HTTP {resp.status_code} (/collect-messages?only={gname})")
+                    log(f"BRIDGE HTTP {resp.status_code} (/messages?only={gname})")
                     continue
                 data = resp.json()
                 if isinstance(data, list):
@@ -845,6 +875,12 @@ def _ocr_document_tags(rid, local_path):
         data = resp.json()
         ok = bool(data.get("ok"))
         text = str(data.get("text") or "").strip()
+        if os.path.splitext(local_path)[1].lower() == ".docx" and (
+            not text or text.startswith("[document metadata:")
+        ):
+            text = _extract_docx_text(local_path)
+            if text:
+                ok = True
         extra["extract_ok"] = "true" if ok else "false"
         if text:
             # В теги кладём не более 20000 символов (защита от раздувания БД);
@@ -862,7 +898,7 @@ def _ocr_document_tags(rid, local_path):
         extra["extract_error"] = str(e)[:500]
         log(f"[PRD] DOC OCR FAIL: {e}")
     if not extra:
-        return
+        return ""
     conn = None
     try:
         from db import get_conn
@@ -876,6 +912,183 @@ def _ocr_document_tags(rid, local_path):
         log(f"[PRD] DOC OCR tags → row {rid}: {list(extra)}")
     except Exception as e:
         log(f"[PRD] DOC OCR tags update ERR: {e} (row {rid})")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    return extra.get("extracted_text", "")
+
+
+def _extract_docx_text(local_path):
+    """Извлечь текст из .docx локально, без обращения к extractor-сервису."""
+    try:
+        with zipfile.ZipFile(local_path) as archive:
+            raw_xml = archive.read("word/document.xml")
+    except Exception as e:
+        log(f"[PRD] DOCX read ERR: {e} ({local_path})")
+        return ""
+    try:
+        root = ElementTree.fromstring(raw_xml)
+    except Exception as e:
+        log(f"[PRD] DOCX XML ERR: {e} ({local_path})")
+        return ""
+    paragraphs = []
+    for paragraph in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"):
+        parts = []
+        for node in paragraph.iter():
+            if node.tag == "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t" and node.text:
+                parts.append(node.text)
+            elif node.tag == "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tab":
+                parts.append("\t")
+        line = "".join(parts).strip()
+        if line:
+            paragraphs.append(line)
+    return "\n".join(paragraphs).strip()
+
+
+def _is_pass_document(text) -> bool:
+    """Пропуск: в тексте есть «Список» и «Водитель» без учёта регистра."""
+    if not text:
+        return False
+    value = str(text).lower()
+    has_list = re.search(r"с\s*п\s*и\s*с\s*о\s*к", value, re.IGNORECASE) is not None
+    has_driver = re.search(r"в\s*о\s*д\s*и\s*т\s*е\s*л\s*ь", value, re.IGNORECASE) is not None
+    return has_list and has_driver
+
+
+def _parse_pass_date(value):
+    if not value:
+        return None
+    try:
+        day, month, year = (int(part) for part in value.split("."))
+        if year == 2029:
+            year = 2026
+        return datetime(year, month, day).date()
+    except Exception:
+        return None
+
+
+def _pass_date_from_filename(fname):
+    match = re.search(r"(?<!\d)(\d{1,2}\.\d{1,2}\.\d{4})(?!\d)", os.path.basename(fname or ""))
+    return _parse_pass_date(match.group(1)) if match else None
+
+
+def _pass_date_from_text(text):
+    match = re.search(
+        r"с\s*п\s*и\s*с\s*о\s*к[^\d]{0,40}(\d{1,2}\.\d{1,2}\.\d{4})",
+        str(text or ""),
+        re.IGNORECASE,
+    )
+    return _parse_pass_date(match.group(1)) if match else None
+
+
+def _first_line_after_marker(lines, marker):
+    marker_re = re.compile(marker, re.IGNORECASE)
+    for idx, line in enumerate(lines):
+        if not marker_re.search(line):
+            continue
+        rest = re.sub(marker, "", line, count=1, flags=re.IGNORECASE).lstrip(" :\t-").strip()
+        if rest:
+            return rest
+        for next_line in lines[idx + 1:]:
+            if next_line.strip():
+                return next_line.strip()
+        return ""
+    return ""
+
+
+def _parse_pass_document(text, fname=None):
+    """Разобрать документ-пропуск. Возвращает dict, поля могут быть None."""
+    value = str(text or "")
+    lines = [line.strip() for line in value.replace("\r", "\n").split("\n") if line.strip()]
+
+    pass_date = _pass_date_from_filename(fname) or _pass_date_from_text(value)
+    driver_line = _first_line_after_marker(lines, r"водитель")
+    full_name = None
+    birthdate = None
+    if driver_line:
+        birth_match = re.search(r"(\d{1,2}\.\d{1,2}\.\d{4})\s*г\.?\s*р\.?", driver_line, re.IGNORECASE)
+        if birth_match:
+            birthdate = birth_match.group(1)
+        full_name_part = driver_line.split(",", 1)[0].strip()
+        full_name = re.sub(r"\s+", " ", full_name_part).strip(" .,:;-") or None
+
+    transport_line = _first_line_after_marker(lines, r"транспорт")
+    plate = None
+    if transport_line:
+        candidates = re.findall(r"\b[0-9A-Za-zА-Яа-я]{5,}\b", transport_line)
+        for candidate in reversed(candidates):
+            if re.search(r"\d", candidate) and re.search(r"[A-Za-zА-Яа-я]", candidate):
+                plate = candidate.upper()
+                break
+    transport_desc = transport_line
+    if plate and transport_desc:
+        transport_desc = re.sub(rf"\b{re.escape(plate)}\b", "", transport_desc, flags=re.IGNORECASE).strip(" .,:;-")
+    notes_parts = []
+    if transport_desc:
+        notes_parts.append(transport_desc)
+    if birthdate:
+        notes_parts.append(f"род. {birthdate}")
+
+    return {
+        "pass_date": pass_date,
+        "full_name": full_name,
+        "organization_name": None,
+        "position": "водитель" if full_name or driver_line else None,
+        "pass_type": "транспорт",
+        "pass_number": None,
+        "vehicle_plate": plate,
+        "notes": "; ".join(notes_parts) if notes_parts else None,
+    }
+
+
+def _save_pass_register(rid, fname, local_path, extracted_text):
+    """Best-effort вставка документа-пропуска в ojr_pass_register. Дедуп по file_message_id."""
+    conn = None
+    try:
+        from db import get_conn
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM ojr_title_page WHERE is_active = TRUE LIMIT 1")
+        trow = cur.fetchone()
+        title_id = trow[0] if trow else 1
+        cur.execute(
+            "SELECT 1 FROM ojr_pass_register WHERE file_message_id = %s LIMIT 1",
+            (rid,))
+        if cur.fetchone():
+            log(f"[PRD] DOC pass register already logged (row {rid})")
+        else:
+            parsed = _parse_pass_document(extracted_text, fname)
+            cur.execute(
+                "INSERT INTO ojr_pass_register "
+                "(title_id, pass_date, full_name, organization_name, position, pass_type, "
+                " pass_number, vehicle_plate, status, file_message_id, file_path, notes, created_at, updated_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'выдан', %s, %s, %s, NOW(), NOW())",
+                (
+                    title_id,
+                    parsed.get("pass_date"),
+                    parsed.get("full_name"),
+                    parsed.get("organization_name"),
+                    parsed.get("position"),
+                    parsed.get("pass_type"),
+                    parsed.get("pass_number"),
+                    parsed.get("vehicle_plate"),
+                    rid,
+                    local_path,
+                    parsed.get("notes"),
+                ))
+            conn.commit()
+            log(f"[PRD] DOC pass register ok (row {rid})")
+        cur.close()
+    except Exception as e:
+        log(f"[PRD] DOC pass register ERR: {e} (row {rid})")
         if conn:
             try:
                 conn.rollback()
@@ -966,11 +1179,20 @@ def _save_prod_document(msg, mid) -> bool:
         log(f"[PRD] DOC metadata-only: {fname} (row {rid}, mediaUrls={msg.get('mediaUrls')}, файл недоступен)")
     # OCR текста документа (T-174): только если файл есть и расширение поддерживается.
     # Best-effort — ошибки extractor'а/БД не влияют на ack/seen (документ уже сохранён).
+    extracted_text = ""
     if local_path and os.path.splitext(local_path)[1].lower() in DOC_OCR_EXTS:
-        _ocr_document_tags(rid, local_path)
-    # Раздел 5 ОЖР (исполнительная документация) — best-effort, ПОСЛЕ успешной записи
-    # в bot_memory_messages. Дедуп по file_message_id; ошибки не влияют на ack/seen.
-    _save_section5_asbuilt_doc(rid, fname, local_path)
+        extracted_text = _ocr_document_tags(rid, local_path) or ""
+        if (
+            os.path.splitext(local_path)[1].lower() == ".docx"
+            and (not extracted_text or extracted_text.startswith("[document metadata:"))
+        ):
+            extracted_text = _extract_docx_text(local_path)
+    # Маршрутизация документа: пропуска идут в отдельный реестр, остальные
+    # документы остаются в Разделе 5 ОЖР. Обе записи best-effort.
+    if _is_pass_document(extracted_text):
+        _save_pass_register(rid, fname, local_path, extracted_text)
+    else:
+        _save_section5_asbuilt_doc(rid, fname, local_path)
     return True
 
 
@@ -982,6 +1204,17 @@ def _save_prod_text(text, chat_id, mid, sender) -> bool:
         save_message(chat_id, sender, "user", text, message_type="text")
     except Exception as e:
         log(f"RAW TEXT ERR: {e} — seen NOT marked, retry next tick")
+        return False
+    try:
+        from office_forward import classify_office_question, forward_to_office
+        topic = classify_office_question(text)
+        if topic:
+            sent = forward_to_office(chat_id, mid, sender, text, topic, async_send=False, log_func=log)
+            log(f"OFFICE_FORWARD topic={topic} sent={sent}")
+            if not sent:
+                return False
+    except Exception as e:
+        log(f"OFFICE_FORWARD ERR: {type(e).__name__}")
         return False
     if is_qa_text(text):
         handle_qa(text, chat_id, sender=sender)
@@ -996,7 +1229,7 @@ def main():
 
     new_count = 0
     confirmed = []  # mid, подтверждённые обработкой → seen (durability: только после успеха)
-    ack_ids = []    # mid → POST /collect-ack (успешно обработанные + re-ack seen из журнала моста)
+    ack_ids = []    # mid → POST /messages-ack (успешно обработанные + re-ack seen из журнала моста)
     for msg in messages:
         mid = msg.get("messageId") or msg.get("id")
         if not mid:
@@ -1008,7 +1241,9 @@ def main():
             continue
 
         chat_id = msg.get("chatId", "")
-        # Диспетчер читает ОБЕ группы (PRODUCTION + SANDBOX).
+        # Диспетчер читает ТОЛЬКО боевую группу (PRODUCTION). Песочницу
+        # обслуживает Hermes gateway. Guard оставлен fail-safe: если песочница
+        # случайно попадёт — не потеряем, но штатно сюда не приходит.
         # Чужие чаты — пропускаем (ack без БД).
         if chat_id not in (PRODUCTION, SANDBOX):
             confirmed.append(mid)

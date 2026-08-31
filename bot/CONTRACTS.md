@@ -18,6 +18,7 @@
 Уровень 1 (сервисы):
   messaging.py  → Hermes Agent (прямой вызов, secret_config для KEY)
   alerter.py    → db.py, secret_config (алерты Telegram + ojr_incidents)
+  office_forward.py → secret_config, requests (webhook офиса)
 
 Уровень 2 (обработчики):
   qa.py         → Hermes Agent, secret_config
@@ -31,7 +32,7 @@
   fill_ejo.py  → data_sources.py (12 NamedTuple), Hermes Agent
 
 Уровень 5 (точка входа):
-  whatsapp_commands.py → messaging.py, handlers.py, qa.py, poll.py, fill_ejo.py, alerter.py
+  whatsapp_commands.py → messaging.py, handlers.py, qa.py, poll.py, fill_ejo.py, alerter.py, office_forward.py
 ```
 
 ### Визуализация (ASCII-граф)
@@ -173,6 +174,45 @@ secret_config.py ──┬─────┬──────────┐   
 2. **Не дублировать `send_msg`** — в кодовой базе исторически было 3+ реализации. Все удалены (AUDIT-011).
 3. **`send_voice` использует edge-tts** — должен быть установлен в системе.
 4. **Текст обрезается до 3800 символов** в `send_msg` — WhatsApp ограничение.
+
+---
+
+### 2.4a. office_forward.py — Пересылка вопросов прорабов в офис
+
+| Свойство | Значение |
+|----------|----------|
+| **Файл** | `bot/office_forward.py` |
+| **Зависит от** | `requests`, `secret_config` |
+| **Импортируется в** | `whatsapp_commands.py`, `scripts/test_office_forward_sandbox.py` |
+
+#### Экспортирует
+
+| Имя | Сигнатура | Описание |
+|-----|-----------|----------|
+| `classify_office_question` | `(text: str) -> str \| None` | Возвращает тему `кровля` / `наружка` / `материалы` / `смета` / `общее` только для явных офисных вопросов |
+| `forward_to_office` | `(chat_id, message_id, sender, text, topic, *, async_send=True, post=requests.post, log_func=None, retries=1, join_timeout=25) -> bool` | POST в офисный webhook; штатный диспетчер вызывает синхронно, async-режим использует non-daemon тред и ждёт полный retry-бюджет с запасом |
+| `get_last_http_status` | `() -> int \| None` | Последний HTTP-статус webhook-вызова для sandbox-проверок |
+
+#### Контракт webhook
+
+| Поле | Значение |
+|------|----------|
+| **URL/key** | Только `office_webhook_url` и `office_webhook_key` через `secret_config.get_secret()` или env `OFFICE_WEBHOOK_URL` / `OFFICE_WEBHOOK_KEY` |
+| **Метод** | `POST` |
+| **Успех** | Только HTTP `2xx` |
+| **Повторы** | 1 retry по тому же `message_id` по умолчанию |
+| **Timeout** | 10 секунд на HTTP-вызов |
+| **Join timeout** | 25 секунд по умолчанию: `2 x 10s` HTTP timeout + запас; daemon fire-and-forget запрещён |
+| **Текст** | Обрезается до 4000 символов |
+| **Логи ошибок** | Только через `log_func` диспетчера; без URL, query-параметров и ключей |
+
+#### ⛔ КРИТИЧЕСКИЕ ПРАВИЛА
+
+1. **Не пересылать QA-факты, poll-ответы и команды бота** (`ежо`, `опрос`, `Алихан ...`) в офис.
+2. **Классификация служебных слов только по границам слов** — `никто` не должен матчить `кто`, `никак` не должен матчить `как`.
+3. **Классификация topic-keywords только по границам слов** — `акт` не должен матчить `факт`.
+4. **Не логировать исключение `requests` как строку** — оно может содержать URL с query/token.
+5. **Не ACK-ать офисный вопрос при неуспешной пересылке** — `_save_prod_text()` возвращает `False`, чтобы `message_id` остался на retry.
 
 ---
 
