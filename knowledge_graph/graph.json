@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-30T20:00:28.002268+00:00",
+  "built_at": "2026-08-31T20:00:10.811079+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 361,
-    "edges": 561,
+    "nodes": 367,
+    "edges": 567,
     "projects": 1,
-    "events": 64,
+    "events": 66,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,42 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-31",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Office webhook forward для строительных вопросов прорабов",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-30/Стабильная ночь без изменений: 0 коммитов, 0 inbou",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-08-30",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Стабильная ночь без изменений: 0 коммитов, 0 inbound, OJR мёртв 2-й день (последние данные 28.08); погода течёт",
       {
         "type": "description"
       }
@@ -4082,6 +4118,48 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      "target": "2026-08-31",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      "target": "Office webhook forward для строительных вопросов прорабов",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-08-30/Стабильная ночь без изменений: 0 коммитов, 0 inbou",
+      "target": "2026-08-30",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-30/Стабильная ночь без изменений: 0 коммитов, 0 inbou",
+      "target": "Стабильная ночь без изменений: 0 коммитов, 0 inbound, OJR мёртв 2-й день (последние данные 28.08); погода течёт",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-30/Стабильная ночь без изменений: 0 коммитов, 0 inbou",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-29/Данные только за 27–28.08 (ejo_v2); новый рестарт",
