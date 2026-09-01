@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-08-31T20:00:10.811079+00:00",
+  "built_at": "2026-09-01T20:00:35.037674+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 367,
-    "edges": 567,
+    "nodes": 369,
+    "edges": 570,
     "projects": 1,
-    "events": 66,
+    "events": 67,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -751,7 +751,7 @@
       }
     ],
     [
-      "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      "event/2026-08-31/Office-forward закоммичен (761a213); OJR-данные за",
       {
         "type": "event"
       }
@@ -760,6 +760,18 @@
       "2026-08-31",
       {
         "type": "date"
+      }
+    ],
+    [
+      "Office-forward закоммичен (761a213); OJR-данные за 30.08 пришли (s3 +9, s1 +8); текстовый приём мёртв 11-й день",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-08-31/Office webhook forward для строительных вопросов п",
+      {
+        "type": "event"
       }
     ],
     [
@@ -4118,6 +4130,27 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-31/Office-forward закоммичен (761a213); OJR-данные за",
+      "target": "2026-08-31",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-08-31/Office-forward закоммичен (761a213); OJR-данные за",
+      "target": "Office-forward закоммичен (761a213); OJR-данные за 30.08 пришли (s3 +9, s1 +8); текстовый приём мёртв 11-й день",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-08-31/Office-forward закоммичен (761a213); OJR-данные за",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-31/Office webhook forward для строительных вопросов п",
