@@ -1,5 +1,61 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 02.09.2026 — OJR: round 4 QA parse_qa агрегация техники до save
+
+**Причина:** Grok B вернул NEEDS_CHANGES round 3: `parse_qa(...)` сохранял каждый Grok-факт категории `техника` отдельным вызовом `save_equipment(...)` с одним `source_message_id`, из-за чего CASE-идемпотентность в `save_equipment` перезаписывала количество вместо суммирования для однотипной техники из одного сообщения. Дополнительно фильтр профессий ловил только именительный падеж `машинист|крановщик`.
+
+**Что сделал:**
+- `bot/qa.py`: добавлен `_aggregate_equipment_facts(...)`, который до DB-save проходит по всем фактам категории `техника`, извлекает позиции через `_equipment_items_from_fact(...)` и суммирует количество по каноническому имени.
+- `bot/qa.py`: `parse_qa(...)` больше не вызывает `save_equipment(...)` внутри цикла по отдельным Grok-фактам техники; legacy `bot_memory_facts` сохраняется по фактам, а `save_equipment(...)` вызывается после цикла один раз на каждое канон-имя с суммарным `quantity` и тем же `source_message_id`.
+- `bot/qa.py`: `_equipment_mention_is_profession_context(...)` нормализует `ё→е` и отсекает словоформы по префиксам `машинист\w*` / `крановщик\w*`, включая `машиниста крана 1`.
+
+**Проверка:** `python3 -m py_compile bot/*.py` — PASS. `python3 -m pytest bot/test_contracts.py bot/test_smoke.py -q` — 16 passed, 5 failed на заранее известных проверках: legacy `bridge_wrapper`, отсутствующий `main_waha.py`, дубликаты personnel, нет процесса `main_waha.py`. Локальные кейсы: `_equipment_items_from_fact('машиниста крана 1')` → `[]`; `_equipment_items_from_fact('крановщик 1')` → `[]`; `_equipment_items_from_fact('экскаватор 2 ед, самосвал 1')` → `[('Экскаватор', 2), ('Самосвал', 1)]`. DB parse_qa-путь с тестовым `bot_memory_messages.id=4992`: Grok-факты `Экскаватор CAT 1 ед` + `Экскаватор Hitachi 1 ед` сохранились как `('Экскаватор', 2, 4992)`; тестовые строки удалены.
+
+## 02.09.2026 — OJR: раунд 3 правок `save_equipment` и QA-парсера техники
+
+**Причина:** Grok B вернул NEEDS_CHANGES round 2: дубли канонического типа техники перезаписывали `quantity` вместо суммирования, дефолты `shift/status` затирали уже сохранённые значения при конфликте, regex QA-парсера пропускал повторные упоминания и матчел профессии как технику.
+
+**Что сделал:**
+- `bot/db.py`: `save_equipment(...)` теперь по конфликту `(title_id, work_date, equipment_name)` суммирует `quantity`; при совпадении `source_message_id` повторный save не добавляет количество заново. Аргументы `shift/status` переведены на дефолт `None`; `1/'working'` подставляются только при первичной вставке, а конфликт без явных значений сохраняет старые `shift/status`.
+- `bot/qa.py`: `_equipment_items_from_fact(...)` переписан на поиск всех упоминаний техники с количеством в форматах `1 экскаватор` и `экскаватор 2 шт.`, с суммированием по каноническому имени. Убрана fallback-запись произвольного текста как техники; `крановщик` и контекст `машинист <техника>` больше не распознаются как техника.
+- `bot/qa.py`: `parse_qa(...)` получил опциональный `source_message_id` и передаёт его в `save_equipment(...)`, если вызывающий слой отдаёт идемпотентный ключ.
+
+**Проверка:** `python3 -m py_compile bot/*.py` — PASS. Локальные parser-case: `1 экскаватор CAT, 1 экскаватор Hitachi` → `[('Экскаватор', 2)]`; `Самосвал 1 ед. экскаватор 2 шт.` → `[('Самосвал', 1), ('Экскаватор', 2)]`; `крановщик 1` → `[]`; `машинист крана 1` → `[]`. БД через `get_conn()` на тестовых датах 2099-03-03/04/05: два save `Экскаватор CAT` + `Экскаватор Hitachi` дали `('Экскаватор', 2, 1, 'working')`; повторный save с тем же `source_message_id` дал `('Экскаватор', 1, 1, 'working', 4990)` без задвоения; конфликт без `shift/status` сохранил старые `('Самосвал', 2, 2, 'idle')`. Тестовые строки удалены. `python3 -m pytest bot/test_contracts.py bot/test_smoke.py -q` — 16 passed, 5 failed на заранее известных проверках: legacy `bridge_wrapper`, отсутствующий `main_waha.py`, дубликаты personnel, нет процесса `main_waha.py`.
+
+## 02.09.2026 — OJR: раунд 2 правок таблицы техники `ojr_section2_equipment`
+
+**Причина:** Grok B вернул NEEDS_CHANGES: `source_message_id` был TEXT без FK, `quantity` допускал NULL, техника считалась из legacy section3, канонизация и upsert теряли данные.
+
+**Что сделал:**
+- `db/ojr_schema.sql`: `source_message_id` заменён на `BIGINT REFERENCES bot_memory_messages(id) ON DELETE SET NULL`; `quantity` теперь `INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0)`; удалены из канонической схемы лишние индексы `idx_ojr_equipment_title`, `idx_ojr_equipment_status`, старый `idx_ojr_equipment_msg`, добавлен корректный индекс `idx_ojr_equipment_source_message_id`.
+- `bot/db.py`: `save_equipment(...)` канонизирует название до INSERT, приводит `source_message_id` к BIGINT/NULL, upsert дописывает пустующие `equipment_type`, `shift`, `status`, `operator_name`, `source_message_id` через `COALESCE`; `get_ojr_qa_status(...)` считает `ojr_section2_equipment` как primary и падает назад на legacy `ojr_section3_work_log category='техника'`.
+- `bot/qa.py`: QA-маршрут техники теперь вызывает `save_equipment(...)` и сохраняет legacy `bot_memory_facts` для совместимости.
+- `bot/data_sources.py`: `get_equipment(date)` при схлопывании канонических имён суммирует `quantity`, а не берёт `max`.
+- `bot/CONTRACTS.md`: актуализированы строки файлов, exports и NamedTuple-контракты, включая `AIBHeadcount`, `EquipmentItem` и `EquipmentData.details`.
+
+**Проверка:** `docker exec evolution-postgres psql ...` создал таблицу, индексы и comment; сверка показала `source_message_id bigint` с FK на `bot_memory_messages(id) ON DELETE SET NULL`, `quantity` `NOT NULL`, только индексы `idx_ojr_equipment_date`, `idx_ojr_equipment_source_message_id`, PK и UNIQUE. `python3 -m py_compile bot/*.py` — PASS. `python3 -m pytest bot/test_contracts.py bot/test_smoke.py -q` — 16 passed, 5 failed на заранее известных проверках: legacy `bridge_wrapper`, отсутствующий `main_waha.py`, дубликаты personnel, нет процесса `main_waha.py`.
+
+## 02.09.2026 — OJR: добавлена 15-я таблица техники `ojr_section2_equipment`
+
+### Причина
+- Канон MASTER_SPEC от 02.09.2026 требует вынести ежедневный учёт техники из legacy-источников в отдельную 15-ю таблицу ОЖР без LLM-парсинга.
+
+### Что сделано
+- `db/ojr_schema.sql`: добавлена `ojr_section2_equipment` с FK на `ojr_title_page`, полями техники, UNIQUE `(title_id, work_date, equipment_name)` и индексами.
+- `bot/db.py`: добавлены `save_equipment(...)` и `get_daily_equipment(ds)` через `get_conn()`; upsert обновляет `quantity` и `status`.
+- `bot/data_sources.py`: `get_equipment(date)` сначала читает `ojr_section2_equipment`, затем падает назад на старый `ojr_section3_work_log category='техника'` и QA-факты; `EquipmentData` расширен деталями без поломки `items`.
+- `bot/CONTRACTS.md`: обновлены публичные контракты DB/data_sources.
+
+### Проверка
+- `python3 -m py_compile bot/*.py` — PASS.
+- `python3 -m pytest bot/test_contracts.py bot/test_smoke.py -q` — 16 passed, 5 failed на существующих внешних/устаревших проверках: legacy `bridge_wrapper/main_waha` контракты, отсутствующий `bot/main_waha.py`, дубликаты `ojr_section1_personnel`, нет процесса `main_waha.py`.
+
+### Файлы
+- `db/ojr_schema.sql`
+- `bot/db.py`
+- `bot/data_sources.py`
+- `bot/CONTRACTS.md`
+
 ## 01.09.2026 (ночь, 23:00 UTC) — 0 коммитов продукта; OJR-разрыв расширился (31.08–01.09 пусто); текстовый приём мёртв 12-й день; bridge рестарт ~04:00 UTC
 
 ### Коммиты за 24ч
@@ -1852,3 +1908,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **31.08.2026 23:01** — chrono: 2026-08-31 — авто-синхронизация (`37fe2f3`)
 - **31.08.2026 23:02** — chrono: индекс коммита 37fe2f3 (`d2d596c`)
 - **01.09.2026 23:01** — chrono: 2026-09-01 — авто-синхронизация (`98590ba`)
+- **01.09.2026 23:01** — chrono: индекс коммита 98590ba (`0111e0c`)

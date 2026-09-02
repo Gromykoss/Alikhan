@@ -36,6 +36,72 @@ WORKER_POSITION_RE = re.compile(
 # Default for unknown buildings
 DEFAULT_BUILDING = 'общая'
 
+_EQUIPMENT_NAME_PATTERNS = (
+    ('Фронтальный погрузчик', r'(?:фронтальн\w+\s+)?погрузчик\w*'),
+    ('Бетононасос', r'бетононасос\w*'),
+    ('Экскаватор', r'экскаватор\w*'),
+    ('Самосвал', r'самосвал\w*'),
+    ('Автокран', r'автокран\w*|(?<!башенный\s)\bкран(?:ы|а|ов|ом|ами|ах)?\b'),
+    ('Каток', r'каток|катки'),
+)
+_EQUIPMENT_NAME_RE = '|'.join(f'(?:{pattern})' for _, pattern in _EQUIPMENT_NAME_PATTERNS)
+_EQUIPMENT_TOKEN_RE = re.compile(_EQUIPMENT_NAME_RE, re.I)
+_EQUIPMENT_QTY_RE = re.compile(
+    rf'(?:'
+    rf'(?P<qty_before>\d+)\s*(?:ед\.?|шт\.?)?\s*(?P<name_after>{_EQUIPMENT_NAME_RE})'
+    rf'|'
+    rf'(?P<name_before>{_EQUIPMENT_NAME_RE})'
+    rf'(?:\s+(?!\d+\b)(?!ед\.?\b)(?!шт\.?\b)(?!{_EQUIPMENT_NAME_RE}\b)[a-zа-я0-9_-]+){{0,2}}'
+    rf'\s+(?P<qty_after>\d+)\s*(?:ед\.?|шт\.?)?'
+    rf')',
+    re.I,
+)
+
+
+def _canon_equipment_token(token):
+    for name, pattern in _EQUIPMENT_NAME_PATTERNS:
+        if re.fullmatch(pattern, token, re.I):
+            return name
+    return None
+
+
+def _equipment_mention_is_profession_context(text, token_start):
+    prefix = text[:token_start].casefold().replace('ё', 'е').rstrip()
+    return bool(re.search(r'(?:^|\s)(?:машинист\w*|крановщик\w*)\s*$', prefix, re.I))
+
+
+def _equipment_items_from_fact(fact):
+    """Extract known equipment mentions from a QA fact for ojr_section2_equipment."""
+    text = (fact or '').casefold().replace('ё', 'е')
+    totals = {}
+    consumed_spans = []
+
+    for match in _EQUIPMENT_QTY_RE.finditer(text):
+        token = match.group('name_after') or match.group('name_before') or ''
+        token_start = match.start('name_after') if match.group('name_after') else match.start('name_before')
+        if _equipment_mention_is_profession_context(text, token_start):
+            continue
+        name = _canon_equipment_token(token)
+        if not name:
+            continue
+        qty = int(match.group('qty_before') or match.group('qty_after') or 1)
+        totals[name] = totals.get(name, 0) + qty
+        consumed_spans.append(match.span())
+
+    def _inside_consumed(span):
+        return any(start <= span[0] and span[1] <= end for start, end in consumed_spans)
+
+    for match in _EQUIPMENT_TOKEN_RE.finditer(text):
+        if _inside_consumed(match.span()):
+            continue
+        if _equipment_mention_is_profession_context(text, match.start()):
+            continue
+        name = _canon_equipment_token(match.group(0))
+        if name:
+            totals[name] = totals.get(name, 0) + 1
+
+    return [(name, qty) for name, qty in totals.items()]
+
 # ─── Audit log helper ────────────────────────────────────────────────────────
 
 def _audit_log(entry_type, data):
@@ -210,6 +276,17 @@ def _aggregate_personnel_facts(facts, sender=None):
         result.append((item['building'], 'персонал', fact))
 
     return result
+
+
+def _aggregate_equipment_facts(facts):
+    """Aggregate equipment facts by canonical name before same-message DB upsert."""
+    totals = {}
+    for _, c, f in facts:
+        if c != 'техника':
+            continue
+        for equipment_name, qty in _equipment_items_from_fact(f):
+            totals[equipment_name] = totals.get(equipment_name, 0) + qty
+    return totals
 
 
 # ─── Simple pattern fallback ─────────────────────────────────────────────────
@@ -487,7 +564,7 @@ def _smart_chunk(text, max_chars=3000):
 
 # ─── Main parse function ─────────────────────────────────────────────────────
 
-def parse_qa(gid, text, date_str=None, sender=None):
+def parse_qa(gid, text, date_str=None, sender=None, source_message_id=None):
     """Parse QA message and save facts to DB.
 
     Pipeline:
@@ -650,7 +727,7 @@ def parse_qa(gid, text, date_str=None, sender=None):
         count = 0
 
         # Import OJR helpers
-        from db import save_work_log, save_incident, save_material
+        from db import save_work_log, save_incident, save_material, save_equipment
 
         # Save VOR codes directly — route to ojr_section3_work_log
         for f in vor_facts:
@@ -661,6 +738,7 @@ def parse_qa(gid, text, date_str=None, sender=None):
 
         # Save validated Grok facts — route by category
         all_grok_facts = _aggregate_personnel_facts(all_grok_facts, sender=sender)
+        equipment_totals = _aggregate_equipment_facts(all_grok_facts)
         print(f"[QA SAVE] Routing {len(all_grok_facts)} grok-validated facts to DB tables", flush=True)
         for b, c, f in all_grok_facts:
             print(f"[QA SAVE] fact category='{c}' building='{b}' text='{f[:80]}'", flush=True)
@@ -700,8 +778,7 @@ def parse_qa(gid, text, date_str=None, sender=None):
                 save_material(gid, today, f, building=b if b != 'общая' else None)
                 count += 1
             elif c == 'техника':
-                # Equipment goes to bot_memory_facts, NOT work_log
-                print(f"[QA SAVE] → bot_memory_facts (техника)", flush=True)
+                print(f"[QA SAVE] → bot_memory_facts (техника); save_equipment deferred", flush=True)
                 try:
                     cur.execute(
                         "INSERT INTO bot_memory_facts (chat_id, fact_date, building, category, fact, source) "
@@ -736,6 +813,11 @@ def parse_qa(gid, text, date_str=None, sender=None):
                 # Unknown category (бетонирование, монтаж, земляные работы etc.) — don't save to work_log
                 print(f"[QA SAVE] ⚠ UNKNOWN category='{c}' — NOT SAVED to DB", flush=True)
                 pass
+
+        for equipment_name, qty in equipment_totals.items():
+            print(f"[QA SAVE] → save_equipment aggregated: name='{equipment_name}' quantity={qty}", flush=True)
+            save_equipment(gid, today, equipment_name, quantity=qty,
+                           source_message_id=source_message_id)
 
         # Fallback: if nothing was saved — personnel regex + simple "нет" patterns
         # (covers Grok JSON fail / empty pipe where workers count still must be stored)

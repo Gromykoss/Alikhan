@@ -160,7 +160,33 @@ CREATE INDEX IF NOT EXISTS idx_ojr_design_visits_date  ON ojr_section2_visits(vi
 COMMENT ON TABLE ojr_section2_visits IS 'Журнал посещений авторского надзора — записи о выявленных замечаниях';
 
 
--- 5. РАЗДЕЛ 3: ВЫПОЛНЕНИЕ РАБОТ
+-- 5. РАЗДЕЛ 2: ТЕХНИКА
+-- ============================================================================
+-- Ежедневный учёт строительной техники на площадке
+CREATE TABLE IF NOT EXISTS ojr_section2_equipment (
+    id                  SERIAL PRIMARY KEY,
+    title_id            INTEGER NOT NULL REFERENCES ojr_title_page(id) ON DELETE CASCADE,
+    work_date           DATE NOT NULL,
+    -- Техника
+    equipment_name      TEXT NOT NULL,                 -- Наименование: «Экскаватор», «Самосвал», «Автокран»
+    equipment_type      TEXT,                          -- Тип/категория: 'землеройная', 'транспорт', 'грузоподъёмная'
+    quantity            INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
+    shift               INTEGER DEFAULT 1,             -- Номер смены
+    status              TEXT DEFAULT 'working',        -- 'working', 'idle', 'repair', 'left'
+    operator_name       TEXT,                          -- Машинист / водитель
+    source_message_id   BIGINT REFERENCES bot_memory_messages(id) ON DELETE SET NULL,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT uq_ojr_equipment_daily UNIQUE (title_id, work_date, equipment_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ojr_equipment_date              ON ojr_section2_equipment(work_date);
+CREATE INDEX IF NOT EXISTS idx_ojr_equipment_source_message_id ON ojr_section2_equipment(source_message_id);
+
+COMMENT ON TABLE ojr_section2_equipment IS 'Раздел 2 ОЖР — ежедневный учёт строительной техники';
+
+
+-- 6. РАЗДЕЛ 3: ВЫПОЛНЕНИЕ РАБОТ
 -- ============================================================================
 -- Ежедневный журнал выполнения строительно-монтажных работ
 CREATE TABLE IF NOT EXISTS ojr_section3_work_log (
@@ -207,7 +233,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_work_log_poll        ON ojr_section3_work_log
 COMMENT ON TABLE ojr_section3_work_log IS 'Раздел 3 ОЖР — Выполнение работ (ежедневный журнал, код ВОР, объём, подрядчик, здание)';
 
 
--- 6. РАЗДЕЛ 4: СТРОИТЕЛЬНЫЙ КОНТРОЛЬ
+-- 7. РАЗДЕЛ 4: СТРОИТЕЛЬНЫЙ КОНТРОЛЬ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_section4_construction_control (
     id                  SERIAL PRIMARY KEY,
@@ -261,7 +287,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_ccontrol_checks_date ON ojr_section4_checks(c
 COMMENT ON TABLE ojr_section4_checks IS 'Записи строительного контроля — акты проверок, нарушения, предписания';
 
 
--- 7. РАЗДЕЛ 5: ИСПОЛНИТЕЛЬНАЯ ДОКУМЕНТАЦИЯ
+-- 8. РАЗДЕЛ 5: ИСПОЛНИТЕЛЬНАЯ ДОКУМЕНТАЦИЯ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_section5_asbuilt_docs (
     id                  SERIAL PRIMARY KEY,
@@ -300,7 +326,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_asbuilt_building    ON ojr_section5_asbuilt_d
 COMMENT ON TABLE ojr_section5_asbuilt_docs IS 'Раздел 5 ОЖР — Исполнительная документация (акты, протоколы, сертификаты, журналы)';
 
 
--- 8. РАЗДЕЛ 6: ГОССТРОЙНАДЗОР
+-- 9. РАЗДЕЛ 6: ГОССТРОЙНАДЗОР
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_section6_gosstroynadzor (
     id                  SERIAL PRIMARY KEY,
@@ -341,7 +367,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_gsn_authority       ON ojr_section6_gosstroyn
 COMMENT ON TABLE ojr_section6_gosstroynadzor IS 'Раздел 6 ОЖР — Госстройнадзор (проверки, предписания, протоколы)';
 
 
--- 9. ПОГОДА (ежедневно)
+-- 10. ПОГОДА (ежедневно)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_weather (
     id                  SERIAL PRIMARY KEY,
@@ -379,7 +405,7 @@ CREATE TABLE IF NOT EXISTS ojr_weather (
 COMMENT ON TABLE ojr_weather IS 'Погода — ежедневная метеосводка с привязкой к дате (Open-Meteo API)';
 
 
--- 10. ФОТО-ФИКСАЦИЯ
+-- 11. ФОТО-ФИКСАЦИЯ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_photo_log (
     id                  SERIAL PRIMARY KEY,
@@ -415,7 +441,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_photo_msg           ON ojr_photo_log(file_mes
 COMMENT ON TABLE ojr_photo_log IS 'Фото-фиксация строительной площадки — привязка к датам, работам, зданиям';
 
 
--- 11. СВОДНЫЕ / КУМУЛЯТИВНЫЕ ПОКАЗАТЕЛИ
+-- 12. СВОДНЫЕ / КУМУЛЯТИВНЫЕ ПОКАЗАТЕЛИ
 -- ============================================================================
 -- Предрасчитанные агрегаты для быстрой отчётности
 CREATE TABLE IF NOT EXISTS ojr_daily_summary (
@@ -455,7 +481,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_summary_date       ON ojr_daily_summary(summa
 COMMENT ON TABLE ojr_daily_summary IS 'Сводные дневные показатели: объёмы, персонал, готовность — быстрый доступ без пересчёта';
 
 
--- 12. МАТЕРИАЛЫ
+-- 13. МАТЕРИАЛЫ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_materials (
     id                  SERIAL PRIMARY KEY,
@@ -487,7 +513,7 @@ CREATE INDEX IF NOT EXISTS idx_ojr_materials_type     ON ojr_materials(material_
 COMMENT ON TABLE ojr_materials IS 'Журнал поступления материалов — поставки, сертификаты, остатки';
 
 
--- 13. ИНЦИДЕНТЫ И ТБ
+-- 14. ИНЦИДЕНТЫ И ТБ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_incidents (
     id                  SERIAL PRIMARY KEY,

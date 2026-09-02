@@ -946,6 +946,81 @@ def save_weather(date_str, weather_data):
     conn.close()
 
 
+def save_equipment(chat_id, date_str, equipment_name, equipment_type=None,
+                   quantity=1, shift=None, status=None, operator_name=None,
+                   source_message_id=None):
+    """Save daily equipment fact to ojr_section2_equipment.
+
+    Conflict target matches uq_ojr_equipment_daily:
+      UNIQUE (title_id, work_date, equipment_name)
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    title_id = _get_active_title_id()
+    try:
+        qty = int(quantity) if quantity is not None else 1
+    except (TypeError, ValueError):
+        qty = 1
+    if qty < 0:
+        qty = 0
+    try:
+        shift_num = int(shift) if shift is not None else None
+    except (TypeError, ValueError):
+        shift_num = None
+    status_value = str(status).strip() if status is not None else None
+    if status_value == '':
+        status_value = None
+    name = _canon_equipment_name(equipment_name)
+    if not name:
+        cur.close()
+        conn.close()
+        return
+    try:
+        msg_id = int(source_message_id) if source_message_id is not None else None
+    except (TypeError, ValueError):
+        msg_id = None
+    cur.execute("""
+        INSERT INTO ojr_section2_equipment
+            (title_id, work_date, equipment_name, equipment_type, quantity,
+             shift, status, operator_name, source_message_id, created_at)
+        VALUES (%s, %s::date, %s, %s, %s, COALESCE(%s, 1), COALESCE(%s, 'working'), %s, %s, NOW())
+        ON CONFLICT (title_id, work_date, equipment_name) DO UPDATE
+        SET quantity = CASE
+                WHEN EXCLUDED.source_message_id IS NOT NULL
+                 AND ojr_section2_equipment.source_message_id = EXCLUDED.source_message_id
+                    THEN EXCLUDED.quantity
+                ELSE ojr_section2_equipment.quantity + EXCLUDED.quantity
+            END,
+            equipment_type = COALESCE(EXCLUDED.equipment_type, ojr_section2_equipment.equipment_type),
+            shift = COALESCE(%s, ojr_section2_equipment.shift),
+            status = COALESCE(%s, ojr_section2_equipment.status),
+            operator_name = COALESCE(EXCLUDED.operator_name, ojr_section2_equipment.operator_name),
+            source_message_id = COALESCE(EXCLUDED.source_message_id, ojr_section2_equipment.source_message_id)
+    """, (title_id, date_str, name, equipment_type, qty, shift_num,
+          status_value, operator_name, msg_id, shift_num, status_value))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def _canon_equipment_name(name):
+    """Canonical equipment label used by ojr_section2_equipment uniqueness."""
+    raw = str(name or '').strip()
+    low = raw.casefold().replace('ё', 'е')
+    synonyms = (
+        ('Самосвал', ('самосвал', 'самосвалы')),
+        ('Экскаватор', ('экскаватор', 'экскаваторы')),
+        ('Фронтальный погрузчик', ('фронтальный погрузчик', 'погрузчик')),
+        ('Каток', ('каток', 'катки')),
+        ('Бетононасос', ('бетононасос',)),
+        ('Автокран', ('автокран', 'кран')),
+    )
+    for canon, needles in synonyms:
+        if any(needle in low for needle in needles):
+            return canon
+    return raw
+
+
 def save_incident(chat_id, date_str, incident_type, description,
                   severity='minor', location=None):
     """Save incident to ojr_incidents."""
@@ -1007,6 +1082,23 @@ def get_daily_works(date_str):
         FROM ojr_section3_work_log
         WHERE work_date = %s::date
         ORDER BY building, vor_code
+    """, (date_str,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_daily_equipment(date_str):
+    """Get equipment for a given date from ojr_section2_equipment."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT equipment_name, equipment_type, quantity, shift, status,
+               operator_name, source_message_id
+        FROM ojr_section2_equipment
+        WHERE work_date = %s::date
+        ORDER BY equipment_name
     """, (date_str,))
     rows = cur.fetchall()
     cur.close()
@@ -1076,12 +1168,23 @@ def get_ojr_qa_status(date_str):
     """, (date_str,))
     status['персонал'] = cur.fetchone()['c']
     
-    # Equipment/Technique — stored in work_log with category 'техника'
+    # Equipment/Technique — primary OJR section2 table, fallback to legacy work_log.
     cur.execute("""
         SELECT count(*) as c FROM ojr_section3_work_log
         WHERE work_date = %s::date AND category = 'техника'
     """, (date_str,))
-    status['техника'] = cur.fetchone()['c']
+    legacy_equipment = cur.fetchone()['c']
+    try:
+        cur.execute("""
+            SELECT count(*) as c FROM ojr_section2_equipment
+            WHERE work_date = %s::date
+        """, (date_str,))
+        primary_equipment = cur.fetchone()['c']
+    except Exception as e:
+        print(f"[OJR QA STATUS EQUIPMENT ERR] {e}", flush=True)
+        conn.rollback()
+        primary_equipment = 0
+    status['техника'] = primary_equipment or legacy_equipment
     
     # Incidents
     cur.execute("""

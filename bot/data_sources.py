@@ -19,7 +19,14 @@ import requests
 import psycopg2.extras
 from openpyxl import load_workbook
 
-from db import get_conn, save_weather as _save_weather, get_daily_incidents, get_daily_works, get_daily_materials
+from db import (
+    get_conn,
+    save_weather as _save_weather,
+    get_daily_incidents,
+    get_daily_works,
+    get_daily_equipment,
+    get_daily_materials,
+)
 from config import SANDBOX
 
 BISHKEK_TZ = timezone(timedelta(hours=6))
@@ -74,8 +81,18 @@ class AIBHeadcount(NamedTuple):
     is_fallback: bool
 
 
+class EquipmentItem(NamedTuple):
+    equipment_name: str
+    equipment_type: str
+    quantity: int
+    shift: int
+    status: str
+    operator_name: str
+
+
 class EquipmentData(NamedTuple):
-    items: dict[str, int]  # название→кол-во
+    items: dict[str, int]  # название→кол-во, legacy агрегат для fill_ejo
+    details: tuple[EquipmentItem, ...] = ()  # полные строки из ojr_section2_equipment
 
 
 class MaterialItem(NamedTuple):
@@ -680,11 +697,61 @@ def _aibikon_ojr_fallback(date=None):
     return None
 
 
+def _canon_equipment_name(name):
+    """Map free-form equipment name to the fixed ЕЖО row label when possible."""
+    raw = (name or '').strip()
+    low = raw.lower().replace('ё', 'е')
+    if 'самосвал' in low:
+        return 'Самосвал'
+    if 'экскаватор' in low:
+        return 'Экскаватор'
+    if 'погрузчик' in low:
+        return 'Фронтальный погрузчик'
+    if 'каток' in low:
+        return 'Каток'
+    if 'бетононасос' in low:
+        return 'Бетононасос'
+    return raw
+
+
 def get_equipment(date):
-    """Primary: ojr_section3_work_log category='техника'. Fallback: QA facts."""
+    """Primary: ojr_section2_equipment. Fallback: old section3 equipment rows, then QA facts."""
+    equip = {'Самосвал': 0, 'Экскаватор': 0, 'Фронтальный погрузчик': 0, 'Каток': 0, 'Бетононасос': 0}
+    ds = date.strftime('%Y-%m-%d')
+
     try:
-        equip = {'Самосвал': 0, 'Экскаватор': 0, 'Фронтальный погрузчик': 0, 'Каток': 0, 'Бетононасос': 0}
-        ds = date.strftime('%Y-%m-%d')
+        rows = get_daily_equipment(ds)
+        if rows:
+            details: list[EquipmentItem] = []
+            for row in rows:
+                name = (row.get('equipment_name') or '').strip()
+                if not name:
+                    continue
+                canon_name = _canon_equipment_name(name)
+                try:
+                    count = int(row.get('quantity') or 0)
+                except (TypeError, ValueError):
+                    count = 0
+                try:
+                    shift = int(row.get('shift') or 1)
+                except (TypeError, ValueError):
+                    shift = 1
+                details.append(EquipmentItem(
+                    equipment_name=canon_name,
+                    equipment_type=row.get('equipment_type') or '',
+                    quantity=count,
+                    shift=shift,
+                    status=row.get('status') or '',
+                    operator_name=row.get('operator_name') or '',
+                ))
+                equip[canon_name] = equip.get(canon_name, 0) + count
+            if details:
+                print(f"[DS EQUIPMENT] {equip} from ojr_section2_equipment", flush=True)
+                return EquipmentData(items=equip, details=tuple(details))
+    except Exception as e:
+        print(f"[DS EQUIPMENT OJR ERR] {e}, falling back to legacy", flush=True)
+
+    try:
         conn = _get_conn()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("""

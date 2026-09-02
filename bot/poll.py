@@ -281,7 +281,19 @@ def _format_qa_facts_by_category(category, poll_date_str=None):
         if category == 'персонал':
             cur2.execute("SELECT organization_name || ' ' || position as fact FROM ojr_section1_personnel WHERE start_date=%s::date AND sync_source='qa' LIMIT 3", (today,))
         elif category == 'техника':
-            cur2.execute("SELECT work_name as fact FROM ojr_section3_work_log WHERE work_date=%s::date AND category='техника' LIMIT 3", (today,))
+            cur2.execute("""
+                SELECT equipment_name || ' ' || quantity::text || ' ед.' as fact
+                FROM ojr_section2_equipment
+                WHERE work_date=%s::date
+                LIMIT 3
+            """, (today,))
+            rows = cur2.fetchall()
+            if not rows:
+                cur2.execute("SELECT work_name as fact FROM ojr_section3_work_log WHERE work_date=%s::date AND category='техника' LIMIT 3", (today,))
+                rows = cur2.fetchall()
+            facts = [r['fact'] for r in rows[:3]]
+            cur2.close(); conn2.close()
+            return '; '.join(facts) if facts else ''
         else:
             cur2.execute("SELECT description as fact FROM ojr_incidents WHERE incident_date=%s::date LIMIT 3", (today,))
         facts = [r['fact'] for r in cur2.fetchall()[:3]]
