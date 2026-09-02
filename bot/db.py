@@ -753,7 +753,7 @@ def _ensure_personnel_schema(cur):
 
 def save_personnel(chat_id, date_str, org_name, full_name, position,
                    org_type='contractor', phone=None, sync_source='qa',
-                   workers_count=None):
+                   workers_count=None, close_existing=True):
     """Save personnel fact to ojr_section1_personnel.
 
     organization_name is normalized to canonical form before UPDATE/INSERT.
@@ -790,37 +790,39 @@ def save_personnel(chat_id, date_str, org_name, full_name, position,
     # workers_count: explicit arg, else 1 for a single person row
     wc = int(workers_count) if workers_count is not None else None
 
-    # Close only records whose normalized position collides with the slot being
-    # written. Prior-day rows for unrelated positions must stay open.
-    cur.execute("""
-        UPDATE ojr_section1_personnel
-        SET end_date = %s::date - INTERVAL '1 day', updated_at = NOW()
-        WHERE LOWER(organization_name) = LOWER(%s)
-          AND end_date IS NULL
-          AND is_active = TRUE
-          AND NOT (
-              LOWER(COALESCE(full_name, '')) = LOWER(%s)
-              AND start_date = %s::date
-          )
-          AND start_date <= %s::date
-          AND CASE
-                    WHEN LOWER(position) LIKE '%%прораб%%' THEN 'прораб'
-                    WHEN LOWER(position) IN ('рабочий', 'рабочие', 'работник')
-                         OR LOWER(position) LIKE '%%рабоч%%'
-                         OR LOWER(position) LIKE '%%работник%%' THEN 'рабочие'
-                    WHEN LOWER(position) = 'итр'
-                         OR LOWER(position) LIKE '%%инженер%%'
-                         OR LOWER(position) LIKE '%%геодезист%%'
-                         OR LOWER(position) LIKE '%%электрик%%'
-                         OR LOWER(position) ~ '(^|[[:space:]])рук\\.'
-                         OR LOWER(position) ~ '(^|[[:space:]])руководител'
-                         OR LOWER(position) ~ '(^|[[:space:]])рук[[:space:]]+стр' THEN 'итр'
-                    WHEN LOWER(position) LIKE '%%машинист%%' THEN 'машинист'
-                    WHEN LOWER(position) LIKE '%%водитель%%' THEN 'водитель'
-                    ELSE LOWER(position)
-                 END = %s
-    """, (date_str, org_name, full_name, date_str, date_str,
-          _norm_personnel_position_key(position)))
+    if close_existing:
+        # Close only records whose normalized position collides with the slot
+        # being written. Historical backfill passes close_existing=False so an
+        # old report cannot close live personnel rows.
+        cur.execute("""
+            UPDATE ojr_section1_personnel
+            SET end_date = %s::date - INTERVAL '1 day', updated_at = NOW()
+            WHERE LOWER(organization_name) = LOWER(%s)
+              AND end_date IS NULL
+              AND is_active = TRUE
+              AND NOT (
+                  LOWER(COALESCE(full_name, '')) = LOWER(%s)
+                  AND start_date = %s::date
+              )
+              AND start_date <= %s::date
+              AND CASE
+                        WHEN LOWER(position) LIKE '%%прораб%%' THEN 'прораб'
+                        WHEN LOWER(position) IN ('рабочий', 'рабочие', 'работник')
+                             OR LOWER(position) LIKE '%%рабоч%%'
+                             OR LOWER(position) LIKE '%%работник%%' THEN 'рабочие'
+                        WHEN LOWER(position) = 'итр'
+                             OR LOWER(position) LIKE '%%инженер%%'
+                             OR LOWER(position) LIKE '%%геодезист%%'
+                             OR LOWER(position) LIKE '%%электрик%%'
+                             OR LOWER(position) ~ '(^|[[:space:]])рук\\.'
+                             OR LOWER(position) ~ '(^|[[:space:]])руководител'
+                             OR LOWER(position) ~ '(^|[[:space:]])рук[[:space:]]+стр' THEN 'итр'
+                        WHEN LOWER(position) LIKE '%%машинист%%' THEN 'машинист'
+                        WHEN LOWER(position) LIKE '%%водитель%%' THEN 'водитель'
+                        ELSE LOWER(position)
+                     END = %s
+        """, (date_str, org_name, full_name, date_str, date_str,
+              _norm_personnel_position_key(position)))
 
     # Prefer upsert when unique index exists; plain INSERT otherwise.
     cur.execute("""
@@ -948,12 +950,20 @@ def save_weather(date_str, weather_data):
 
 def save_equipment(chat_id, date_str, equipment_name, equipment_type=None,
                    quantity=1, shift=None, status=None, operator_name=None,
-                   source_message_id=None):
+                   source_message_id=None, mode='add'):
     """Save daily equipment fact to ojr_section2_equipment.
 
     Conflict target matches uq_ojr_equipment_daily:
       UNIQUE (title_id, work_date, equipment_name)
+
+    mode='add' keeps QA semantics: add quantities from different messages,
+    overwrite only when the same source_message_id is replayed.
+    mode='replace' keeps EJO backfill semantics: overwrite quantity and keep
+    source_message_id NULL because backfill has no bot_memory_messages row.
     """
+    mode_value = str(mode or 'add').strip().lower()
+    if mode_value not in {'add', 'replace'}:
+        raise ValueError("save_equipment mode must be 'add' or 'replace'")
     conn = get_conn()
     cur = conn.cursor()
     title_id = _get_active_title_id()
@@ -975,10 +985,13 @@ def save_equipment(chat_id, date_str, equipment_name, equipment_type=None,
         cur.close()
         conn.close()
         return
-    try:
-        msg_id = int(source_message_id) if source_message_id is not None else None
-    except (TypeError, ValueError):
+    if mode_value == 'replace':
         msg_id = None
+    else:
+        try:
+            msg_id = int(source_message_id) if source_message_id is not None else None
+        except (TypeError, ValueError):
+            msg_id = None
     cur.execute("""
         INSERT INTO ojr_section2_equipment
             (title_id, work_date, equipment_name, equipment_type, quantity,
@@ -986,6 +999,8 @@ def save_equipment(chat_id, date_str, equipment_name, equipment_type=None,
         VALUES (%s, %s::date, %s, %s, %s, COALESCE(%s, 1), COALESCE(%s, 'working'), %s, %s, NOW())
         ON CONFLICT (title_id, work_date, equipment_name) DO UPDATE
         SET quantity = CASE
+                WHEN %s = 'replace'
+                    THEN EXCLUDED.quantity
                 WHEN EXCLUDED.source_message_id IS NOT NULL
                  AND ojr_section2_equipment.source_message_id = EXCLUDED.source_message_id
                     THEN EXCLUDED.quantity
@@ -995,9 +1010,13 @@ def save_equipment(chat_id, date_str, equipment_name, equipment_type=None,
             shift = COALESCE(%s, ojr_section2_equipment.shift),
             status = COALESCE(%s, ojr_section2_equipment.status),
             operator_name = COALESCE(EXCLUDED.operator_name, ojr_section2_equipment.operator_name),
-            source_message_id = COALESCE(EXCLUDED.source_message_id, ojr_section2_equipment.source_message_id)
+            source_message_id = CASE
+                WHEN %s = 'replace' THEN NULL
+                ELSE COALESCE(EXCLUDED.source_message_id, ojr_section2_equipment.source_message_id)
+            END
     """, (title_id, date_str, name, equipment_type, qty, shift_num,
-          status_value, operator_name, msg_id, shift_num, status_value))
+          status_value, operator_name, msg_id, mode_value, shift_num,
+          status_value, mode_value))
     conn.commit()
     cur.close()
     conn.close()

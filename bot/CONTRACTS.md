@@ -30,6 +30,7 @@
 
 Уровень 4 (композиция):
   fill_ejo.py  → data_sources.py (контрактные NamedTuple), Hermes Agent
+  ejo_backfill.py → db.py, openpyxl (обратный разбор ЕЖО → ОЖР)
 
 Уровень 5 (точка входа):
   whatsapp_commands.py → messaging.py, handlers.py, qa.py, poll.py, fill_ejo.py, alerter.py, office_forward.py
@@ -58,6 +59,8 @@ secret_config.py ──┬─────┬──────────┐   
     │           whatsapp_commands.py                    │
     │  (точка входа v6 — bridge :3000 → команды)       │
     └──────────────────────────────────────────────────┘
+
+db.py ──► ejo_backfill.py
 ```
 
 ---
@@ -129,6 +132,8 @@ secret_config.py ──┬─────┬──────────┐   
 2. **Не хардкодить `DB_CONFIG`** в других модулях. Все параметры БД — только через `db.py`.
 3. **`resolve_db_host()`** автоматически определяет IP контейнера. Не передавать хост статически.
 4. **Закрывать курсоры** после использования. `get_conn()` открывает соединение, но курсоры — ответственность вызывающего.
+5. **`save_equipment(..., mode='add')`** — дефолт для QA: разные `source_message_id` суммируются, повтор того же `source_message_id` перезаписывает количество без задвоения.
+6. **`save_equipment(..., mode='replace')`** — режим backfill ЕЖО: `quantity` всегда перезаписывается итоговым значением за день, `source_message_id` принудительно остаётся `NULL`; синтетические хеши в FK `ojr_section2_equipment.source_message_id` запрещены.
 
 ---
 
@@ -349,6 +354,41 @@ secret_config.py ──┬─────┬──────────┐   
 
 ---
 
+### 2.9a. ejo_backfill.py — Обратный разбор ЕЖО в ОЖР
+
+| Свойство | Значение |
+|----------|----------|
+| **Файл** | `bot/ejo_backfill.py` |
+| **Зависит от** | `db.py` (`get_conn`, `save_work_log`, `save_personnel`, `save_equipment`), `openpyxl`, `zipfile` |
+| **Импортируется в** | — (готов к подключению в обработчик документов) |
+
+#### Экспортирует
+
+| Имя | Сигнатура | Описание |
+|-----|-----------|----------|
+| `backfill_ejo` | `(report_path, date_str) -> dict` | Детерминированно читает ЕЖО `.xlsx` и пишет суточные объёмы/планы, персонал, технику и готовность в ОЖР |
+
+#### Маппинг
+
+| Лист | Ячейки / колонки | ОЖР |
+|------|------------------|-----|
+| `Ежедневный отчет` | A=building, C=vor_code, D=work_name, J=unit, L=план сутки, M=факт сутки | `ojr_section3_work_log`: `category='план'` из L, `category='объём'` из M; пустой A наследует последний непустой building |
+| `Ежедневный отчет` | строка, где D содержит `Готовность объекта`, значение K | `ojr_daily_summary.completion_pct` через `get_conn()`; если строка не найдена, `readiness=None` |
+| `Персонал и техника` | блоки организаций, колонка B=count | `ojr_section1_personnel` через `save_personnel(sync_source='ejo_backfill', close_existing=False)` |
+| `Персонал и техника` | блок `Статистика по технике`, A=name, B=qty | `ojr_section2_equipment` через `save_equipment(status=None, source_message_id=None, mode='replace')` |
+| `xl/media/*` | встроенные медиа workbook, включая логотипы | только счётчик `photos`; запись фото в БД не выполняется |
+
+#### ⛔ КРИТИЧЕСКИЕ ПРАВИЛА
+
+1. **Никакого LLM-парсинга.** Только значения ячеек утверждённого шаблона.
+2. **Работы/персонал/техника пишутся только через `db.py` helpers.** Не создавать свои INSERT для этих таблиц.
+3. **`ojr_daily_summary` обновляется через `get_conn()`**, потому что отдельного `save_daily_summary` нет; поле готовности — `completion_pct`.
+4. **Функции fault-tolerant:** ошибка листа, строки или отдельной записи не должна валить весь backfill.
+5. **Обратный разбор пишет только суточные факт/план (L/M).** Накопления O/P/R/S (план мес/накоп/общий план/накоп проект) вычисляются генератором ЕЖО и не импортируются backfill-ом.
+6. **Фото на этом этапе не импортируются:** `photos` — счётчик встроенных media-файлов `xl/media/*`, а не подтверждённый фотоотчёт стройки.
+
+---
+
 ### 2.10. alerter.py — Алерты (Telegram + ojr_incidents)
 
 | Свойство | Значение |
@@ -403,6 +443,7 @@ secret_config.py ──┬─────┬──────────┐   
 | **poll.py** | `whatsapp_commands.py` | Опрос, таблица `bot_poll_state` |
 | **data_sources.py** | `fill_ejo.py` | Контрактные NamedTuple + 12 функций. Заполнение ЕЖО целиком |
 | **fill_ejo.py** | `whatsapp_commands.py` | Генерация ЕЖО, вставка фото, расчёт процентов |
+| **ejo_backfill.py** | `db.py` | Обратный разбор ЕЖО в ОЖР; проверить idempotency helpers и `ojr_daily_summary` |
 | **alerter.py** | `whatsapp_commands.py` | Telegram-алерты, мониторинг ojr_incidents |
 | **whatsapp_commands.py** | — (точка входа) | Полный цикл: Bridge poll → обработка → ответ |
 
@@ -412,7 +453,7 @@ secret_config.py ──┬─────┬──────────┐   
 |-----------|--------|--------|
 | 🔴 **P0** | `secret_config.py`, `db.py`, `messaging.py` | Фундамент — ломает ВСЁ |
 | 🟠 **P1** | `data_sources.py`, `config.py` | Ломает ЕЖО и конфигурацию |
-| 🟡 **P2** | `poll.py`, `fill_ejo.py`, `whatsapp_commands.py` | Ломает конкретные фичи |
+| 🟡 **P2** | `poll.py`, `fill_ejo.py`, `ejo_backfill.py`, `whatsapp_commands.py` | Ломает конкретные фичи |
 | 🟢 **P3** | `qa.py`, `handlers.py`, `alerter.py` | Ломает парсинг/Grok/алерты |
 
 ---
@@ -449,6 +490,7 @@ secret_config.py ──┬─────┬──────────┐   
     "poll.py": ["db.py", "messaging.py", "secret_config.py"],
     "data_sources.py": ["db.py", "config.py"],
     "fill_ejo.py": ["data_sources.py"],
+    "ejo_backfill.py": ["db.py"],
     "alerter.py": ["db.py", "secret_config.py"],
     "whatsapp_commands.py": ["messaging.py", "handlers.py", "qa.py", "poll.py", "fill_ejo.py", "alerter.py", "config.py", "db.py"]
   },
@@ -552,6 +594,19 @@ secret_config.py ──┬─────┬──────────┐   
       "critical_rules": [
         "Зависит от контрактных NamedTuple из data_sources",
         "Не ходить в БД напрямую — только через data_sources"
+      ]
+    },
+    "ejo_backfill.py": {
+      "level": 4,
+      "priority": "P2",
+      "description": "Обратный детерминированный разбор ЕЖО .xlsx в ОЖР.",
+      "exports": ["backfill_ejo"],
+      "critical_rules": [
+        "Никакого LLM-парсинга — только утвержденные ячейки и колонки шаблона",
+        "Работы, персонал и техника пишутся только через db.py helpers",
+        "Готовность пишется в ojr_daily_summary.completion_pct через get_conn(), потому что save_daily_summary нет",
+        "Backfill импортирует только суточные L/M; накопления O/P/R/S вычисляются и не импортируются",
+        "Фото в этом этапе не импортируются, photos считает встроенные media-файлы xl/media"
       ]
     },
     "alerter.py": {
