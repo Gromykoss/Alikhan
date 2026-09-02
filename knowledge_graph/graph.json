@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-09-01T20:00:35.037674+00:00",
+  "built_at": "2026-09-02T20:00:23.689944+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 369,
-    "edges": 570,
+    "nodes": 383,
+    "edges": 592,
     "projects": 1,
-    "events": 67,
+    "events": 73,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,90 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-02/ejo_backfill Round 3: идемпотентность техники без",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-09-02",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "ejo_backfill Round 3: идемпотентность техники без synthetic FK",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-02/OJR: round 4 QA parse_qa агрегация техники до save",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "OJR: round 4 QA parse_qa агрегация техники до save",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-02/OJR: раунд 3 правок `save_equipment` и QA-парсера",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "OJR: раунд 3 правок `save_equipment` и QA-парсера техники",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-02/OJR: раунд 2 правок таблицы техники `ojr_section2_",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "OJR: раунд 2 правок таблицы техники `ojr_section2_equipment`",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-02/OJR: добавлена 15-я таблица техники `ojr_section2_",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "OJR: добавлена 15-я таблица техники `ojr_section2_equipment`",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-01/0 коммитов продукта; OJR-разрыв расширился (31.08–",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-09-01",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "0 коммитов продукта; OJR-разрыв расширился (31.08–01.09 пусто); текстовый приём мёртв 12-й день; bridge рестарт ~04:00 UTC",
       {
         "type": "description"
       }
@@ -2397,13 +2481,6 @@
     },
     {
       "source": "db_table/ojr_section3_work_log",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_section3_work_log",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -3097,6 +3174,13 @@
     },
     {
       "source": "bot_component/avr",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "bot_component/avr",
       "target": "INDEX.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
@@ -3363,13 +3447,6 @@
     },
     {
       "source": "db_table/bot_memory_facts",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/bot_memory_facts",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -3545,6 +3622,13 @@
     },
     {
       "source": "template/ks2",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.8
+    },
+    {
+      "source": "template/ks2",
       "target": "INDEX.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
@@ -3569,6 +3653,13 @@
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_title_page",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
       "confidence": 0.88
     },
     {
@@ -3614,6 +3705,13 @@
       "confidence": 0.88
     },
     {
+      "source": "db_table/ojr_section2_design_supervision",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
       "source": "db_table/ojr_section2_visits",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -3628,6 +3726,13 @@
       "confidence": 0.88
     },
     {
+      "source": "db_table/ojr_section2_visits",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
       "source": "db_table/ojr_section4_construction_control",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -3639,6 +3744,13 @@
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/ojr_section4_construction_control",
+      "target": "AGENTS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
       "confidence": 0.88
     },
     {
@@ -4130,6 +4242,132 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/ejo_backfill Round 3: идемпотентность техники без",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/ejo_backfill Round 3: идемпотентность техники без",
+      "target": "ejo_backfill Round 3: идемпотентность техники без synthetic FK",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/ejo_backfill Round 3: идемпотентность техники без",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-02/OJR: round 4 QA parse_qa агрегация техники до save",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/OJR: round 4 QA parse_qa агрегация техники до save",
+      "target": "OJR: round 4 QA parse_qa агрегация техники до save",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/OJR: round 4 QA parse_qa агрегация техники до save",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 3 правок `save_equipment` и QA-парсера",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 3 правок `save_equipment` и QA-парсера",
+      "target": "OJR: раунд 3 правок `save_equipment` и QA-парсера техники",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 3 правок `save_equipment` и QA-парсера",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 2 правок таблицы техники `ojr_section2_",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 2 правок таблицы техники `ojr_section2_",
+      "target": "OJR: раунд 2 правок таблицы техники `ojr_section2_equipment`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/OJR: раунд 2 правок таблицы техники `ojr_section2_",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-02/OJR: добавлена 15-я таблица техники `ojr_section2_",
+      "target": "2026-09-02",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-02/OJR: добавлена 15-я таблица техники `ojr_section2_",
+      "target": "OJR: добавлена 15-я таблица техники `ojr_section2_equipment`",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-02/OJR: добавлена 15-я таблица техники `ojr_section2_",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-01/0 коммитов продукта; OJR-разрыв расширился (31.08–",
+      "target": "2026-09-01",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-01/0 коммитов продукта; OJR-разрыв расширился (31.08–",
+      "target": "0 коммитов продукта; OJR-разрыв расширился (31.08–01.09 пусто); текстовый приём мёртв 12-й день; bridge рестарт ~04:00 UTC",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-01/0 коммитов продукта; OJR-разрыв расширился (31.08–",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-08-31/Office-forward закоммичен (761a213); OJR-данные за",
