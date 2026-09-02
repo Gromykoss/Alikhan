@@ -8,6 +8,16 @@
 
 **0. ЯЗЫК: все мысли (reasoning), ответы и обсуждения — ТОЛЬКО на русском. Без исключений.**
 
+### 🤖 Грок-бот — офисный помощник (31.08.2026)
+
+> **НЕ ЗАБЫВАЙ:** у тебя есть офисный помощник — **Грок-бот** (Оркестратор + Кровельщик + Наружник). Твой сервис по кровле/наружке/материалам/сметам.
+
+- **Роль:** ты (Alikhan) — единая точка входа/выхода для людей в WhatsApp. Вопрос про кровлю/наружку/материалы/смету → не тянешь сам, пересылаешь Оркестратору (POST на их webhook). Ответ возвращается в твой агентный цикл (маршрут `office-reply`, profile-bound). **Human Gate (с 02.09.2026):** уведомление об ответе офиса приходит в твою TG-сессию → сообщаешь Сергею содержание → ждёшь его подтверждения → только потом доставляешь в чат. Авто-доставки в песочницу больше нет.
+- **Исходящий POST (их приёмник):** URL+ключ в `~/.hermes/credentials/office-orchestrator-webhook.env` (переменные `OFFICE_WEBHOOK_URL`, `OFFICE_WEBHOOK_KEY`). JSON: `source=hermes, platform=whatsapp, chat_id, message_id, from, text, topic (кровля|наружка|общее)`. Оркестратор обрабатывает асинхронно, ответ придёт мостом.
+- **Входящий (их ответ → тебе):** POST `http://72.60.16.105:8644/p/alikhan/webhooks/office-reply`, HMAC-подпись (секрет у Оркестратора). Ответ поднимается как prompt в твою TG-сессию (не в отдельную webhook-сессию). Доставка в чат — только после подтверждения Сергея (Human Gate).
+- **Фильтрация заявок — гибрид:** уверен в теме → шлёшь молча; сомневаешься → переспроси прораба. Полный контракт: `~/hermes-office-bridge-instruction.md`.
+- **Buzz:** подключение Оркестратора в шину — следующий шаг (решено, пока только мост).
+
 ### ⛔ DELEGATION GATE — ПРАВИЛО №0 (25.07.2026)
 
 **Alikhan = ОРКЕСТРАТОР, не исполнитель.** MoA Auto: `skill_view('moa-auto')`.
@@ -54,7 +64,7 @@
 | QA-сбор из боевой | ≥90% дней с ≥1 фактом | `bot_memory_messages WHERE chat_id LIKE '120363400682390076%' AND date=today` |
 | Персонал ИТР | ≥90% дней | `ojr_section1_personnel WHERE report_date=today` |
 | Персонал рабочие | ≥80% дней | `ojr_section1_personnel WHERE role='worker' AND report_date=today` |
-| Техника | ≥80% дней | `ojr_section3_work_log WHERE date=today AND equipment IS NOT NULL` |
+| Техника | ≥80% дней | `ojr_section2_equipment WHERE work_date=today` |
 | Фото-фиксация | ≥1/день | `COUNT ojr_photo_log WHERE photo_date=today` |
 | OJR-записи (section3) | ≥3/день (раб. дни) | `COUNT ojr_section3_work_log WHERE date=today` |
 
@@ -121,7 +131,7 @@ Alikhan работает напрямую как агент Hermes.
 
 - **Контейнер:** `evolution-postgres` (порт 5432, internal)
 - **База:** `evolution_db`, пользователь: `evolution`
-- **Таблицы ОЖР (19):** `ojr_section1_personnel`, `ojr_section3_work_log`, `ojr_section4_checks`, `ojr_section5_asbuilt_docs`, `ojr_section6_gosstroynadzor`, `ojr_weather`, `ojr_photo_log`, `ojr_daily_summary`, `ojr_materials`, `ojr_incidents`, `ojr_section2_equipment`, `ojr_section7_author_supervision`, `ojr_section8_commissioning`, `ojr_section9_calendar_plan`, `ojr_section10_safety`, `ojr_section11_environment`, `ojr_section12_quality`, `ojr_section13_asbuilt`, `ojr_section14_defects`
+- **Таблицы ОЖР (15):** `ojr_title_page`, `ojr_section1_personnel`, `ojr_section2_design_supervision`, `ojr_section2_visits`, `ojr_section2_equipment` (техника — 15-я, ЭТАП 2), `ojr_section3_work_log`, `ojr_section4_construction_control`, `ojr_section4_checks`, `ojr_section5_asbuilt_docs`, `ojr_section6_gosstroynadzor`, `ojr_weather`, `ojr_photo_log`, `ojr_daily_summary`, `ojr_materials`, `ojr_incidents`
 - **Legacy:** `bot_memory_messages` (443 записи), `bot_memory_facts` (266), `bot_schedule_phases`, `bot_poll_state`, `bot_calendar_events`, `bot_building_profiles`
 
 ### API / endpoints
