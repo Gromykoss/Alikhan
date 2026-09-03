@@ -1974,3 +1974,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **03.09.2026 09:28** — страж: полный pytest bot/ вместо 5 файлов (`c91e988`)
 - **03.09.2026 11:50** — docs: сверка ЭТАП 2↔MASTER_SPEC + хронология 03.09 (`76d0add`)
 - **03.09.2026 15:29** — контракты швов A1/A3/A5: Ollama удалён + golden-file ЕЖО + JSON Schema NamedTuple (`1f4efdd`)
+- **03.09.2026 15:55** — контракты швов A2/A4: OpenAPI bridge + Grok QA JSON Schema (`de0b2bc`)

@@ -1,0 +1,70 @@
+openapi: 3.0.3
+info:
+  title: Office Reply Webhook (Alikhan side)
+  version: "1.0"
+  description: >
+    Входящий контракт office-reply со стороны Alikhan: ответ офисного
+    Оркестратора поступает в маршрут Hermes и после приёма поднимается как
+    prompt в TG-сессию Alikhan. Это server-view приёмной стороны; тело ответа
+    формирует Оркестратор.
+servers:
+  - url: http://72.60.16.105:8644
+paths:
+  /p/alikhan/webhooks/office-reply:
+    post:
+      summary: Accept office orchestrator reply
+      description: >
+        Принимает входящий ответ офиса для дальнейшего Human Gate. После 202
+        Alikhan уведомляет Сергея в TG-сессии и ждёт подтверждения; 202 не
+        означает автоматическую доставку ответа в WhatsApp-чат.
+      security:
+        - HMAC: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              x-note: >
+                Тело входящего ответа не полностью специфицировано на стороне
+                Alikhan: его формирует Оркестратор. Подтверждённый минимум -
+                текст ответа для доставки в чат и служебные идентификаторы
+                message_id/chat_id для адресации. Остальные поля допустимы.
+              properties:
+                chat_id:
+                  type: string
+                  minLength: 1
+                  x-note: "Подтверждённый минимум для адресации; точный контракт у Оркестратора."
+                message_id:
+                  type: string
+                  minLength: 1
+                  x-note: "Подтверждённый минимум для адресации; точный контракт у Оркестратора."
+                text:
+                  type: string
+                  minLength: 1
+                  x-note: "Текст ответа офиса для Human Gate и последующей доставки после подтверждения."
+              anyOf:
+                - required: [text]
+                - required: [message_id]
+                - required: [chat_id]
+      responses:
+        "202":
+          description: >
+            Принято маршрутом Hermes. Human Gate: ответ поднимается как prompt
+            в TG-сессию Alikhan; Alikhan сообщает Сергею содержание и ждёт
+            подтверждения перед доставкой в WhatsApp-чат.
+        "401":
+          description: Неверная или отсутствующая HMAC-подпись.
+        "400":
+          description: Плохое тело запроса.
+components:
+  securitySchemes:
+    HMAC:
+      type: apiKey
+      in: header
+      name: HMAC_SIGNATURE_HEADER_TBD_BY_ORCHESTRATOR
+      description: >
+        Обязательная HMAC V2 подпись входящего office-reply. Имя заголовка и
+        алгоритм задаёт Оркестратор; канон см. в hermes-office-bridge-instruction.md.
+      x-note: "Имя заголовка и алгоритм - у Оркестратора; Alikhan фиксирует обязательность подписи."
