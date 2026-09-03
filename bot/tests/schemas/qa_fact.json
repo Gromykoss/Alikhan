@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "qa_fact.json",
+  "title": "Grok QA Fact",
+  "description": "Structured QA fact returned by Grok for bot/qa.py.",
+  "type": "object",
+  "properties": {
+    "building": {
+      "type": "string",
+      "enum": [
+        "АБК",
+        "Общежитие",
+        "общая"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "персонал",
+        "техника",
+        "инцидент",
+        "бетонирование",
+        "монтаж",
+        "земляные работы",
+        "документация",
+        "материалы",
+        "план",
+        "объём"
+      ]
+    },
+    "fact": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "building",
+    "category",
+    "fact"
+  ],
+  "additionalProperties": false
+}

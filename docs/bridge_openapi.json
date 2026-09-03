@@ -1,0 +1,366 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hermes WhatsApp Bridge API",
+    "version": "v0.20.4 A+",
+    "description": "Контракт диспетчера Alikhan (bot/whatsapp_commands.py) к Hermes WhatsApp Bridge :3000. Описаны только поля и endpoints, подтверждённые кодом диспетчера; прочие raw Baileys поля считаются passthrough/TODO."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000",
+      "description": "Local Hermes WhatsApp Bridge"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Bridge health",
+        "responses": {
+          "200": {
+            "description": "Bridge is reachable and reports runtime contract fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages": {
+      "get": {
+        "summary": "Read durable message queue",
+        "parameters": [
+          {
+            "name": "only",
+            "in": "query",
+            "required": false,
+            "description": "Optional WhatsApp group JID filter. Dispatcher uses production group only.",
+            "schema": {
+              "type": "string",
+              "example": "120363400682390076@g.us"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queue items. Dispatcher only relies on documented Message properties below.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages-ack": {
+      "post": {
+        "summary": "Acknowledge processed message IDs",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Valid non-empty ack accepted."
+          },
+          "400": {
+            "description": "Invalid ack request, including empty messageIds list."
+          }
+        }
+      }
+    },
+    "/send": {
+      "post": {
+        "summary": "Send text message or file",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Send attempt completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collect-messages": {
+      "get": {
+        "summary": "Legacy endpoint intentionally dead",
+        "description": "Dispatcher treats any response other than 404 as suspicion of an old dual-consumer/splice bridge.",
+        "parameters": [
+          {
+            "name": "only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Expected response for v0.20.4 A+ bridge."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "queueLength",
+          "uptime",
+          "scriptHash",
+          "sendReadReceipts"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "connected"
+          },
+          "queueLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uptime": {
+            "type": "number",
+            "minimum": 0
+          },
+          "scriptHash": {
+            "type": "string"
+          },
+          "sendReadReceipts": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Message": {
+        "type": "object",
+        "description": "Элемент очереди /messages. Dispatcher требует messageId или id; chatId используется для маршрутизации. Остальные поля задокументированы только там, где whatsapp_commands.py читает их напрямую. TODO: полный raw Baileys payload bridge.js не принадлежит зоне Alikhan.",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "chatId": {
+            "type": "string"
+          },
+          "senderId": {
+            "type": "string"
+          },
+          "senderNumber": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "timestamp": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "document",
+              "video",
+              "gif",
+              "ptt",
+              "audio",
+              "sticker",
+              "location",
+              "contact"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "conversation": {
+            "type": "string"
+          },
+          "message": {},
+          "extendedTextMessage": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "imageMessage": {
+            "type": "object",
+            "properties": {
+              "caption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "documentMessage": {
+            "type": "object",
+            "properties": {
+              "caption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "mediaUrls": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "mediaMissing": {
+            "type": "boolean"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true,
+        "anyOf": [
+          {
+            "required": [
+              "messageId"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          }
+        ]
+      },
+      "AckRequest": {
+        "type": "object",
+        "required": [
+          "messageIds"
+        ],
+        "properties": {
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "chatId",
+              "message"
+            ],
+            "properties": {
+              "chatId": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "chatId",
+              "fileName",
+              "fileData"
+            ],
+            "properties": {
+              "chatId": {
+                "type": "string"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "fileData": {
+                "type": "string",
+                "description": "Base64 file payload."
+              },
+              "caption": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SendResponse": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -1922,6 +1922,7 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **13.08.2026 12:49** — docs: перенести устаревшую v5-документацию и чужеродный CLAUDE.md в archive/ (`fc4bb62`)
 - **14.08.2026 08:30** — fix: media-записи сохраняют message_time из bridge timestamp (`178a363`)
 - **15.08.2026 10:43** — feat: enforced authority model (claim-gate + production send-deny) (`bfa9b2f`)
+- **03.09.2026 12:36** — contracts A5/A3/A1: удалена мёртвая ветка Ollama из `handlers.py` и конфигурации (`ask_grok()` всегда вызывает `ask_grok_raw()`), документация extractor приведена к канону `/extract-document`, добавлен golden-file контракт колонок ЕЖО K-U и JSON Schema drift-контракт для 15 `NamedTuple` из `data_sources.py`. В `.git/hooks/pre-commit` добавлена быстрая проверка drift схем. Проверка: новые тесты `bot/tests/test_ejo_template_contract.py` + `bot/tests/test_namedtuple_schemas.py` = 4 passed; полный прогон выполняется после записи. Файлы: `bot/handlers.py`, `bot/config.py`, `AGENTS.md`, `INDEX.md`, `bot/CONTRACTS.md`, `bot/BUGS.md`, `bot/tests/*`, `.git/hooks/pre-commit`, `CHRONOLOGY.md`.
 - **15.08.2026 10:55** — feat(authority): guard_tool_call — enforced файловая граница профиля Alikhan (`d4353f8`)
 - **15.08.2026 13:16** — feat(каркас): H4+H5 — claim-gate проверяет counts (count=0 → INCONCLUSIVE) (`75a1bab`)
 - **15.08.2026 13:18** — chore: удалить закоммиченный bot/venv/ из git + добавить .gitignore (`655d2b3`)
@@ -1972,3 +1973,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **03.09.2026 07:57** — test: полный pytest bot/ зелёный — фикс орфан-импортов + script-тесты вне pytest (`0344a7a`)
 - **03.09.2026 09:28** — страж: полный pytest bot/ вместо 5 файлов (`c91e988`)
 - **03.09.2026 11:50** — docs: сверка ЭТАП 2↔MASTER_SPEC + хронология 03.09 (`76d0add`)
+- **03.09.2026 15:29** — контракты швов A1/A3/A5: Ollama удалён + golden-file ЕЖО + JSON Schema NamedTuple (`1f4efdd`)
