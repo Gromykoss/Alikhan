@@ -1,7 +1,7 @@
 # MASTER_SPEC — Alikhan (ТЗРК Джеруй)
 
 > Единый мастер-документ. Собран из всех доков и кода проекта. Каждый раздел ссылается на источник. Противоречия — в разделе «Открытые вопросы для Сергея» в конце.
-> Дата сборки: 02.09.2026. Автор: Project-Alikhan (по задаче Hermes, ЭТАП 1).
+> Дата сборки: 02.09.2026 (ЭТАП 1), актуализировано 03.09.2026 (после ЭТАП 2). Автор: Project-Alikhan (по задаче Hermes).
 
 ---
 
@@ -48,7 +48,7 @@
 ### VOR-коды (docs/data-sources-contracts.md, ALIKHAN_ARCHITECTURE.md:37-40)
 - Код ВОР: 3- или 4-частный (`3.3.2`, `7.2.1.1`), разделитель `=`/`—`/`–`/`-`.
 - Извлекаются **regex'ом до LLM** (Grok не видит коды → не галлюцинирует).
-- Справочник: `report/templates/ВОР_с_расценками.xlsx` — 837 кодов ФЕР-2020.
+- Справочник: `report/templates/ВОР.xlsx` + `ВОР_с_расценками.xlsx` — 573 кода ВОР (факт проверен 03.09.2026).
 
 ### Команды (CLIENT_GUIDE.md:299-307, METHODOLOGY.md:6-12)
 | Команда | Действие |
@@ -175,7 +175,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | `ojr_materials` | — | материалы |
 | `ojr_incidents` | — | инциденты/ТБ |
 
-**Канон = 15 таблиц ОЖР (решение Сергея 02.09.2026).** 14 существующих (section1-6 + weather/photo/summary/materials/incidents) + **15-я новая — учёт техники** (`ojr_section2_equipment`). План ЭТАП 2: добавить CREATE для 15-й таблицы и миграцию. Разделы 7-14 (комиссионинг, ОТ, экология, качество и т.п.) — НЕ входят в канон, вынесены из скоупа.
+**Канон = 15 таблиц ОЖР (решение Сергея 02.09.2026).** 14 существующих (section1-6 + weather/photo/summary/materials/incidents) + **15-я — учёт техники** (`ojr_section2_equipment`). ✅ Реализовано в ЭТАП 2 (коммит `14bc078`). Разделы 7-14 (комиссионинг, ОТ, экология, качество и т.п.) — НЕ входят в канон, вынесены из скоупа.
 
 ### Legacy таблицы (bot_*)
 | Таблица | Роль |
@@ -222,8 +222,10 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | `ojr_sync.py` | синк facts→OJR, фото→photo_log, погода→weather |
 | `document_extractor.py` | распознавание доков (:8099) |
 | `office_forward.py` | пересылка вопросов офисному Грок-боту (31.08.2026) |
+| `ejo_backfill.py` | обратный разбор ЕЖО .xlsx → ОЖР (ЭТАП 2) |
+| `vor_reference.py` | импорт справочника ВОР в ojr_vor_reference (ЭТАП 2) |
 | `db.py` | PostgreSQL подключение |
-| `handlers.py` | Grok API (ask_grok_raw), Ollama |
+| `handlers.py` | Grok API (ask_grok_raw) |
 | ~~main_waha.py, router.py, bridge_wrapper.py~~ | ИСТОРИЧЕСКИЕ (v6) |
 
 ### Данные ЕЖО (колонки листа «Ежедневный отчет», 1-based)
@@ -256,7 +258,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | **Grok Build / xAI** | QA-парсинг персонала/инцидентов (structured JSON) | qa.py, PROJECT.md:33 |
 | ~~**Ollama**~~ | **УДАЛЁН** (решение Сергея 02.09.2026) | — |
 | **STT (faster-whisper)** | голосовые — **в маркетинг/перспективу**, в v6 НЕ реализовано | CLIENT_GUIDE.md:458 |
-| **Office-bridge (Грок-бот)** | кровля/наружка/сметы: исходящий POST + входящий office-reply (HMAC). ⚠️ **подключён, но работает НЕПРАВИЛЬНО** (выявлено 02.09.2026) | AGENTS.md:11-19, office_forward.py |
+| **Office-bridge (Грок-бот)** | кровля/наружка/сметы: исходящий POST + входящий office-reply (HMAC). ✅ подключён, Human Gate работает (дефект исправлен директором 02.09.2026) | AGENTS.md:11-19, office_forward.py |
 | **Codex / Grok Build CLI** | делегирование кода (Maker/Checker) | AGENTS.md:181-189 |
 
 ### Office-мост (31.08.2026, детали)
@@ -291,7 +293,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 5. **Погода → в ОЖР**, время по Бишкеку (UTC+6).
 6. **Интеграции Уровня 3 → маркетинг/перспектива** (не бэклог v6).
 7. **Ollama → удалён**.
-8. **ВОР-справочник → ИСПРАВИТЬ**: 837 кодов как таблица БД (ЭТАП 2).
+8. **ВОР-справочник → сделано** (ЭТАП 2): таблица `ojr_vor_reference` + `vor_reference.py`, 573 кода (коммит `a2a408c`).
 9. **STT → маркетинг/перспектива**.
 10. **Офис-мост → подключён, работает** (дефект Human Gate исправлен директором Hermes 02.09.2026).
 
