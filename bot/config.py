@@ -22,8 +22,6 @@ PRODUCTION = os.environ.get("WHATSAPP_PRODUCTION", "120363400682390076@g.us")  #
 EVO_URL = "http://127.0.0.1:3000"
 BRIDGE_URL = "http://127.0.0.1:3000"
 XAI_URL = "https://api.x.ai/v1/chat/completions"
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "qwen2.5:14b"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 WTTR_URL = "https://wttr.in/42.2,72.5?format=%C+%t+%w+%h+%P&lang=ru"
 

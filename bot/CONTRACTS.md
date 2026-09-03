@@ -86,7 +86,6 @@ db.py ──► ejo_backfill.py
 | `EVO_URL` | `str` | `"http://127.0.0.1:3000"` |
 | `BRIDGE_URL` | `str` | `"http://127.0.0.1:3000"` |
 | `XAI_URL` | `str` | xAI API endpoint |
-| `OLLAMA_URL` | `str` | Ollama endpoint |
 | `TEMPLATE_PATH` | `str` | Путь к шаблону ЕЖО |
 | `SEEN_FILE` | `str` | Путь к `seen_ids.json` |
 | `EJO_START_ROW` | `int` | `24` — первая строка данных в листе ЕЖО |
@@ -249,7 +248,7 @@ db.py ──► ejo_backfill.py
 
 ---
 
-### 2.6. handlers.py — Обработчики (Grok, Ollama)
+### 2.6. handlers.py — Обработчики (Grok)
 
 | Свойство | Значение |
 |----------|----------|
@@ -261,9 +260,8 @@ db.py ──► ejo_backfill.py
 
 | Имя | Сигнатура | Описание |
 |-----|-----------|----------|
-| `ask_grok` | `(prompt, max_tokens=700, image_base64=None, image_mime=None, force_grok=False) -> str` | Запрос к Grok/Ollama |
+| `ask_grok` | `(prompt, max_tokens=700, image_base64=None, image_mime=None, force_grok=False) -> str` | Запрос к Grok |
 | `ask_grok_raw` | — | Сырой запрос с image_base64 |
-| `ask_ollama` | `(prompt, system=None, max_tokens=700) -> str` | Запрос к локальной Ollama |
 
 #### ⛔ КРИТИЧЕСКИЕ ПРАВИЛА
 
@@ -603,8 +601,8 @@ db.py ──► ejo_backfill.py
     "handlers.py": {
       "level": 2,
       "priority": "P3",
-      "description": "Обработчики: Grok API, Ollama, верификация ответов. Ключи через secret_config.",
-      "exports": ["ask_grok", "ask_grok_raw", "ask_ollama"],
+      "description": "Обработчики: Grok API, верификация ответов. Ключи через secret_config.",
+      "exports": ["ask_grok", "ask_grok_raw"],
       "critical_rules": [
         "XAI_KEY загружается через secret_config (не через n8n — удалено, AUDIT-017)",
         "Сигнатура ask_grok(prompt, max_tokens, image_base64, mimetype, force_grok)"

@@ -10,8 +10,6 @@ from messaging import send_msg  # unified messaging (AUDIT-011)
 from secret_config import get_secret
 
 XAI_URL = "https://api.x.ai/v1/chat/completions"
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "qwen2.5:14b"  # installed model (verified 17.07.2026)
 
 
 def _load_keys():
@@ -59,32 +57,6 @@ def _extract_json(raw):
         if match:
             return json.loads(match.group(0))
         raise
-
-
-
-
-def ask_ollama(prompt, system=None, max_tokens=700):
-    """Ask local Ollama model. Falls back to Grok on failure."""
-    try:
-        full_prompt = prompt
-        if system:
-            full_prompt = f"{system}\n\n{prompt}"
-        r = requests.post(OLLAMA_URL, json={
-            "model": OLLAMA_MODEL,
-            "prompt": full_prompt,
-            "stream": False,
-            "options": {"temperature": 0.3, "num_predict": max_tokens}
-        }, timeout=120)
-        if r.status_code == 200:
-            resp = r.json().get("response", "").strip()
-            if resp and len(resp) > 5:
-                return resp
-    except Exception as e:
-        print(f"[OLLAMA ERR] {e}", flush=True)
-    # Fallback to Grok
-    return ask_grok_raw(prompt, system=system, max_tokens=max_tokens)
-
-
 def ask_grok_raw(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg"):
     user_content = prompt
     if image_base64:
@@ -115,11 +87,13 @@ def ask_grok_raw(prompt, system=None, max_tokens=700, image_base64=None, mimetyp
 
 
 def ask_grok(prompt, system=None, max_tokens=700, image_base64=None, mimetype="image/jpeg", force_grok=False):
-    # Vision always needs Grok
-    if image_base64 or force_grok:
-        return ask_grok_raw(prompt, system=system, max_tokens=max_tokens,
-                           image_base64=image_base64, mimetype=mimetype)
-    return ask_ollama(prompt, system=system, max_tokens=max_tokens)
+    return ask_grok_raw(
+        prompt,
+        system=system,
+        max_tokens=max_tokens,
+        image_base64=image_base64,
+        mimetype=mimetype,
+    )
 
 
 def _get_base64_evolution(quoted_message_id):

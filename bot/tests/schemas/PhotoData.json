@@ -1,0 +1,336 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AIBHeadcount": {
+      "additionalProperties": false,
+      "properties": {
+        "by_prof": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "is_fallback": {
+          "type": "boolean"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "by_prof",
+        "is_fallback"
+      ],
+      "type": "object"
+    },
+    "ActivePhases": {
+      "additionalProperties": false,
+      "properties": {
+        "phases": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "phases"
+      ],
+      "type": "object"
+    },
+    "CodeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "codes": {
+          "additionalProperties": {
+            "additionalItems": false,
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "codes"
+      ],
+      "type": "object"
+    },
+    "EquipmentData": {
+      "additionalProperties": false,
+      "properties": {
+        "details": {
+          "items": {
+            "$ref": "#/definitions/EquipmentItem"
+          },
+          "type": "array"
+        },
+        "items": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "items",
+        "details"
+      ],
+      "type": "object"
+    },
+    "EquipmentItem": {
+      "additionalProperties": false,
+      "properties": {
+        "equipment_name": {
+          "type": "string"
+        },
+        "equipment_type": {
+          "type": "string"
+        },
+        "operator_name": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer"
+        },
+        "shift": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "equipment_name",
+        "equipment_type",
+        "quantity",
+        "shift",
+        "status",
+        "operator_name"
+      ],
+      "type": "object"
+    },
+    "IncidentCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "count"
+      ],
+      "type": "object"
+    },
+    "MaterialData": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/MaterialItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "type": "object"
+    },
+    "MaterialItem": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "qty",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "PhotoData": {
+      "additionalProperties": false,
+      "properties": {
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/definitions/PhotoFile"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "counts",
+        "files"
+      ],
+      "type": "object"
+    },
+    "PhotoFile": {
+      "additionalProperties": false,
+      "properties": {
+        "building": {
+          "type": "string"
+        },
+        "local_path": {
+          "type": "string"
+        },
+        "msg_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "building",
+        "msg_id",
+        "local_path"
+      ],
+      "type": "object"
+    },
+    "PlanData": {
+      "additionalProperties": false,
+      "properties": {
+        "plans": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "plans"
+      ],
+      "type": "object"
+    },
+    "StaffData": {
+      "additionalProperties": false,
+      "properties": {
+        "orgs": {
+          "additionalProperties": {
+            "$ref": "#/definitions/StaffOrg"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "orgs"
+      ],
+      "type": "object"
+    },
+    "StaffOrg": {
+      "additionalProperties": false,
+      "properties": {
+        "itr": {
+          "type": "integer"
+        },
+        "total": {
+          "type": "integer"
+        },
+        "workers": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "itr",
+        "workers"
+      ],
+      "type": "object"
+    },
+    "VolumeData": {
+      "additionalProperties": false,
+      "properties": {
+        "plans": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "works": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "works",
+        "plans"
+      ],
+      "type": "object"
+    },
+    "WeatherData": {
+      "additionalProperties": false,
+      "properties": {
+        "humidity": {
+          "type": "string"
+        },
+        "pressure": {
+          "type": "string"
+        },
+        "temp": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "wind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "temp",
+        "wind",
+        "humidity",
+        "pressure",
+        "visibility"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/definitions/PhotoFile"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "counts",
+    "files"
+  ],
+  "title": "PhotoData",
+  "type": "object"
+}

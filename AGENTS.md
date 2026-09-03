@@ -139,7 +139,7 @@ Alikhan работает напрямую как агент Hermes.
 | Сервис | URL | Назначение |
 |--------|-----|-----------|
 | WhatsApp Bridge | `http://127.0.0.1:3000` | `/health`, `/messages` (опрос), `/send` (отправка), `/collect-messages` |
-| Document Extractor | `http://127.0.0.1:8099` | `/health`, `/extract` (распознавание xlsx/pdf) |
+| Document Extractor | `http://127.0.0.1:8099` | `/health`, `/extract-document` (распознавание xlsx/pdf) |
 | Open-Meteo | `https://api.open-meteo.com` | Погода (координаты 42.284, 72.765) |
 | Google Sheets | API (сервисный аккаунт) | Табель персонала |
 

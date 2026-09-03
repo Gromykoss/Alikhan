@@ -28,7 +28,7 @@ Alikhan работает как агент Hermes — прямой WhatsApp Brid
 - OJR fill guide: `/home/hermes-workspace/Alikhan-migration/db/ojr_fill_guide.md`
 - Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
 - Extractor service unit: `/home/hermes-workspace/Alikhan-migration/bot/alikhan-document-extractor.service`
-- Extractor endpoint: `127.0.0.1:8099`
+- Extractor endpoint: `127.0.0.1:8099/extract-document`
 - Runtime log: Hermes session logs (не `/tmp/alikhan.log` — бот остановлен)
 
 ## Active workflows
@@ -47,7 +47,7 @@ Alikhan работает как агент Hermes — прямой WhatsApp Brid
 - OJR sync: `bot/ojr_sync.py` — функции синхронизации facts→OJR, фото→`ojr_photo_log`, погода→`ojr_weather`.
 - Daily snapshot: композит из `ojr_photo_log` + `ojr_daily_summary` + сообщений.
 - Document extraction: `bot/document_extractor.py` and the local extractor
-  service on `127.0.0.1:8099`.
+  service on `127.0.0.1:8099/extract-document`.
 - Sandbox WhatsApp validation: `120363179621030401@g.us`.
 - Production WhatsApp group: `120363400682390076@g.us`; approval required
   before sending.
