@@ -171,29 +171,35 @@ def test_contract_fill_ejo_no_direct_db():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Тест 5: messaging.py импортирует EVO, KEY из bridge_wrapper
+# Тест 5: messaging.py импортирует EVO, KEY из config
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_contract_messaging_imports_bridge():
-    """Контракт: messaging.py импортирует EVO, KEY из bridge_wrapper."""
+    """Контракт v6: messaging.py импортирует EVO, KEY из config, не bridge_wrapper."""
     messaging_path = os.path.join(os.path.dirname(__file__), 'messaging.py')
     imports = _top_level_imports(messaging_path)
 
     evo_imported = False
     key_imported = False
+    bridge_wrapper_imported = False
 
     for kind, mod, name in imports:
-        if kind == 'from' and mod == 'bridge_wrapper':
+        if kind == 'from' and mod == 'config':
             if name == 'EVO':
                 evo_imported = True
             if name == 'KEY':
                 key_imported = True
+        if (kind == 'from' and mod == 'bridge_wrapper') or (kind == 'import' and name == 'bridge_wrapper'):
+            bridge_wrapper_imported = True
 
     assert evo_imported, (
-        "КОНТРАКТ НАРУШЕН: messaging.py не импортирует EVO из bridge_wrapper."
+        "КОНТРАКТ НАРУШЕН: messaging.py не импортирует EVO из config."
     )
     assert key_imported, (
-        "КОНТРАКТ НАРУШЕН: messaging.py не импортирует KEY из bridge_wrapper."
+        "КОНТРАКТ НАРУШЕН: messaging.py не импортирует KEY из config."
+    )
+    assert not bridge_wrapper_imported, (
+        "КОНТРАКТ НАРУШЕН: messaging.py импортирует удалённый v5 bridge_wrapper."
     )
 
 
@@ -219,29 +225,22 @@ def test_contract_poll_imports_db():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Тест 7: qa.py импортирует EVO, KEY из bridge_wrapper
+# Тест 7: qa.py не импортирует bridge_wrapper
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_contract_qa_imports_bridge():
-    """Контракт: qa.py импортирует EVO, KEY из bridge_wrapper."""
+    """Контракт v6: qa.py не импортирует удалённый v5 bridge_wrapper."""
     qa_path = os.path.join(os.path.dirname(__file__), 'qa.py')
     imports = _top_level_imports(qa_path)
 
-    evo_imported = False
-    key_imported = False
+    bridge_wrapper_imported = False
 
     for kind, mod, name in imports:
-        if kind == 'from' and mod == 'bridge_wrapper':
-            if name == 'EVO':
-                evo_imported = True
-            if name == 'KEY':
-                key_imported = True
+        if (kind == 'from' and mod == 'bridge_wrapper') or (kind == 'import' and name == 'bridge_wrapper'):
+            bridge_wrapper_imported = True
 
-    assert evo_imported, (
-        "КОНТРАКТ НАРУШЕН: qa.py не импортирует EVO из bridge_wrapper."
-    )
-    assert key_imported, (
-        "КОНТРАКТ НАРУШЕН: qa.py не импортирует KEY из bridge_wrapper."
+    assert not bridge_wrapper_imported, (
+        "КОНТРАКТ НАРУШЕН: qa.py импортирует удалённый v5 bridge_wrapper."
     )
 
 
@@ -405,26 +404,6 @@ def test_contract_normalize_org_and_personnel_api():
     assert 'workers_count' in sig.parameters, (
         "КОНТРАКТ НАРУШЕН: save_personnel должен принимать workers_count."
     )
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Тест 15: photo handlers write local_path into tags
-# ═══════════════════════════════════════════════════════════════════════════
-
-def test_contract_photo_tags_local_path_written():
-    """Контракт: main_waha photo paths always set tags.local_path from media."""
-    path = os.path.join(os.path.dirname(__file__), 'main_waha.py')
-    with open(path, 'r') as f:
-        source = f.read()
-    assert '_resolve_media_local_path' in source, (
-        "КОНТРАКТ НАРУШЕН: нужен _resolve_media_local_path helper."
-    )
-    assert source.count('tags_photo["local_path"]') >= 2 or source.count("tags_photo['local_path']") >= 2 or \
-           'tags_photo["local_path"]' in source or 'if local_path:' in source, (
-        "КОНТРАКТ НАРУШЕН: local_path должен писаться в tags_photo."
-    )
-    # Both sandbox and prod should reference helper
-    assert source.count('_resolve_media_local_path') >= 3
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -246,29 +246,6 @@ def _hide_rows(ws):
     print(f"[HIDE ROWS] Hidden: {hidden_count}, Visible: {len(visible)} + {len(header_rows)} headers", flush=True)
 
 
-def _get_aibikon_from_ojr(date=None):
-    """B6: Read АйБиКон headcount from ojr_section1_personnel as fallback."""
-    try:
-        from db import get_conn
-        import psycopg2.extras
-        ds = date.strftime('%Y-%m-%d') if date else datetime.now(BISHKEK_TZ).strftime('%Y-%m-%d')
-        conn = get_conn()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("""
-            SELECT COUNT(*) as cnt FROM ojr_section1_personnel 
-            WHERE LOWER(organization_name) = 'айбикон' 
-            AND start_date <= %s::date AND (end_date IS NULL OR end_date >= %s::date)
-        """, (ds, ds))
-        row = cur.fetchone()
-        cur.close(); conn.close()
-        if row and row.get('cnt', 0) > 0:
-            print(f"[TABEL] OJR fallback: {row['cnt']} АйБиКон from ojr_section1_personnel", flush=True)
-            return {'total': row['cnt'], 'by_prof': {}, 'is_fallback': True}
-    except Exception as e:
-        print(f"[TABEL OJR FALLBACK ERR] {e}", flush=True)
-    return None
-
-
 def yesterday_cum(date, code):
     yd = date - timedelta(days=1)
     p = f"/tmp/ЕЖО_{yd.strftime('%d.%m.%y')}_АйБиКон.xlsx"

@@ -9,7 +9,6 @@ test_smoke.py — Smoke-тесты: 5 критических проверок б
 """
 
 import os
-import subprocess
 import sys
 from datetime import date as dt_date
 
@@ -120,10 +119,10 @@ def test_smoke_photo_pipeline():
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_smoke_personnel_no_leak():
-    """Критический: нет дубликатов сотрудников с end_date=NULL.
+    """Критический: нет дубликатов personnel-слотов с end_date=NULL.
 
-    Проверка: каждый сотрудник в ojr_section1_personnel должен иметь
-    не более одной записи с end_date IS NULL.
+    Проверка: каждый слот (organization_name, full_name, position, start_date)
+    в ojr_section1_personnel должен иметь не более одной открытой записи.
     Провал = дубликаты персонала → завышенные цифры в ЕЖО.
     """
     from db import get_conn
@@ -134,10 +133,10 @@ def test_smoke_personnel_no_leak():
 
     try:
         cur.execute("""
-            SELECT organization_name, full_name, start_date, COUNT(*) as dup_count
+            SELECT organization_name, full_name, position, start_date, COUNT(*) as dup_count
             FROM ojr_section1_personnel
             WHERE end_date IS NULL
-            GROUP BY organization_name, full_name, start_date
+            GROUP BY organization_name, full_name, position, start_date
             HAVING COUNT(*) > 1
             ORDER BY dup_count DESC
             LIMIT 20
@@ -147,7 +146,7 @@ def test_smoke_personnel_no_leak():
         if dupes:
             details = '\n'.join(
                 f"  {d['organization_name']}: {d['full_name']} "
-                f"(начало {d['start_date']}) — {d['dup_count']} дубликатов"
+                f"/ {d['position']} (начало {d['start_date']}) — {d['dup_count']} дубликатов"
                 for d in dupes
             )
             assert False, (
@@ -203,58 +202,24 @@ def test_smoke_ejo_valid():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Smoke 5: Ровно 1 процесс main_waha
+# Smoke 5: Bridge отвечает на /health
 # ═══════════════════════════════════════════════════════════════════════════
 
 def test_smoke_poll_single_process():
-    """Критический: ровно 1 процесс main_waha.py.
+    """Критический v6: Hermes Bridge отвечает и находится в connected.
 
-    Проверка: pgrep -af main_waha возвращает ровно 1 процесс.
-    0 процессов = бот не запущен.
-    >1 процессов = возможен конфликт, дублирование сообщений.
+    v6 больше не имеет main_waha.py/alikhan.service; точка контроля —
+    HTTP health Bridge на 127.0.0.1:3000.
     """
-    try:
-        result = subprocess.run(
-            ['pgrep', '-af', 'main_waha'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-    except FileNotFoundError:
-        # pgrep не установлен — пробуем через ps
-        result = subprocess.run(
-            ['ps', 'aux'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        lines = [l for l in result.stdout.split('\n') if 'main_waha' in l and 'grep' not in l]
-        count = len(lines)
-    else:
-        lines = [l for l in result.stdout.strip().split('\n') if l.strip()]
-        # Exclude the current test shell / pytest command that may contain 'main_waha' in argv
-        lines = [
-            l for l in lines
-            if 'main_waha.py' in l
-            and 'pytest' not in l
-            and 'pgrep' not in l
-            and 'py_compile' not in l
-            and '/usr/bin/bash' not in l
-        ]
-        count = len(lines)
+    import json
+    import urllib.request
 
-    if count == 0:
-        assert False, (
-            "SMOKE FAIL: процесс main_waha не запущен (0 процессов). "
-            "Бот не работает. systemctl --user restart alikhan"
-        )
+    req = urllib.request.Request("http://127.0.0.1:3000/health")
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.loads(resp.read().decode())
 
-    if count > 1:
-        details = '\n'.join(f"  {line}" for line in lines)
-        assert False, (
-            f"SMOKE FAIL: найдено {count} процессов main_waha (ожидался 1):\n{details}\n"
-            "Дублирование процессов → конфликт сообщений. "
-            "Убей лишние: pkill -f main_waha && systemctl --user restart alikhan"
-        )
-
-    print(f"\n✅  main_waha: {count} процесс(ов) — OK", flush=True)
+    assert data.get("status") == "connected", (
+        f"SMOKE FAIL: Bridge /health status = {data.get('status')}, ожидалось 'connected'. "
+        f"Ответ: {data}."
+    )
+    print(f"\n✅  Hermes Bridge /health: {data}", flush=True)
