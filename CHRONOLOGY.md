@@ -1,5 +1,34 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 03.09.2026 — ЭТАП 3 дополнение: полный pytest bot/ зелёный + сверка канона + cron-страж
+
+**Причина:** Hermes верифицировал «30/30» только для своего скоупа, полный `pytest bot/` был красный (18 failed / 2 errors). Root cause: `test_photo_classification.py` на module-level делал `sys.modules['db']=fake_db` и заражал все тесты после себя по алфавиту. Дополнительно 4 script-теста (voice_pipeline, voice_production, speech_defects, ejo_simulation) не были pytest-совместимы (def test(name,...)+sys.exit). Ещё 2 файла (test_audit_fixes, test_qa_parser) имели орфан-импорты v5 (fill_ejo→data_sources).
+
+**Что сделано:**
+- Переименованы 5 script-тестов без префикса `test_`: `photo_classification_check.py`, `voice_pipeline_check.py`, `voice_production_check.py`, `speech_defects_check.py`, `ejo_simulation_check.py`.
+- `test_audit_fixes.py` + `test_qa_parser.py`: импорты `volumes`/`get_volumes`/`get_aibikon_headcount` перенаправлены `fill_ejo`→`data_sources` (функции переехали в v6). Codex исправил + моки через `_get_conn`/`get_staff`.
+- `test_ejo_backfill.py`: хардкод `readiness == 30.0` заменён на инвариант (`0 < v ≤ 100`) — шаблон изменился (30%→27%), change-detector тест пойман cron-стражем.
+- Создан `scripts/daily_health_check.py` — полный `pytest bot/` (100 тестов).
+- Создан `scripts/daily_data_liveness.py` — проверка накопления ОЖР/файлов/фото за 24ч.
+- Cron-страж `f7025391a89a`: ежедневно 02:00 UTC (08:00 Бишкек), прогон + живость → Telegram.
+
+**Проверка:** `pytest bot/` = **100 passed / 9 skipped / 0 failed** (было 18 failed / 2 errors). Hermes верифицировал независимо. Коммиты: `0344a7a` (fix), `c91e988` (страж полный).
+
+## 03.09.2026 — Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex → Grok Build)
+
+**Причина:** Сергей потребовал формальную сверку канона с реализацией. Исполнено через Diamond (Codex Worker A → Grok Build Worker B adversarial).
+
+**Результат: APPROVED.** 8/8 пунктов закрыты:
+- 6 ✅ — точное совпадение канона с кодом/БД (техника, ВОР, погода, backfill, _code, политика дублей)
+- 1 ⏸️ — АВР/синхронизация 7/7: канон есть, реализация осознанно отложена (синхронизация не достижима)
+- 1 учётовое — 15 таблиц канон, 17 в БД (ojr_pass_register legacy + ojr_vor_reference справочник)
+
+## 03.09.2026 — Рестарт gateway (ПАТЧ 8-бис активирован)
+
+**Причина:** Сергей перезагрузил gateway → активирован фикс drain-race входящих WhatsApp (ПАТЧ 8-бис от Hermes).
+
+**Результат:** Bridge connected, диспетчер тикает. E2E document подтверждён (id=4994 → ojr_section5_asbuilt_docs id=89). Текстовые/фото входящие — 0 (прорабы не писали после рестарта). Провал 22.08–02.09 в `bot_memory_messages` — подтверждён (12 дней пусто). Если прорабы присылали что-то в этот период и данные потерялись — восстановление через `ejo_backfill.py`.
+
 ## 02.09.2026 — ejo_backfill Round 3: идемпотентность техники без synthetic FK
 
 **Причина:** Worker B (Grok) нашёл CRITICAL: `ejo_backfill` писал в `ojr_section2_equipment.source_message_id` sha256-хеш, хотя поле — `BIGINT FK REFERENCES bot_memory_messages(id) ON DELETE SET NULL`; такого сообщения нет, FK отклонял запись, ошибка проглатывалась, техника не backfill-илась. Дополнительно backfill ЕЖО должен быть REPLACE-источником итогового количества за день, а не QA-style ADD.
@@ -1941,3 +1970,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **03.09.2026 06:39** — test(ЭТАП 3): v5-орфаны → v6 + тесты новых модулей + dead code cleanup (`5d68053`)
 - **03.09.2026 07:12** — test: readiness инвариант вместо change-detector + скрипты суточной проверки (`e5030ed`)
 - **03.09.2026 07:57** — test: полный pytest bot/ зелёный — фикс орфан-импортов + script-тесты вне pytest (`0344a7a`)
+- **03.09.2026 09:28** — страж: полный pytest bot/ вместо 5 файлов (`c91e988`)
