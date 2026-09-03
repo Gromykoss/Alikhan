@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-09-02T20:00:23.689944+00:00",
+  "built_at": "2026-09-03T20:00:10.179825+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 383,
-    "edges": 592,
+    "nodes": 390,
+    "edges": 600,
     "projects": 1,
-    "events": 73,
+    "events": 76,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,48 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-09-03",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "ЭТАП 3 дополнение: полный pytest bot/ зелёный + сверка канона + cron-страж",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-03/Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex →",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex → Grok Build)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-03/Рестарт gateway (ПАТЧ 8-бис активирован)",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Рестарт gateway (ПАТЧ 8-бис активирован)",
       {
         "type": "description"
       }
@@ -2143,7 +2185,7 @@
       }
     ],
     [
-      "parse_qa() → force_grok=True (минуя Ollama)",
+      "03.09.2026: ветка Ollama удалена; ask_grok() всегда вызывает ask_grok_raw()",
       {
         "type": "description"
       }
@@ -3908,13 +3950,6 @@
       "confidence": 0.88
     },
     {
-      "source": "db_table/bot_memory_messages",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.88
-    },
-    {
       "source": "db_table/bot_schedule_phases",
       "target": "project/alikhan",
       "predicate": "referenced_in",
@@ -4242,6 +4277,69 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      "target": "2026-09-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      "target": "ЭТАП 3 дополнение: полный pytest bot/ зелёный + сверка канона + cron-страж",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-03/Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex →",
+      "target": "2026-09-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-03/Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex →",
+      "target": "Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex → Grok Build)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/Сверка ЭТАПА 2 ↔ MASTER_SPEC.md (Diamond: Codex →",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-03/Рестарт gateway (ПАТЧ 8-бис активирован)",
+      "target": "2026-09-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-03/Рестарт gateway (ПАТЧ 8-бис активирован)",
+      "target": "Рестарт gateway (ПАТЧ 8-бис активирован)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/Рестарт gateway (ПАТЧ 8-бис активирован)",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-09-02/ejo_backfill Round 3: идемпотентность техники без",
@@ -6415,7 +6513,7 @@
     },
     {
       "source": "fix/al-005",
-      "target": "parse_qa() → force_grok=True (минуя Ollama)",
+      "target": "03.09.2026: ветка Ollama удалена; ask_grok() всегда вызывает ask_grok_raw()",
       "predicate": "described_as",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
       "confidence": 0.88

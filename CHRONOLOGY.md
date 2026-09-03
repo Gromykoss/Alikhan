@@ -1,5 +1,19 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 03.09.2026 — ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPROVED, pytest 124/9/0)
+
+**Причина:** формализация контрактов всех швов системы (канон = код).
+
+**Что сделано (коммиты `1f4efdd`, `de0b2bc`, `747221f`):**
+- A1: golden-file `bot/tests/fixtures/ejo_template_snapshot.xlsx` + контракт-тест колонок ЕЖО K-U; 15 JSON Schema draft-07 для NamedTuple из `data_sources.py` + drift-тесты.
+- A2: `docs/bridge_openapi.json` (OpenAPI 3.0.3, /health, /messages, /messages-ack, /send, /collect-messages) + live smoke `test_bridge_contract.py` (5/5).
+- A3: endpoint в AGENTS.md/INDEX.md исправлен на `/extract-document`.
+- A4: JSON Schema Grok QA (`qa_fact.json`, `qa_facts_array.json`) + drift-тест.
+- A5: удалена мёртвая ветка Ollama (`ask_ollama`, OLLAMA_URL/MODEL) из `handlers.py`/`config.py`; `ask_grok()` → `ask_grok_raw()` напрямую; BUGS.md AL-005 закрыт.
+- A7: office-мост — исходящий `bot/tests/schemas/office_forward_payload.json` (topic enum 5 значений, text ≤4000) + входящий `docs/office_reply_openapi.yaml` (HMAC обязателен, Human Gate) + тесты.
+
+**Проверка:** Diamond Codex Maker → Grok Build Checker APPROVED (5/5) на каждом коммите. `pytest bot/` = **124 passed / 9 skipped / 0 failed**. Все изменения — tests/docs/CHRONOLOGY, боевой код не тронут (кроме удаления мёртвой ветки A5).
+
 ## 03.09.2026 — ЭТАП 3 дополнение: полный pytest bot/ зелёный + сверка канона + cron-страж
 
 **Причина:** Hermes верифицировал «30/30» только для своего скоупа, полный `pytest bot/` был красный (18 failed / 2 errors). Root cause: `test_photo_classification.py` на module-level делал `sys.modules['db']=fake_db` и заражал все тесты после себя по алфавиту. Дополнительно 4 script-теста (voice_pipeline, voice_production, speech_defects, ejo_simulation) не были pytest-совместимы (def test(name,...)+sys.exit). Ещё 2 файла (test_audit_fixes, test_qa_parser) имели орфан-импорты v5 (fill_ejo→data_sources).
@@ -1975,3 +1989,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **03.09.2026 11:50** — docs: сверка ЭТАП 2↔MASTER_SPEC + хронология 03.09 (`76d0add`)
 - **03.09.2026 15:29** — контракты швов A1/A3/A5: Ollama удалён + golden-file ЕЖО + JSON Schema NamedTuple (`1f4efdd`)
 - **03.09.2026 15:55** — контракты швов A2/A4: OpenAPI bridge + Grok QA JSON Schema (`de0b2bc`)
+- **03.09.2026 16:33** — контракт шва A7: office-мост (исходящий payload + входящий office-reply) (`747221f`)
+- **03.09.2026 23:05** — chrono: ЭТАП 3 закрыт (A1–A7, pytest 124/9/0) — авто-брифинг + синхронизация
