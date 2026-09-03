@@ -82,7 +82,7 @@ def test_grok_hallucination_filter():
     """Verify volumes() in fill_ejo skips category='монтаж' facts."""
     # This test verifies the filter logic by checking that only 'объём'/'план'
     # categories contribute to volumes. We simulate DB facts.
-    from fill_ejo import get_volumes
+    from data_sources import get_volumes
     # Note: full DB integration test would require test DB; here we just
     # ensure the function exists and basic import works. The filter is
     # documented in qa.py parse flow and fill_ejo volumes query.
