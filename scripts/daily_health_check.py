@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Ежесуточная проверка логики и архитектуры проекта Alikhan.
 
-Гоняет pytest по:
-  - test_contracts.py  — архитектурные контракты (статические инварианты)
-  - test_smoke.py      — боевые smoke (bridge :3000, БД, шаблон ЕЖО, персонал)
+Гоняет ПОЛНЫЙ pytest по каталогу bot/ (все test_*.py).
+Почему полный, а не выборочный: контаминация типа sys.modules['db']=fake_db
+в одном файле заражает ВСЕ тесты после себя — поймать её можно только полным
+прогоном. Пример: test_photo_classification.py (вычищен 03.09) валил каскад.
 
 Вывод ДЕТЕРМИНИРОВАН (для cron monitor): без таймстампов и времени выполнения,
 чтобы monitor-гейт просыпался только при реальном изменении состояния.
@@ -16,18 +17,11 @@ import subprocess
 
 BOT_DIR = "/home/hermes-workspace/Alikhan-migration/bot"
 PYTHON = "/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3"
-TESTS = [
-    "test_contracts.py",     # архитектурные контракты
-    "test_smoke.py",         # боевые smoke (bridge, БД, шаблон, персонал)
-    "test_ejo_backfill.py",  # ЭТАП 2: обратный разбор ЕЖО
-    "test_vor_reference.py", # ЭТАП 2: справочник ВОР
-    "test_equipment.py",     # ЭТАП 2: учёт техники
-]
 
 
 def main():
     r = subprocess.run(
-        [PYTHON, "-m", "pytest", *TESTS, "-q", "--tb=no", "-p", "no:cacheprovider"],
+        [PYTHON, "-m", "pytest", "-q", "--tb=no", "-p", "no:cacheprovider"],
         cwd=BOT_DIR,
         capture_output=True,
         text=True,
