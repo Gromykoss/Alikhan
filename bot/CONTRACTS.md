@@ -2,7 +2,7 @@
 
 > **Назначение:** единый источник истины о зависимостях, контрактах и правилах взаимодействия модулей.
 > **Обновляется:** при любом изменении сигнатур функций, импортов или публичного API модулей.
-> **Дата:** 12.08.2026 — обновлено после аудита: удалены main_waha.py, bridge_wrapper.py, daily_snapshot.py; точка входа v6 — whatsapp_commands.py
+> **Дата:** 03.09.2026 — добавлен детерминированный справочник ВОР (`ojr_vor_reference`, `vor_reference.py`)
 > **Используется:** `scripts/pre_delegation.py` для сборки контекста при делегировании задач в Codex/Grok Build.
 
 ---
@@ -19,6 +19,7 @@
   messaging.py  → Hermes Agent (прямой вызов, secret_config для KEY)
   alerter.py    → db.py, secret_config (алерты Telegram + ojr_incidents)
   office_forward.py → secret_config, requests (webhook офиса)
+  vor_reference.py → db.py, openpyxl (импорт справочника ВОР из xlsx)
 
 Уровень 2 (обработчики):
   qa.py         → Hermes Agent, secret_config
@@ -125,6 +126,8 @@ db.py ──► ejo_backfill.py
 | `get_daily_equipment(ds)` | `-> list` | Техника за дату |
 | `save_weather(ds, data)` | — | Сохраняет погоду |
 | `get_daily_incidents(ds)` | `-> list` | Инциденты за дату |
+| `get_vor_reference()` | `-> list[dict]` | Полный справочник ВОР из `ojr_vor_reference` |
+| `get_vor_by_code(code)` | `-> dict \| None` | Одна позиция справочника ВОР по точному коду |
 
 #### ⛔ КРИТИЧЕСКИЕ ПРАВИЛА
 
@@ -134,6 +137,7 @@ db.py ──► ejo_backfill.py
 4. **Закрывать курсоры** после использования. `get_conn()` открывает соединение, но курсоры — ответственность вызывающего.
 5. **`save_equipment(..., mode='add')`** — дефолт для QA: разные `source_message_id` суммируются, повтор того же `source_message_id` перезаписывает количество без задвоения.
 6. **`save_equipment(..., mode='replace')`** — режим backfill ЕЖО: `quantity` всегда перезаписывается итоговым значением за день, `source_message_id` принудительно остаётся `NULL`; синтетические хеши в FK `ojr_section2_equipment.source_message_id` запрещены.
+7. **`ojr_vor_reference`** — справочник кодов ВОР; запись справочника выполняет только `vor_reference.py` через `get_conn()`, штатные читатели используют `get_vor_reference()` / `get_vor_by_code(code)`.
 
 ---
 
@@ -389,6 +393,54 @@ db.py ──► ejo_backfill.py
 
 ---
 
+### 2.9b. vor_reference.py — Импорт справочника ВОР
+
+| Свойство | Значение |
+|----------|----------|
+| **Файл** | `bot/vor_reference.py` |
+| **Зависит от** | `db.py` (`get_conn`), `openpyxl`, `pathlib`, `decimal`, `re` |
+| **Импортируется в** | — (запускается вручную после APPROVED) |
+
+#### Экспортирует
+
+| Имя | Сигнатура | Описание |
+|-----|-----------|----------|
+| `load_vor_reference` | `(vor_path=None, priced_path=None, dry_run=False) -> dict` | Детерминированно читает `report/templates/ВОР.xlsx`, подхватывает расценки из `ВОР_с_расценками.xlsx` и upsert-ит `ojr_vor_reference` |
+
+#### Таблица `ojr_vor_reference`
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `id` | `SERIAL PRIMARY KEY` | Технический ID |
+| `vor_code` | `TEXT NOT NULL UNIQUE` | Код ВОР вида `2.1.1` |
+| `work_name` | `TEXT` | Наименование работ |
+| `unit` | `TEXT` | Единица измерения |
+| `stage` | `TEXT` | Этап, например `2 этап` |
+| `quantity` | `NUMERIC` | Проектный объём из `ВОР.xlsx` col5 |
+| `unit_price` | `NUMERIC` | Единичная расценка из `ВОР_с_расценками.xlsx` col6 |
+| `source` | `TEXT DEFAULT 'ВОР.xlsx'` | Источник базовой ВОР |
+| `created_at` | `TIMESTAMPTZ DEFAULT NOW()` | Время создания |
+
+#### Маппинг Excel
+
+| Файл | Колонки | Правило |
+|------|---------|---------|
+| `ВОР.xlsx` | A=stage, B=vor_code, C=work_name, D=unit, E=quantity | Берутся только строки, где B матчится `^\d+(\.\d+)+$`; заголовки/подзаголовки пропускаются |
+| `ВОР_с_расценками.xlsx` | B=vor_code, F=unit_price | Расценка подхватывается по точному коду; отсутствие файла или цены не валит импорт |
+
+#### ⛔ КРИТИЧЕСКИЕ ПРАВИЛА
+
+1. **Никакого LLM-парсинга.** Только значения утверждённых Excel-колонок.
+2. **`dry_run=True` обязателен для проверки без APPROVED:** считает `total/with_price/skipped_conflict`, не открывает DB connection и ничего не пишет.
+3. **Реальная запись только через `get_conn()`** и `INSERT ... ON CONFLICT (vor_code) DO UPDATE`.
+4. **Ошибки отдельных строк не валят импорт:** строка пропускается с `print`, успешные строки защищены savepoint-ами.
+5. **Уникальность — по `vor_code`:** при дублях в Excel итоговая запись одна на код.
+6. **Конфликт справочника не затирается:** если `vor_code` уже есть в `ojr_vor_reference`, но нормализованные `work_name` или `unit` отличаются от импортируемых, строка пропускается и учитывается в `skipped_conflict`.
+7. **Цена не стирается пустым импортом:** при повторном импорте без расценки `unit_price` сохраняет старое значение через `COALESCE(EXCLUDED.unit_price, ojr_vor_reference.unit_price)`.
+8. **Код ВОР нормализуется как строковый идентификатор:** запятые заменяются точками, пробелы убираются; float-значения не форматируются через `.15g`, чтобы не применять числовую нормализацию к коду.
+
+---
+
 ### 2.10. alerter.py — Алерты (Telegram + ojr_incidents)
 
 | Свойство | Значение |
@@ -444,6 +496,7 @@ db.py ──► ejo_backfill.py
 | **data_sources.py** | `fill_ejo.py` | Контрактные NamedTuple + 12 функций. Заполнение ЕЖО целиком |
 | **fill_ejo.py** | `whatsapp_commands.py` | Генерация ЕЖО, вставка фото, расчёт процентов |
 | **ejo_backfill.py** | `db.py` | Обратный разбор ЕЖО в ОЖР; проверить idempotency helpers и `ojr_daily_summary` |
+| **vor_reference.py** | `db.py`, `report/templates/ВОР*.xlsx` | Импорт справочника ВОР; проверить dry-run, regex кодов, upsert по `vor_code` |
 | **alerter.py** | `whatsapp_commands.py` | Telegram-алерты, мониторинг ojr_incidents |
 | **whatsapp_commands.py** | — (точка входа) | Полный цикл: Bridge poll → обработка → ответ |
 
@@ -491,6 +544,7 @@ db.py ──► ejo_backfill.py
     "data_sources.py": ["db.py", "config.py"],
     "fill_ejo.py": ["data_sources.py"],
     "ejo_backfill.py": ["db.py"],
+    "vor_reference.py": ["db.py"],
     "alerter.py": ["db.py", "secret_config.py"],
     "whatsapp_commands.py": ["messaging.py", "handlers.py", "qa.py", "poll.py", "fill_ejo.py", "alerter.py", "config.py", "db.py"]
   },
@@ -519,7 +573,7 @@ db.py ──► ejo_backfill.py
       "level": 0,
       "priority": "P0",
       "description": "Единственная точка подключения к БД (PostgreSQL/psycopg2). DB_PASS через secret_config.",
-      "exports": ["get_conn", "DB_CONFIG", "resolve_db_host", "save_message", "save_fact", "get_daily_personnel", "get_daily_works", "save_equipment", "get_daily_equipment", "save_weather", "get_daily_incidents"],
+      "exports": ["get_conn", "DB_CONFIG", "resolve_db_host", "save_message", "save_fact", "get_daily_personnel", "get_daily_works", "save_equipment", "get_daily_equipment", "save_weather", "get_daily_incidents", "get_vor_reference", "get_vor_by_code"],
       "critical_rules": [
         "get_conn() — единственная точка подключения. Никакой модуль не создаёт psycopg2.connect() напрямую",
         "Не хардкодить DB_CONFIG в других модулях",
@@ -607,6 +661,18 @@ db.py ──► ejo_backfill.py
         "Готовность пишется в ojr_daily_summary.completion_pct через get_conn(), потому что save_daily_summary нет",
         "Backfill импортирует только суточные L/M; накопления O/P/R/S вычисляются и не импортируются",
         "Фото в этом этапе не импортируются, photos считает встроенные media-файлы xl/media"
+      ]
+    },
+    "vor_reference.py": {
+      "level": 1,
+      "priority": "P2",
+      "description": "Детерминированный импорт справочника ВОР из report/templates/ВОР.xlsx с расценками из ВОР_с_расценками.xlsx.",
+      "exports": ["load_vor_reference"],
+      "critical_rules": [
+        "Никакого LLM-парсинга — только Excel-колонки A/E и F для цены",
+        "dry_run=True не открывает DB connection и ничего не пишет",
+        "Реальная запись только через db.get_conn() и ON CONFLICT (vor_code) DO UPDATE",
+        "Строки без кода по regex ^\\d+(\\.\\d+)+$ пропускаются"
       ]
     },
     "alerter.py": {

@@ -233,6 +233,29 @@ CREATE INDEX IF NOT EXISTS idx_ojr_work_log_poll        ON ojr_section3_work_log
 COMMENT ON TABLE ojr_section3_work_log IS 'Раздел 3 ОЖР — Выполнение работ (ежедневный журнал, код ВОР, объём, подрядчик, здание)';
 
 
+-- 6a. СПРАВОЧНИК ВОР
+-- ============================================================================
+-- Детерминированный справочник кодов работ из ведомости объёмов работ
+CREATE TABLE IF NOT EXISTS ojr_vor_reference (
+    id                  SERIAL PRIMARY KEY,
+    vor_code            TEXT NOT NULL,                 -- Код ВОР (напр. «2.1.1»)
+    work_name           TEXT,                          -- Наименование работ
+    unit                TEXT,                          -- Единица измерения
+    stage               TEXT,                          -- Этап (напр. «2 этап»)
+    quantity            NUMERIC,                       -- Проектный объём из ВОР.xlsx
+    unit_price          NUMERIC,                       -- Единичная расценка из ВОР_с_расценками.xlsx
+    source              TEXT DEFAULT 'ВОР.xlsx',
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+
+    CONSTRAINT uq_ojr_vor_reference_code UNIQUE (vor_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ojr_vor_reference_stage ON ojr_vor_reference(stage);
+CREATE INDEX IF NOT EXISTS idx_ojr_vor_reference_work_name ON ojr_vor_reference(work_name);
+
+COMMENT ON TABLE ojr_vor_reference IS 'Справочник ВОР — код работы, наименование, единица измерения, проектный объём, расценка и этап';
+
+
 -- 7. РАЗДЕЛ 4: СТРОИТЕЛЬНЫЙ КОНТРОЛЬ
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS ojr_section4_construction_control (

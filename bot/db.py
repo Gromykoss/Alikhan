@@ -1108,6 +1108,40 @@ def get_daily_works(date_str):
     return rows
 
 
+def get_vor_reference():
+    """Get the full VOR reference ordered by stage and code."""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT vor_code, work_name, unit, stage, quantity, unit_price, source, created_at
+        FROM ojr_vor_reference
+        ORDER BY stage NULLS LAST, vor_code
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def get_vor_by_code(code):
+    """Get one VOR reference row by normalized exact code."""
+    from vor_reference import _code
+
+    normalized_code = _code(code)
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("""
+        SELECT vor_code, work_name, unit, stage, quantity, unit_price, source, created_at
+        FROM ojr_vor_reference
+        WHERE vor_code = %s
+        LIMIT 1
+    """, (normalized_code,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+
 def get_daily_equipment(date_str):
     """Get equipment for a given date from ojr_section2_equipment."""
     conn = get_conn()
