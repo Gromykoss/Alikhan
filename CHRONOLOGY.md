@@ -2022,3 +2022,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **04.09.2026 11:47** — chrono+handoff: 04.09 финал Diamond — уроки гварда, канон Б статусы, контрольные точки следующей сессии (`606f3e4`)
 - **04.09.2026 11:47** — chrono: self-log 606f3e4 (`246d2b6`)
 - **04.09.2026 11:47** — chrono: self-log iteration 1 (`2b61625`)
+- **04.09.2026 11:47** — chrono: self-log iteration 2 (`03600fd`)
