@@ -1991,3 +1991,22 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **03.09.2026 15:55** — контракты швов A2/A4: OpenAPI bridge + Grok QA JSON Schema (`de0b2bc`)
 - **03.09.2026 16:33** — контракт шва A7: office-мост (исходящий payload + входящий office-reply) (`747221f`)
 - **03.09.2026 23:05** — chrono: ЭТАП 3 закрыт (A1–A7, pytest 124/9/0) — авто-брифинг + синхронизация
+- **03.09.2026 23:07** — chrono: 2026-09-03 — авто-синхронизация (`835258a`)
+- **04.09.2026 04:48** — watchdog_bridge v6: переписан cron-монитор WhatsApp Bridge как detect-only без `systemctl` и без рестартов. Добавлены классификации `BRIDGE_DOWN`/`BRIDGE_DOWNGRADED`/`NOT_CONNECTED`, persistent state `/tmp/alikhan_watchdog_state.json` с атомарной записью и защитой от битого JSON, threshold=3 per-type с дедупликацией, Telegram-first алерты из `~/.hermes/secrets.env` и Discord fallback, recovery-алерт только после реально доставленного incident alert. Проверка: `python3 -m py_compile bot/watchdog_bridge.py` PASS; мок-классификация 4/4 PASS; persistence/dedupe/type-change/recovery PASS; `rg` подтвердил отсутствие `systemctl`/`subprocess`; real `/health` сейчас `status=connected`, но без `collectOnlyChats` → новая классификация `BRIDGE_DOWNGRADED`. Файлы: `bot/watchdog_bridge.py`, `CHRONOLOGY.md`.
+- **04.09.2026 04:53** — watchdog_bridge: исправлен критерий `BRIDGE_DOWNGRADED` под реальный A+ durable queue контракт v0.20.4. `_classify_health()` больше не требует `collectOnlyChats` в `/health`; после успешного `/health` проверяет `/collect-messages?only=PRODUCTION` = 404 и `/messages-ack {"messageIds":[]}` != 404, затем `status=connected`. Тексты recovery переведены на «контракт A+ OK». Проверка: `python3 -m py_compile bot/watchdog_bridge.py` PASS; мок-классификация 5/5 PASS; `run_once()` не запускался. Файлы: `bot/watchdog_bridge.py`, `CHRONOLOGY.md`.
+- **04.09.2026 05:06** — watchdog_bridge Round 3: исправлены 6 замечаний adversarial review Grok по надёжности алертов и контракту A+. Удалён любой вызов `/collect-messages`; downgrade теперь только явный HTTP 404 от `POST /messages-ack {"messageIds":[]}`, timeout/refused/5xx/4xx кроме 404 при живом `/health status=connected` не алертят downgrade. Дедуп incident-алерта переведён на `alert_sent`, добавлен `MAX_ALERT_ATTEMPTS=5`, attempts фиксируются на диске до HTTP-отправки. Recovery стал pending+retry до успешной доставки. `run_once()` обёрнут в `fcntl.flock` на `/tmp/alikhan_watchdog_state.json.lock`, state сохраняется до отправки incident/recovery алертов. Проверка: `python3 -m py_compile bot/watchdog_bridge.py` PASS; мок-классификация 6/6 PASS; мок-дедуп показал retry на 4-м тике после провала 3-го (`alert_attempts=2`); мок-recovery ретраит до успешной доставки; `rg "/collect-messages" bot/watchdog_bridge.py` без совпадений; `run_once()` использовался только с временными `STATE_PATH/LOCK_PATH`, боевой state не запускался. Файлы: `bot/watchdog_bridge.py`, `CHRONOLOGY.md`.
+
+## 04.09 — Восстановление WhatsApp-контура после update v0.21.0 (Hermes + Сергей)
+
+**Контекст:** после update 04.09 03:20 мост offline. Первичный диагноз «disabled в конфиге» оказался неполным.
+
+**Хронология фикса (3 слоя):**
+1. `platforms.disabled` пуст → but adapter не поднялся при рестарте 05:34. Корень: upstream `febd2af391` (02.09) — whatsapp больше не строится из secondary multiplex-профилей. Контракт изменён: whatsapp на PRIMARY конфиге.
+2. Фикс: `platforms.whatsapp` перенесена из профильного конфига в `~/.hermes/config.yaml` (Hermes); `WHATSAPP_ENABLED=false→true` в `.env`. Бэкапы `.bak-waprim-20260904-0615`.
+3. Рестарт 05:56: bridge поднялся, но «Unauthorized user: 101193942573217@lid» — LID-резолвинг ищет `lid-mapping-*.json` в default-пути `~/.hermes/whatsapp/session`, а они в профильной сессии.
+4. Фикс: симлинк `~/.hermes/whatsapp/session → profiles/alikhan/whatsapp/session`; в `WHATSAPP_ALLOWED_USERS` добавлен актуальный номер Сергея (79218***453, старый сохранён).
+5. Рестарт 06:08: **контур жив** — bridge connected (hash 32dfb86c), 2 входящих приняты+acked (06:11, 06:14 UTC), авторизация пройдена. Песочница collect-only — agent-ответ по дизайну отключён. Полный E2E — через 5ч.
+
+**Урок:** upstream-изменения контрактов платформ (skip-WA-on-secondary) надо ловить на этапе diff-обзора update, не продакшеном.
+
+**Hermes-зона:** config.yaml, .env, симлинк, secrets.env (алерт-токен watchdog). **Alikhan-зона:** watchdog_bridge.py (Codex, APPROVED), E2E-тест.
