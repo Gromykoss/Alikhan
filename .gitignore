@@ -34,3 +34,10 @@ bot/bot.log
 bot/seen_ids.json
 bot/prod_seen_ids.json
 *.log
+
+# Бэкапы шаблонов вида *.bak_0831_0731 (не матчатся *.bak.*)
+*.bak_*
+
+# Локальные артефакты (фото-архив, временные логи Codex/Grok)
+photo_archive/
+tmp/
