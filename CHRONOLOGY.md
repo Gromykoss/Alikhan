@@ -2010,3 +2010,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 **Урок:** upstream-изменения контрактов платформ (skip-WA-on-secondary) надо ловить на этапе diff-обзора update, не продакшеном.
 
 **Hermes-зона:** config.yaml, .env, симлинк, secrets.env (алерт-токен watchdog). **Alikhan-зона:** watchdog_bridge.py (Codex, APPROVED), E2E-тест.
+- **04.09.2026 06:20** — chronology: восстановление WhatsApp-контура 04.09 — 3 слоя фикса (disabled/upstream febd2af391/LID-auth) (`e2d07ba`)
