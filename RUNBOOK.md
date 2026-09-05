@@ -11,7 +11,7 @@
 ```bash
 # WhatsApp Bridge (Hermes Bridge, Baileys, mode=bot)
 curl -s http://127.0.0.1:3000/health
-systemctl --user status hermes-whatsapp-bridge
+# (unit hermes-whatsapp-bridge НЕ существует — мост живёт в gateway)
 
 # Document Extractor
 curl -fsS http://127.0.0.1:8099/health
@@ -49,7 +49,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 
 | Сервис | Тип | Команда проверки |
 |:-------|:----|:-----------------|
-| `hermes-whatsapp-bridge` | `systemctl --user` | `curl -s http://127.0.0.1:3000/health` |
+| `hermes-whatsapp-bridge` | внутри gateway | `curl -s http://127.0.0.1:3000/health` |
 | `alikhan-document-extractor` | `systemctl --user` | `curl -fsS http://127.0.0.1:8099/health` |
 
 **alikhan.service (Python-бот) — ОСТАНОВЛЕН 29.07.2026.** Alikhan работает как агент Hermes напрямую через Bridge.
@@ -69,7 +69,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | `bot/watchdog_bridge.py` | Watchdog для Hermes Bridge |
 | `bot/backup_db.py` | Бэкап/восстановление PostgreSQL |
 | `bot/config.py` | Централизованный конфиг |
-| `db/ojr_schema.sql` | Схема БД — 14 таблиц ОЖР |
+| `db/ojr_schema.sql` | Схема БД — 15 таблиц ОЖР |
 | `db/ojr_er_diagram.md` | ER-диаграмма |
 | `db/ojr_fill_guide.md` | Руководство по заполнению |
 
@@ -79,19 +79,15 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 
 ### WhatsApp Bridge (Hermes Bridge)
 
+> ⛔ **Unit `hermes-whatsapp-bridge` НЕ существует.** Мост (`bridge.js`) живёт внутри `hermes-gateway` (спавнится при connect профиля alikhan). Рестарт — только через gateway, а рестарт gateway запрещён (GATEWAY RESTART BAN) — только Сергей/оператор.
+
 ```bash
-# Статус
-systemctl --user status hermes-whatsapp-bridge
+# Статус моста
+curl -s http://127.0.0.1:3000/health
+# → {"status":"connected", "queueLength":0, "uptime":..., "scriptHash":"..."}
 
-# Перезапуск
-systemctl --user restart hermes-whatsapp-bridge
-
-# Логи
-journalctl --user -u hermes-whatsapp-bridge --since "10 minutes ago"
+# Если disconnected — НЕ рестартуй сам. Доложи Hermes в #infrastructure / Сергею.
 ```
-
-**⚠️ При перезапуске моста бот может потерять ~30 секунд сообщений.**
-Убедись что бот переподключился: `curl -s http://127.0.0.1:3000/health` → `"status":"connected"`.
 
 ### Python-бот (main_waha.py) — ⛔ БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ
 
@@ -100,7 +96,7 @@ Alikhan работает как агент Hermes напрямую через Br
 ### Document Extractor
 
 ```bash
-sudo systemctl restart alikhan-document-extractor
+systemctl --user restart alikhan-document-extractor
 curl -fsS http://127.0.0.1:8099/health
 ```
 
@@ -117,21 +113,19 @@ curl -fsS http://127.0.0.1:8099/health
    docker ps --filter "name=evolution-postgres"
    → evolution-postgres Up ✅ | ❌ → sudo systemctl restart docker
 
-3. Python бот запущен?
-   pgrep -af main_waha.py → есть PID ✅ | ❌ → шаг «Перезапуск»
+3. Hermes Agent получает сообщения?
+   grep "platform=whatsapp" gateway.log → есть inbound ✅ | ❌ → проверить мост
 
 4. Бот получает сообщения?
-   tail -30 /tmp/alikhan.log | grep -i "message\|poll\|error"
-   → есть активность ✅ | ❌ → проверить мост + бот
+   grep "platform=whatsapp" gateway.log | tail
+   → есть активность ✅ | ❌ → проверить мост + агента
 
-5. Перезапустить WhatsApp Bridge (если disconnected):
-   systemctl --user restart hermes-whatsapp-bridge
-   sleep 10
-   curl -s http://127.0.0.1:3000/health
+5. Если bridge disconnected — НЕ рестартуй сам (GATEWAY RESTART BAN):
+   доложи Hermes в #infrastructure / Сергею.
+   Проверка: curl -s http://127.0.0.1:3000/health
 
 6. Логи:
-   journalctl --user -u hermes-whatsapp-bridge --since "30 minutes ago" | tail -30
-   tail -50 /tmp/alikhan.log
+   journalctl --user -u hermes-gateway --since "30 minutes ago" | tail -30
 ```
 
 ---
@@ -233,26 +227,22 @@ SIM_DATE = "2026-06-30"
 ### Проверка систем мониторинга
 
 ```bash
-# Watchdog моста (каждые 5 минут, cron)
-tail -30 /tmp/alikhan_watchdog.log
+# Мост (health)
+curl -s http://127.0.0.1:3000/health
 
-# Prometheus метрики
-curl -s http://localhost:9090/metrics | head -30
+# Document Extractor
+curl -fsS http://127.0.0.1:8099/health
 
-# Telegram алерты
-# Настройка в ~/.hermes/secrets.env:
-#   ALERT_TELEGRAM_TOKEN=...
-#   ALERT_TELEGRAM_CHAT_ID=...
-#   DISCORD_WEBHOOK_URL=...
+# PostgreSQL
+docker ps --filter "name=evolution-postgres"
 
-# Health check (8 измерений)
-python3 ~/.hermes/scripts/alikhan_health_check.py
+# Telegram-алерты (cron-страж, ежедневно 02:00 UTC)
+#   scripts/daily_health_check.py + scripts/daily_data_liveness.py
 ```
 
 **Триггеры алертов:**
-- Hermes Bridge не отвечает > 15 минут (watchdog, авто-рестарт)
-- Бот не отвечает > 10 минут
-- Ошибок > 5 за 5 минут
+- Hermes Bridge `status != connected` → доложить Hermes/Сергею (не рестартить самому)
+- Cron-страж `f7025391a89a` (02:00 UTC) — pytest + живость → Telegram
 - Grok API недоступен
 - PostgreSQL не отвечает
 
@@ -262,11 +252,11 @@ python3 ~/.hermes/scripts/alikhan_health_check.py
 
 | Симптом | Причина | Решение |
 |:--------|:--------|:--------|
-| Тройные ответы в WhatsApp | Зомби-процесс main_waha | `sudo systemctl restart alikhan-bot` |
-| Бот не видит сообщения | Bridge не запущен | `systemctl --user restart hermes-whatsapp-bridge` |
-| Bridge health = disconnected | Сессия WhatsApp истекла | Проверить `journalctl --user -u hermes-whatsapp-bridge`, перезапустить, заново привязать QR |
+| Тройные ответы в WhatsApp | Зомби-процесс/дубль gateway | Доложить Hermes (рестарт gateway — только оператор) |
+| Бот не видит сообщения | Bridge не запущен | `curl -s http://127.0.0.1:3000/health`; disconnected → доложить Hermes |
+| Bridge health = disconnected | Сессия WhatsApp истекла | Доложить Hermes (релинк/рестарт — только оператор), заново привязать QR |
 | ЕЖО пустой / нет данных | Данные не попали в `ojr_section3_work_log` | `SELECT * FROM ojr_section3_work_log WHERE work_date = CURRENT_DATE` |
-| Фото не обрабатываются | Document extractor упал | `sudo systemctl restart alikhan-document-extractor` |
+| Фото не обрабатываются | Document extractor упал | `systemctl --user restart alikhan-document-extractor` |
 | Ошибка «табель не найден» | Файл табеля не загружен | Прислать табель как документ в WhatsApp |
 | Watchdog не алертит | Не настроен DISCORD_WEBHOOK_URL | Добавить webhook в `~/.hermes/secrets.env` |
 | Бэкапы не создаются | Нет прав на `/backups/` | `sudo chown $(whoami):$(whoami) /backups` |
@@ -296,30 +286,27 @@ docker ps --filter "name=evolution-postgres"
 # 2. Запустить PostgreSQL если упал
 docker start evolution-postgres 2>/dev/null || true
 
-# 3. Запустить WhatsApp Bridge
-systemctl --user start hermes-whatsapp-bridge
+# 3. Запустить WhatsApp Bridge (внутри gateway)
+#    ⛔ НЕ рестартить gateway самому — доложить Hermes/Сергею
 sleep 10
 curl -s http://127.0.0.1:3000/health
 
-# 4. Запустить бота
-sudo systemctl start alikhan-bot
+# 4. Hermes Agent (Alikhan) — работает как агент, отдельного процесса нет
 
 # 5. Запустить Document Extractor
 sudo systemctl start alikhan-document-extractor
 
 # 6. Проверить всё
-python3 ~/.hermes/scripts/alikhan_health_check.py
-tail -30 /tmp/alikhan.log
+curl -s http://127.0.0.1:3000/health
+curl -fsS http://127.0.0.1:8099/health
 ```
 
 ### Только WhatsApp Bridge упал (бот жив, БД жива)
 
 ```bash
-systemctl --user restart hermes-whatsapp-bridge
-sleep 10
-# Бот должен автоматически переподключиться
-# Если нет — перезапустить бота:
-sudo systemctl restart alikhan-bot
+# ⛔ НЕ рестартить gateway самому — GATEWAY RESTART BAN.
+# Доложить Hermes в #infrastructure / Сергею, оператор перезапустит.
+curl -s http://127.0.0.1:3000/health
 ```
 
 ### Повреждена БД ОЖР
@@ -330,9 +317,6 @@ ls -t /backups/alikhan_db_*.sql.gz | head -1 | xargs python3 /home/hermes-worksp
 
 # Проверить что таблицы восстановились
 docker exec evolution-postgres psql -U evolution -d evolution_db -c "\dt ojr_*"
-
-# Перезапустить бота
-sudo systemctl restart alikhan-bot
 ```
 
 ---
@@ -343,14 +327,11 @@ sudo systemctl restart alikhan-bot
 |:-------|:---------------|
 | Исходный код | `/home/hermes-workspace/Alikhan-migration/bot/` |
 | Шаблон ЕЖО | `bot/templates/ЕЖО_шаблон.xlsx` |
-| Схема БД | `db/ojr_schema.sql` (14 таблиц) |
-| Логи бота | `/tmp/alikhan.log` |
-| Логи моста | `journalctl --user -u hermes-whatsapp-bridge` |
-| Логи watchdog | `/tmp/alikhan_watchdog.log` |
+| Схема БД | `db/ojr_schema.sql` (15 таблиц) |
+| Логи агента | Hermes session logs (не `/tmp/alikhan.log` — бот остановлен) |
+| Логи моста | `journalctl --user -u hermes-gateway` |
 | Бэкапы | `/backups/` (ежедневно, ротация 30 дней) |
-| Системный лог бота | `sudo journalctl -u alikhan-bot --since "1 hour ago"` |
-| Health check | `python3 ~/.hermes/scripts/alikhan_health_check.py` |
-| Prometheus | `http://localhost:9090/metrics` |
+| Health check | `curl :3000/health` + `curl :8099/health` |
 | Песочница WhatsApp | `120363179621030401@g.us` |
 | Боевая группа | `120363400682390076@g.us` (только с approval!) |
 
@@ -367,4 +348,4 @@ sudo systemctl restart alikhan-bot
 
 ---
 
-*Alikhan v5.0 — ОЖР · ТЗРК Джеруй · 18 июля 2026*
+*Alikhan v6.0 — прямой Hermes Bridge · ТЗРК Джеруй · обновлено 05.09.2026*
