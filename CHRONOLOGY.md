@@ -1,5 +1,23 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 05.09.2026 — Консолидация документации (фаза 1, директива Сергея)
+
+**Причина:** иерархия документации — 148 .md без структуры, дубли фактов, мёртвые доки. Карта утверждена (с 3 правками Hermes), исполнение после approval Сергея.
+
+**Что сделано (ветка `docs-consolidation`):**
+- Backup: `/tmp/alikhan-docs-backup-20260905.tar.gz` (86MB).
+- INDEX.md: «14 таблиц ОЖР»→15, путь сессии→`profiles/alikhan/whatsapp/session/`, + секция Project skills.
+- RUNBOOK.md: обновлён до v6 — unit `hermes-whatsapp-bridge` не существует (мост в gateway, рестарт запрещён); `main_waha.py`/`alikhan-bot` демонтированы; `/tmp/alikhan.log`→session logs; Prometheus и `alikhan_health_check.py` (устарел) удалены.
+- METHODOLOGY.md §2 (жизненный цикл опроса + цикл ЕЖО) → MASTER_SPEC §2; METHODOLOGY → `docs/archive/`.
+- `bot/SPEC.md` удалён (v3 демонтирован 29.07; роут-таблица жива в handlers.py).
+- ~30 разовых .md + `skills/alikhan-daily-snapshot` + `skills/alikhan-photo-vision` + `skills/README.md` → `docs/archive/` (git mv, история сохранена).
+- briefings < 01.09 (31 файл) → `docs/archive/briefings/`.
+- Мусор: `tmp/*watchdog*`, `.pytest_cache/README` ×2 — удалён.
+
+**НЕ сделано:** AGENTS.md:200,234 (путь сессии) — заблокирован файловым гвардом (protected agent-instruction file), требует команды Сергея напрямую.
+
+**Проверка:** pytest bot/ (smoke) + curl :3000/:8099 health — см. коммит.
+
 ## 03.09.2026 — ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPROVED, pytest 124/9/0)
 
 **Причина:** формализация контрактов всех швов системы (канон = код).
@@ -2024,3 +2042,25 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **04.09.2026 11:47** — chrono: self-log iteration 1 (`2b61625`)
 - **04.09.2026 11:47** — chrono: self-log iteration 2 (`03600fd`)
 - **04.09.2026 11:49** — handoff: hook-bag контрольная точка (post-commit self-log) (`0b3ff4e`)
+- **04.09.2026 11:52** — handoff: adapter-steal снят — PATCH 12 уже изолирует очереди (live-verify 04.09 11:55) (`48e3648`)
+- **04.09.2026 12:44** — chore: разгрёб рабочий каталог — .gitignore (photo_archive, tmp, *.bak_*), + migrate_passes_to_register.py, удалён бэкап ВОР (`494a00f`)
+- **04.09.2026 23:00** — chrono: 2026-09-04 — авто-синхронизация cron. За 24ч 13 коммитов; содержательные: фикс WhatsApp-контура 3 слоя (`e2d07ba`), buzz-гвард allowlist + watchdog_bridge v2 (`8034650`), gateway-адаптер канон Б sandbox-raw-ingest (`55c7bd0`), разгреб рабочего каталога + migrate_passes_to_register.py (`494a00f`). Живость 23:00 UTC: bridge connected (uptime ~12ч), extractor ok, bot_memory_messages +2 за 24ч, фактов 0 (прорабы не пишут). Открытые: E2E канона Б ждёт живого сообщения в песочницу; hook-баг post-commit (self-log loop) — фикс следующей сессией. Брифинг: `briefings/2026-09-04.md`.
+- **04.09.2026 23:05** — chrono-коммит 2026-09-04 ЗАБЛОКИРОВАН pre-commit hook, фаза 1b (NamedTuple schema drift): `❌ NamedTuple JSON Schema drift — run: python3 tests/generate_namedtuple_schemas.py`. Причина: хук вызывает bare `python3 -m pytest` (системный python без pytest), при этом в venv `~/.hermes/hermes-agent/venv/bin/python3` pytest 9.1.0 есть. По правилу «НЕ обходить hook» коммит не сделан, стоп. Изменения в рабочем каталоге (некоммичены): CHRONOLOGY.md (+2 записи), briefings/2026-09-04.md (новый), knowledge_graph/graph.json + maintenance_report.json (обновлены cron KG). Фикс на следующую сессию: в .git/hooks/pre-commit заменить bare `python3` на venv-путь или активировать venv. NOTE: этот же хук утром 04.09 пропускал chrono-коммиты — видимо, окружение изменилось (PATH/системный python).
+- **05.09.2026 03:29** — docs: консолидация документации (фаза 1) — иерархия T0-T3 (`d2baa72`)
+- **05.09.2026 03:32** — chrono: docs consolidation фаза 1 (d2baa72) — запись в CHRONOLOGY (`637cd44`)
+- **05.09.2026 03:33** — docs: RUNBOOK шапка дата → 05.09.2026 (хвост фазы 1) (`f11b502`)
+- **05.09.2026 03:36** — docs: AGENTS.md путь сессии → profiles/alikhan/whatsapp/session (правка 2 approval, гвард профиля не пускал Alikhan — выполнил Hermes-оператор) (`f707f0d`)
+- **05.09.2026 03:38** — chrono: f707f0d AGENTS session path fix (`d4d1f73`)
+- **05.09.2026 03:39** — chrono: docs consolidation фаза 1 закрыта (`0abac09`)
+- **05.09.2026 03:40** — chrono: брифинг 04.09 + KG-обновления cron (закрытие хвостов фазы 1) (`165ee06`)
+- **05.09.2026 03:40** — chrono: запись 165ee06 (`2726b58`)
+- **05.09.2026 03:40** — chrono: 2726b58 (финальная запись, без самопорождённой следующей) (`c28df01`)
+- **05.09.2026 03:51** — docs: фаза 2 — PROJECT_MEMORY_GRAPH.md + openspec карточки доменов (`3d40115`)
+- **05.09.2026 03:55** — docs: Contract Index Gate в AGENTS.md; ojr_sync.py мёртвые ссылки исправлены (INDEX x2, MASTER_SPEC, RUNBOOK) — находка Alikhan, диагноз: модуль не существовал в git, роль в db.py+whatsapp_commands.py (`ae62186`)
+- **05.09.2026 03:55** — chrono: ae62186 gate+ojr_sync (`c6c1836`)
+- **05.09.2026 03:55** — chrono: c6c1836 (окончательное, без следующей самозаписи) (`d762d7f`)
+- **05.09.2026 03:56** — docs: ojr-data-contract — убрана мёртвая ссылка ojr_sync.py + распределение синка facts→OJR (db.py section1/3+weather, whatsapp_commands фото/доки/pass_register) (`6d28b2d`)
+- **05.09.2026 03:58** — docs: openspec change-шаблоны разделены (proposal/design/tasks были идентичными копии) — правка ревью Hermes (`2f3938f`)
+- **05.09.2026 03:59** — chrono: 2f3938f templates split (`f45f129`)
+- **05.09.2026 04:02** — chrono: f45f129 (`66778bf`)
+- **05.09.2026 04:02** — chrono: 66778bf (pre-merge) (`6281db7`)

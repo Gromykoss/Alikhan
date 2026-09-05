@@ -12,7 +12,7 @@ Alikhan работает как агент Hermes — прямой WhatsApp Brid
 - Bot dir: `/home/hermes-workspace/Alikhan-migration/bot/`
 - **Alikhan работает как агент Hermes** (прямой Bridge, без отдельного бота)
 - Hermes Bridge: `systemctl --user status hermes-whatsapp-bridge` (port 3000, mode=bot)
-- Bridge session: `~/.hermes/sessions/whatsapp/`
+- Bridge session: `~/.hermes/profiles/alikhan/whatsapp/session/`
 - Номер телефона: 79958974452
 - ~~main_waha.py~~ — НЕ ИСПОЛЬЗУЕТСЯ (миграция 29.07.2026)
 - ~~bridge_wrapper.py~~ — НЕ ИСПОЛЬЗУЕТСЯ (monkey-patch удалён)
@@ -22,8 +22,8 @@ Alikhan работает как агент Hermes — прямой WhatsApp Brid
 - AVR generator: `/home/hermes-workspace/Alikhan-migration/bot/avr.py` (КС-2 из ЕЖО, КС-6 — 4 раздела, 780+ строк)
 - AVR tests: `/home/hermes-workspace/Alikhan-migration/bot/test_avr.py` (3 теста: КС-2, КС-6, сводка)
 - AVR pricing: `/home/hermes-workspace/Alikhan-migration/report/templates/ВОР_с_расценками.xlsx` (837 кодов, 0 пропущенных)
-- OJR sync module: `/home/hermes-workspace/Alikhan-migration/bot/ojr_sync.py`
-- OJR schema: `/home/hermes-workspace/Alikhan-migration/db/ojr_schema.sql` (14 таблиц ОЖР)
+- OJR sync: распределён — `bot/db.py` (facts→OJR, weather), `bot/whatsapp_commands.py` (фото/доки/pass_register)
+- OJR schema: `/home/hermes-workspace/Alikhan-migration/db/ojr_schema.sql` (15 таблиц ОЖР; в БД 17 = 15 + `ojr_pass_register` + `ojr_vor_reference`)
 - OJR ER diagram: `/home/hermes-workspace/Alikhan-migration/db/ojr_er_diagram.md`
 - OJR fill guide: `/home/hermes-workspace/Alikhan-migration/db/ojr_fill_guide.md`
 - Local extractor: `/home/hermes-workspace/Alikhan-migration/bot/document_extractor.py`
@@ -44,13 +44,19 @@ Alikhan работает как агент Hermes — прямой WhatsApp Brid
   - Источник: `ЕЖО_шаблон.xlsx` (колонки K/P/S). Не `ojr_section3_work_log`.
   - WhatsApp-команды: `АВР`, `формируй АВР`, `кс-2`, `кс-6`. Поддержка периодов: `АВР за июнь`.
 - OJR data flow: QA (`qa.py`) → `bot_memory_facts` → роутинг по `ojr_*` таблицам (schema: `db/ojr_schema.sql`).
-- OJR sync: `bot/ojr_sync.py` — функции синхронизации facts→OJR, фото→`ojr_photo_log`, погода→`ojr_weather`.
+- OJR sync: распределён — `bot/db.py` (facts→OJR, weather), `bot/whatsapp_commands.py` (фото/доки/pass_register). Модуля `ojr_sync.py` нет и не было в git.
 - Daily snapshot: композит из `ojr_photo_log` + `ojr_daily_summary` + сообщений.
 - Document extraction: `bot/document_extractor.py` and the local extractor
   service on `127.0.0.1:8099/extract-document`.
 - Sandbox WhatsApp validation: `120363179621030401@g.us`.
 - Production WhatsApp group: `120363400682390076@g.us`; approval required
   before sending.
+
+## Project skills (репо)
+
+- Проектные знания: `skills/alikhan/`, `skills/project/`, `skills/projects/` — ЕДИНСТВЕННЫЙ источник для навыков, отсутствующих в живом профиле (fill-ejo, operations, poll-logic, ejo-report, whatsapp-bot, ejo-daily-report, maintenance).
+- Живой профиль: `~/.hermes/profiles/alikhan/skills/` (148 SKILL.md, ~110 из них — штатная библиотека Hermes Agent).
+- Архивные копии устаревших навыков: `docs/archive/skills/`.
 
 ## Archive / do not use by default
 

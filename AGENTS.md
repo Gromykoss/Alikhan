@@ -30,6 +30,16 @@
 **Запрещено:** patch(), write_file(), terminal с sed/awk/python/git commit/push/cp/mv/rm, pkill, systemctl restart.
 **Почему:** Codex/Grok = $0. DeepSeek = $0.87/M. ⛔ Нарушение = откат.
 
+### 📇 CONTRACT INDEX GATE (05.09.2026)
+
+Единый вход сессии — `PROJECT_MEMORY_GRAPH.md` (корень). Читать на старте вместо больших доков.
+
+1. **Boot Rule:** только граф на старте; `MASTER_SPEC`/`DATA_CONTRACT`/`bot/CONTRACTS` — по маршруту, не целиком.
+2. **Маршрут:** задача про домен → `openspec/specs/<домен>.md` → источник из карточки.
+3. **Global Invariants** (в графе) — нарушение = стоп + эскалация.
+4. **Spec Drift Gate:** изменил домен/инвариант/тест → обнови граф+карточку; иначе запись «Contract index update: not needed» в CHRONOLOGY.
+5. **Код — Codex (Maker) / Grok (Checker).**
+
 ### 🗣️ Buzz-общение (multi-agent)
 
 Отвечай **только** на прямое `@ТвойПрофиль`. Без `@` — молчи (кроме `default_profile`).
@@ -197,7 +207,7 @@ Alikhan работает напрямую как агент Hermes.
 - Venv: `/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3`
 - Env vars: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
 - Bridge: `systemctl --user start hermes-whatsapp-bridge` (port 3000, mode=bot)
-- Session: `~/.hermes/sessions/whatsapp/` | Номер: 79958974452
+- Session: `~/.hermes/profiles/alikhan/whatsapp/session/` | Номер: 79958974452
 - poll.py, qa.py, fill_ejo.py, document_extractor.py — в `bot/`
 - Extractor: `127.0.0.1:8099` | alikhan-document-extractor.service
 - main_waha.py, bridge_wrapper.py, Evolution API, alikhan.service — ОСТАНОВЛЕНЫ
@@ -231,7 +241,7 @@ platforms:
   whatsapp:
     enabled: true
     mode: bot
-    session_dir: /home/hermes-workspace/.hermes/sessions/whatsapp
+    session_dir: /home/hermes-workspace/.hermes/profiles/alikhan/whatsapp/session
     group_policy: allowlist
     group_allow_from: 120363179621030401@g.us,120363400682390076@g.us
     require_mention: false

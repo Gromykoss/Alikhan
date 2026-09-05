@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-09-03T20:00:10.179825+00:00",
+  "built_at": "2026-09-05T02:00:58.883082+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 390,
-    "edges": 600,
+    "nodes": 392,
+    "edges": 604,
     "projects": 1,
-    "events": 76,
+    "events": 77,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -751,7 +751,7 @@
       }
     ],
     [
-      "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      "event/2026-09-03/ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPRO",
       {
         "type": "event"
       }
@@ -760,6 +760,18 @@
       "2026-09-03",
       {
         "type": "date"
+      }
+    ],
+    [
+      "ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPROVED, pytest 124/9/0)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
+      {
+        "type": "event"
       }
     ],
     [
@@ -1927,7 +1939,7 @@
       }
     ],
     [
-      "bug/AL-023",
+      "bug/AL-005",
       {
         "type": "bug"
       }
@@ -1936,6 +1948,12 @@
       "CHRONOLOGY.md",
       {
         "type": "unknown"
+      }
+    ],
+    [
+      "bug/AL-023",
+      {
+        "type": "bug"
       }
     ],
     [
@@ -2026,12 +2044,6 @@
       "BUGS.md",
       {
         "type": "unknown"
-      }
-    ],
-    [
-      "bug/AL-005",
-      {
-        "type": "bug"
       }
     ],
     [
@@ -2810,6 +2822,13 @@
     },
     {
       "source": "service/alikhan",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "service/alikhan",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -3212,13 +3231,6 @@
       "target": "BUGS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.8
-    },
-    {
-      "source": "bot_component/avr",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.8
     },
     {
@@ -3664,13 +3676,6 @@
     },
     {
       "source": "template/ks2",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
-      "confidence": 0.8
-    },
-    {
-      "source": "template/ks2",
       "target": "INDEX.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
@@ -3947,6 +3952,13 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "db_table/bot_memory_messages",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.88
     },
     {
@@ -4277,6 +4289,27 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPRO",
+      "target": "2026-09-03",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPRO",
+      "target": "ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPROVED, pytest 124/9/0)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-03/ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPRO",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-09-03/ЭТАП 3 дополнение: полный pytest bot/ зелёный + св",
@@ -5868,6 +5901,55 @@
       "confidence": 0.8
     },
     {
+      "source": "bug/AL-005",
+      "target": "CHRONOLOGY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "project/alikhan",
+      "predicate": "affects",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "BUGS.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.92
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "Ollama таймаут 90с на каждом QA-парсинге",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "ask_grok() → ask_ollama() для текста без фото",
+      "predicate": "caused_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "fix/al-005",
+      "predicate": "fixed_by",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.88
+    },
+    {
+      "source": "bug/AL-005",
+      "target": "fixed",
+      "predicate": "status_is",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
+      "confidence": 0.9
+    },
+    {
       "source": "bug/AL-023",
       "target": "CHRONOLOGY.md",
       "predicate": "mentioned_in",
@@ -6037,48 +6119,6 @@
     },
     {
       "source": "bug/AL-004",
-      "target": "fixed",
-      "predicate": "status_is",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.9
-    },
-    {
-      "source": "bug/AL-005",
-      "target": "BUGS.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.92
-    },
-    {
-      "source": "bug/AL-005",
-      "target": "project/alikhan",
-      "predicate": "affects",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bug/AL-005",
-      "target": "Ollama таймаут 90с на каждом QA-парсинге",
-      "predicate": "described_as",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.9
-    },
-    {
-      "source": "bug/AL-005",
-      "target": "ask_grok() → ask_ollama() для текста без фото",
-      "predicate": "caused_by",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bug/AL-005",
-      "target": "fix/al-005",
-      "predicate": "fixed_by",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "bug/AL-005",
       "target": "fixed",
       "predicate": "status_is",
       "source_file": "/home/hermes-workspace/Alikhan-migration/bot/BUGS.md",
