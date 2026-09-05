@@ -197,7 +197,7 @@ Alikhan работает напрямую как агент Hermes.
 - Venv: `/home/hermes-workspace/.hermes/hermes-agent/venv/bin/python3`
 - Env vars: `WHATSAPP_SANDBOX`, `WHATSAPP_PRODUCTION`, `DB_PASS`
 - Bridge: `systemctl --user start hermes-whatsapp-bridge` (port 3000, mode=bot)
-- Session: `~/.hermes/sessions/whatsapp/` | Номер: 79958974452
+- Session: `~/.hermes/profiles/alikhan/whatsapp/session/` | Номер: 79958974452
 - poll.py, qa.py, fill_ejo.py, document_extractor.py — в `bot/`
 - Extractor: `127.0.0.1:8099` | alikhan-document-extractor.service
 - main_waha.py, bridge_wrapper.py, Evolution API, alikhan.service — ОСТАНОВЛЕНЫ
@@ -231,7 +231,7 @@ platforms:
   whatsapp:
     enabled: true
     mode: bot
-    session_dir: /home/hermes-workspace/.hermes/sessions/whatsapp
+    session_dir: /home/hermes-workspace/.hermes/profiles/alikhan/whatsapp/session
     group_policy: allowlist
     group_allow_from: 120363179621030401@g.us,120363400682390076@g.us
     require_mention: false
