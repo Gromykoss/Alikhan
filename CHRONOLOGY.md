@@ -2062,3 +2062,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 03:56** — docs: ojr-data-contract — убрана мёртвая ссылка ojr_sync.py + распределение синка facts→OJR (db.py section1/3+weather, whatsapp_commands фото/доки/pass_register) (`6d28b2d`)
 - **05.09.2026 03:58** — docs: openspec change-шаблоны разделены (proposal/design/tasks были идентичными копии) — правка ревью Hermes (`2f3938f`)
 - **05.09.2026 03:59** — chrono: 2f3938f templates split (`f45f129`)
+- **05.09.2026 04:02** — chrono: f45f129 (`66778bf`)
