@@ -252,7 +252,7 @@ platforms:
 ## 🗄️ ОЖР (PostgreSQL)
 
 Хост: `DB_HOST`, порт 5432. База: evolution_db, пользователь: evolution.
-14 таблиц ГОСТ РД-11-05-2007. Схема: `db/ojr_schema.sql`.
+15 таблиц ГОСТ РД-11-05-2007 (14 разделов + учёт техники `ojr_section2_equipment`). Схема: `db/ojr_schema.sql`.
 
 Поток: QA → `bot_memory_facts` → роутинг по `ojr_section1_personnel`, `ojr_section3_work_log`, `ojr_weather`, `ojr_photo_log`, `ojr_daily_summary`, `ojr_materials`, `ojr_incidents`.
 
