@@ -97,7 +97,6 @@ Alikhan-migration/
 │   ├── fill_ejo.py           # EJO generator / генератор ЕЖО
 │   ├── avr.py                # KS-2 + KS-6 generator / генератор АВР
 │   ├── test_avr.py           # 3 AVR tests / 3 теста АВР
-│   ├── ojr_sync.py           # facts → OJR synchronization
 │   └── templates/ЕЖО_шаблон.xlsx
 ├── db/
 │   ├── ojr_schema.sql        # 14-table OJR schema / схема ОЖР
