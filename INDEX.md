@@ -4,6 +4,8 @@ Concise routing map for `/home/hermes-workspace/Alikhan-migration`.
 
 ## Start here
 
+> 📇 Единый вход сессии: PROJECT_MEMORY_GRAPH.md (CONTRACT INDEX GATE, 05.09)
+
 Read `/home/hermes-workspace/Alikhan-migration/AGENTS.md` first.
 Alikhan работает как агент Hermes — прямой WhatsApp Bridge (Baileys, mode=bot), без отдельного Python-бота.
 
