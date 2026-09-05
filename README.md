@@ -6,14 +6,14 @@
 
 [![Version](https://img.shields.io/badge/version-v5.0_OJR-blue)](https://github.com/Gromykoss/Alikhan)
 [![Python](https://img.shields.io/badge/python-3.11-green)](https://www.python.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14_OJR_tables-blue)](db/ojr_schema.sql)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15_OJR_tables-blue)](db/ojr_schema.sql)
 [![VOR](https://img.shields.io/badge/VOR-837_codes-orange)](report/templates/ВОР_с_расценками.xlsx)
 [![AVR tests](https://img.shields.io/badge/AVR_tests-3%2F3-brightgreen)](bot/test_avr.py)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-Alikhan is a WhatsApp-native AI agent for construction operations at the Jeruy project. It captures field updates, uses Grok to extract facts, maintains a 14-table OJR database, generates EJO workbooks, and turns the EJO template into KS-2 and KS-6 acceptance records.
+Alikhan is a WhatsApp-native AI agent for construction operations at the Jeruy project. It captures field updates, uses Grok to extract facts, maintains a 15-table OJR database, generates EJO workbooks, and turns the EJO template into KS-2 and KS-6 acceptance records.
 
-Alikhan — WhatsApp-native AI-агент для стройки на проекте Джеруй: собирает сообщения с площадки, извлекает факты через Grok, ведёт 14 таблиц ОЖР, формирует ЕЖО и выпускает КС-2/КС-6 из шаблона ЕЖО.
+Alikhan — WhatsApp-native AI-агент для стройки на проекте Джеруй: собирает сообщения с площадки, извлекает факты через Grok, ведёт 15 таблиц ОЖР, формирует ЕЖО и выпускает КС-2/КС-6 из шаблона ЕЖО.
 
 ## Architecture in one line
 
@@ -23,7 +23,7 @@ WhatsApp → Hermes Bridge :3000 → main_waha.py → Grok AI → PostgreSQL OJR
 
 ## Key numbers / Ключевые цифры
 
-| **837** | **14** | **780+** | **0** | **3/3** |
+| **837** | **15** | **780+** | **0** | **3/3** |
 |:---:|:---:|:---:|:---:|:---:|
 | VOR work codes | OJR tables | KS-6 rows | missing prices | AVR tests passing |
 | кодов ВОР | таблиц ОЖР | строк КС-6 | пропущенных расценок | теста АВР проходят |
@@ -74,7 +74,7 @@ Hermes Bridge :3000 → bridge_wrapper.py → main_waha.py
           ▼
 Guard → Router → QA / Grok / Weather / Schedule / Poll
           │
-          ├──► PostgreSQL: 14 OJR tables / 14 таблиц ОЖР
+          ├──► PostgreSQL: 15 OJR tables / 15 таблиц ОЖР
           │       ├── personnel / ИТР
           │       ├── work log / журнал работ
           │       ├── weather / погода
@@ -99,7 +99,7 @@ Alikhan-migration/
 │   ├── test_avr.py           # 3 AVR tests / 3 теста АВР
 │   └── templates/ЕЖО_шаблон.xlsx
 ├── db/
-│   ├── ojr_schema.sql        # 14-table OJR schema / схема ОЖР
+│   ├── ojr_schema.sql        # 15-table OJR schema / схема ОЖР
 │   ├── ojr_er_diagram.md     # data model / модель данных
 │   └── ojr_fill_guide.md     # operating guide / руководство
 ├── report/templates/

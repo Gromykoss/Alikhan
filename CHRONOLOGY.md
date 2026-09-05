@@ -2070,3 +2070,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 04:07** — docs: vor-import — regression baseline (реальный прогон dry_run=False: 573 total, 0 inserted, 573 updated, 0 conflict; БД 573 distinct без задвоения) (`5248c04`)
 - **05.09.2026 04:19** — docs: graph-view для Obsidian — 126 заметок-узлов с [[вики-связями]] + ALIKHAN GRAPH.canvas (126 узлов / 141 ребро, из knowledge_graph/graph.json) (`96742a2`)
 - **05.09.2026 05:04** — docs: vor-import — Regression Baseline + контент-снимок (sha256 59ce30c7) от job-hunter (`1dd5e8b`)
+- **05.09.2026 05:10** — docs: job-hunter правки — убран фантом ojr_sync.py из README + шапка ИСТОРИЧЕСКИЙ в ojr_fill_guide (`4fb88ba`)
