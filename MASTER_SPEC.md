@@ -235,7 +235,7 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | `fill_ejo.py` | генератор ЕЖО (view на ojr_section3) |
 | `data_sources.py` | контракты данных (12 NamedTuple + функции) |
 | `avr.py` | АВР (КС-2/КС-6) |
-| `ojr_sync.py` | синк facts→OJR, фото→photo_log, погода→weather |
+| `db.py` | PostgreSQL: подключение, запросы, синк facts→OJR (section1/3, weather) |
 | `document_extractor.py` | распознавание доков (:8099) |
 | `office_forward.py` | пересылка вопросов офисному Грок-боту (31.08.2026) |
 | `ejo_backfill.py` | обратный разбор ЕЖО .xlsx → ОЖР (ЭТАП 2) |

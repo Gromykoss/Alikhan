@@ -30,6 +30,16 @@
 **Запрещено:** patch(), write_file(), terminal с sed/awk/python/git commit/push/cp/mv/rm, pkill, systemctl restart.
 **Почему:** Codex/Grok = $0. DeepSeek = $0.87/M. ⛔ Нарушение = откат.
 
+### 📇 CONTRACT INDEX GATE (05.09.2026)
+
+Единый вход сессии — `PROJECT_MEMORY_GRAPH.md` (корень). Читать на старте вместо больших доков.
+
+1. **Boot Rule:** только граф на старте; `MASTER_SPEC`/`DATA_CONTRACT`/`bot/CONTRACTS` — по маршруту, не целиком.
+2. **Маршрут:** задача про домен → `openspec/specs/<домен>.md` → источник из карточки.
+3. **Global Invariants** (в графе) — нарушение = стоп + эскалация.
+4. **Spec Drift Gate:** изменил домен/инвариант/тест → обнови граф+карточку; иначе запись «Contract index update: not needed» в CHRONOLOGY.
+5. **Код — Codex (Maker) / Grok (Checker).**
+
 ### 🗣️ Buzz-общение (multi-agent)
 
 Отвечай **только** на прямое `@ТвойПрофиль`. Без `@` — молчи (кроме `default_profile`).

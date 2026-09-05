@@ -61,8 +61,8 @@ WhatsApp → Hermes Bridge :3000 (Baileys, mode=bot) → Hermes Agent (Alikhan)
 | `bot/fill_ejo.py` | Генератор ЕЖО — view на `ojr_section3_work_log` |
 | `bot/qa.py` | QA-парсер: извлечение фактов через Grok |
 | `bot/poll.py` | Ежедневный опрос прорабов |
-| `bot/db.py` | PostgreSQL: подключение, запросы |
-| `bot/ojr_sync.py` | Синхронизация bot_memory_facts → OJR-таблицы |
+| `bot/db.py` | PostgreSQL: подключение, запросы, синк facts→OJR |
+| ~~bot/ojr_sync.py~~ | НЕ СУЩЕСТВУЕТ (мёртвая ссылка удалена 05.09; синк в db.py + whatsapp_commands.py) |
 | ~~bot/main_waha.py~~ | ИСТОРИЧЕСКИЙ — заменён прямым Hermes Agent (29.07.2026) |
 | ~~bot/router.py~~ | ИСТОРИЧЕСКИЙ — маршрутизация теперь в Hermes Agent |
 | ~~bot/bridge_wrapper.py~~ | ИСТОРИЧЕСКИЙ — monkey-patch удалён (29.07.2026) |
