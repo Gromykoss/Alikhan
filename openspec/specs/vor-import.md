@@ -39,11 +39,21 @@
 ## Update Rule
 Менялся импорт/формат кода → обнови `test_vor_reference.py` + CONTRACTS.md §2.9b.
 
-## Regression Baseline (прогон 05.09.2026)
-Фактические результаты `load_vor_reference(dry_run=False)` на актуальных `report/templates/ВОР.xlsx` + `ВОР_с_расценками.xlsx`:
-- **dry_run=True:** `total=573`, `with_price=554`, `inserted=0`, `updated=0`, `skipped_conflict=0`
-- **dry_run=False (реальный):** `total=573`, `inserted=0`, `updated=573`, `skipped_conflict=0`, `with_price=554`
-- **Пост-прогон БД:** `ojr_vor_reference` = 573 строки, 554 с ценой, **573 distinct `vor_code`** (без задвоения, идемпотентно).
+## Regression Baseline (прогон 05.09.2026, верифицирован директором)
 
-Инвариант: повторный прогон НЕ увеличивает `total` и НЕ создаёт дублей кодов; `inserted` остаётся 0 при неизменных файлах (всё уже в справочнике — upsert переписывает, не добавляет). Дрейф `total` или рост `distinct_codes` выше 573 = новый источник/файл ВОР — обновить базу.
+### Счётчики (dry_run=True, load_vor_reference на актуальных файлах)
+- `total=573`, `with_price=554`, `inserted=0`, `updated=0`, `skipped_conflict=0`
+
+### Контент-снимок источника (SELECT-аналог: vor_code, work_name, quantity, unit_price, ORDER BY vor_code)
+- **Метод сериализации (КАНОН, не менять):** `json.dumps(payload, ensure_ascii=False, sort_keys=True)` → UTF-8 → `hashlib.sha256`.
+  `payload = [(vor_code, work_name, str(quantity), str(unit_price)), ...]` — строки отсортированы по `vor_code`.
+- **sha256 = `59ce30c78c5c09ef7df0f88f96778bb8c4e593d381adbfa9e91c3cc402f38ecb`**
+- ⚠️ Вариант с `separators=(',',':')` даёт другой хеш (`daf1e531…`), `repr()` — третий (`17e4f37c…`). Хеши сравнимы только при одной сериализации.
+- Снято job-hunter 04.09 (Лаба 3, read-only); rows=573, distinct vor_code=573.
+
+### Прогон dry_run=False (выполнен Alikhan, job-hunter не повторял — правило В.2)
+- `total=573`, `inserted=0`, `updated=573`, `skipped_conflict=0`, `with_price=554`
+- Пост-прогон БД: `ojr_vor_reference` = 573 строки, 554 с ценой, **573 distinct `vor_code`** (без задвоения, идемпотентно).
+
+Инвариант: повторный прогон НЕ увеличивает `total` и НЕ создаёт дублей кодов; `inserted` остаётся 0 при неизменных файлах (upsert переписывает, не добавляет). Дрейф `total`, рост `distinct_codes` выше 573 или несовпадение sha256-снимка = новый источник/файл ВОР или смысловой дрейф (цена молча переписалась) — обновить базу и карточку.
 
