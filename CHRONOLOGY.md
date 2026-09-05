@@ -2064,3 +2064,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 03:59** — chrono: 2f3938f templates split (`f45f129`)
 - **05.09.2026 04:02** — chrono: f45f129 (`66778bf`)
 - **05.09.2026 04:02** — chrono: 66778bf (pre-merge) (`6281db7`)
+- **05.09.2026 04:03** — chrono: 6281db7 (`2cbe1d3`)
