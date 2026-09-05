@@ -2067,3 +2067,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 04:03** — chrono: 6281db7 (`2cbe1d3`)
 - **05.09.2026 04:04** — chrono: merge d200ad4 записи (хвост stash) (`6685fc9`)
 - **05.09.2026 04:04** — chrono: 6685fc9 (`3a4d262`)
+- **05.09.2026 04:07** — docs: vor-import — regression baseline (реальный прогон dry_run=False: 573 total, 0 inserted, 573 updated, 0 conflict; БД 573 distinct без задвоения) (`5248c04`)
