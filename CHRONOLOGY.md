@@ -2049,3 +2049,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 03:29** — docs: консолидация документации (фаза 1) — иерархия T0-T3 (`d2baa72`)
 - **05.09.2026 03:32** — chrono: docs consolidation фаза 1 (d2baa72) — запись в CHRONOLOGY (`637cd44`)
 - **05.09.2026 03:33** — docs: RUNBOOK шапка дата → 05.09.2026 (хвост фазы 1) (`f11b502`)
+- **05.09.2026 03:36** — docs: AGENTS.md путь сессии → profiles/alikhan/whatsapp/session (правка 2 approval, гвард профиля не пускал Alikhan — выполнил Hermes-оператор) (`f707f0d`)
