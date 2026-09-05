@@ -38,3 +38,12 @@
 
 ## Update Rule
 Менялся импорт/формат кода → обнови `test_vor_reference.py` + CONTRACTS.md §2.9b.
+
+## Regression Baseline (прогон 05.09.2026)
+Фактические результаты `load_vor_reference(dry_run=False)` на актуальных `report/templates/ВОР.xlsx` + `ВОР_с_расценками.xlsx`:
+- **dry_run=True:** `total=573`, `with_price=554`, `inserted=0`, `updated=0`, `skipped_conflict=0`
+- **dry_run=False (реальный):** `total=573`, `inserted=0`, `updated=573`, `skipped_conflict=0`, `with_price=554`
+- **Пост-прогон БД:** `ojr_vor_reference` = 573 строки, 554 с ценой, **573 distinct `vor_code`** (без задвоения, идемпотентно).
+
+Инвариант: повторный прогон НЕ увеличивает `total` и НЕ создаёт дублей кодов; `inserted` остаётся 0 при неизменных файлах (всё уже в справочнике — upsert переписывает, не добавляет). Дрейф `total` или рост `distinct_codes` выше 573 = новый источник/файл ВОР — обновить базу.
+
