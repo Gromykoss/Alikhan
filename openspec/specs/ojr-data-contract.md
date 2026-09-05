@@ -7,9 +7,13 @@
 - **`DATA_CONTRACT.md`** (полный контракт — читать его, не эту карточку)
 - `db/ojr_schema.sql` (16 CREATE; 15 канон + pass_register/справочники отдельно)
 
+## Синк-распределение (facts → OJR; модуль `ojr_sync.py` НЕ существует и НЕ БЫЛО в git)
+- `bot/db.py` — facts → `ojr_section1_personnel` / `ojr_section3_work_log`; погода → `ojr_weather` (`save_weather`)
+- `bot/whatsapp_commands.py` — фото → `ojr_photo_log`; документы → `ojr_section5_asbuilt_docs`; пропуска → `ojr_pass_register`
+
 ## Code Owners
-- `bot/db.py` (get_conn, SET TIME ZONE 'Asia/Bishkek')
-- `bot/ojr_sync.py`
+- `bot/db.py` (get_conn, SET TIME ZONE 'Asia/Bishkek', синк facts→section1/3 + weather)
+- `bot/whatsapp_commands.py` (синк фото/доков/pass_register)
 - `bot/data_sources.py` (NamedTuple-контракты)
 
 ## Neighbor Risks
