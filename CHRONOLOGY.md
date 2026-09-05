@@ -2093,3 +2093,6 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 05:10** — docs: job-hunter правки — убран фантом ojr_sync.py из README + шапка ИСТОРИЧЕСКИЙ в ojr_fill_guide (`4fb88ba`)
 - **05.09.2026 05:11** — docs: дрейф '14 таблиц ОЖР' → 15 (канон графа) (`363fd9d`)
 - **05.09.2026 05:26** — docs: AGENTS.md канон ОЖР 15 таблиц (синхронизация с графом, дрейф закрыт 363fd9d) (`ae8fb06`)
+- **05.09.2026 19:31** — docs: INDEX.md указатель на PROJECT_MEMORY_GRAPH (консистентность rollout 05.09) (`b79c272`)
+- **05.09.2026 23:05** — chrono: 2026-09-05 — авто-синхронизация cron. За 24ч ~25 коммитов (только docs/chrono, код не менялся). Программа «Иерархия документации» закрыта (ф1: T0-T3, ~45 файлов в archive, `d2baa72`; ф2: PROJECT_MEMORY_GRAPH.md + openspec 9 карточек, `3d40115`; ф3: дрейф 14→15 таблиц ОЖР, `363fd9d`/`ae8fb06`). vor-import: baseline 573 total, 0 inserted, 573 updated, 0 conflict; контент-снимок sha256 59ce30c7 MATCH. Obsidian graph-view: 126 узлов + canvas (`96742a2`). Живость 23:00 UTC: bridge connected (uptime ~15.5ч), extractor ok, bot_memory_messages +1/24ч (прорабы не пишут). Открытые: E2E канона Б ждёт живого сообщения в песочницу; gateway-adapter ACK обеих collect_only_chats (HIGH, вне скоупа); bare-python3 в pre-commit hook не исправлен (бэклог). Брифинг: `briefings/2026-09-05.md`.
+

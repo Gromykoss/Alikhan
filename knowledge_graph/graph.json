@@ -1,12 +1,12 @@
 {
-  "built_at": "2026-09-05T02:00:58.883082+00:00",
+  "built_at": "2026-09-05T20:00:49.504273+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
-    "nodes": 392,
-    "edges": 604,
+    "nodes": 397,
+    "edges": 610,
     "projects": 1,
-    "events": 77,
+    "events": 79,
     "bugs": 27,
     "fixes": 13,
     "api_quirks": 5,
@@ -746,6 +746,36 @@
     ],
     [
       "Flow: WhatsApp → Bridge:3000 → bridge_wrapper → main_waha (poll 3s) → Guard → Router → QA/DB/Weather/Grok/Schedule/Poll → Reply",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-05/Итог сессии: программа «Иерархия документации» зак",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "2026-09-05",
+      {
+        "type": "date"
+      }
+    ],
+    [
+      "Итог сессии: программа «Иерархия документации» закрыта (ф1+ф2+ф3)",
+      {
+        "type": "description"
+      }
+    ],
+    [
+      "event/2026-09-05/Консолидация документации (фаза 1, директива Серге",
+      {
+        "type": "event"
+      }
+    ],
+    [
+      "Консолидация документации (фаза 1, директива Сергея)",
       {
         "type": "description"
       }
@@ -3305,6 +3335,13 @@
     },
     {
       "source": "bot_component/db",
+      "target": "MEMORY.md",
+      "predicate": "mentioned_in",
+      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "bot_component/db",
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
@@ -3546,13 +3583,6 @@
       "target": "RUNBOOK.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/RUNBOOK.md",
-      "confidence": 0.88
-    },
-    {
-      "source": "db_table/ojr_weather",
-      "target": "INDEX.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/Alikhan-migration/INDEX.md",
       "confidence": 0.88
     },
     {
@@ -4289,6 +4319,48 @@
       "predicate": "writes_to",
       "source_file": "seed:domain",
       "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-05/Итог сессии: программа «Иерархия документации» зак",
+      "target": "2026-09-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-05/Итог сессии: программа «Иерархия документации» зак",
+      "target": "Итог сессии: программа «Иерархия документации» закрыта (ф1+ф2+ф3)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-05/Итог сессии: программа «Иерархия документации» зак",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
+    },
+    {
+      "source": "event/2026-09-05/Консолидация документации (фаза 1, директива Серге",
+      "target": "2026-09-05",
+      "predicate": "occurred_on",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.95
+    },
+    {
+      "source": "event/2026-09-05/Консолидация документации (фаза 1, директива Серге",
+      "target": "Консолидация документации (фаза 1, директива Сергея)",
+      "predicate": "described_as",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.9
+    },
+    {
+      "source": "event/2026-09-05/Консолидация документации (фаза 1, директива Серге",
+      "target": "project/alikhan",
+      "predicate": "referenced_in",
+      "source_file": "/home/hermes-workspace/Alikhan-migration/CHRONOLOGY.md",
+      "confidence": 0.85
     },
     {
       "source": "event/2026-09-03/ЭТАП 3 закрыт: контракты швов A1–A7 (Diamond APPRO",
