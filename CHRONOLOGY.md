@@ -1,5 +1,25 @@
 # CHRONOLOGY — Хронология изменений Алихан бота
 
+## 05.09.2026 — Итог сессии: программа «Иерархия документации» закрыта (ф1+ф2+ф3)
+
+**Причина:** Сергей дал директиву «Иерархия документации» (3 фазы). Вся программа исполнена и верифицирована с двух сторон (Grok + независимый review Hermes).
+
+**Фаза 1 — консолидация** (см. запись ниже; коммиты `d2baa72`, `f11b502`): 148 .md разложены по T0-T3, ~30 разовых + 31 брифинг + 2 устаревших навыка → `docs/archive/`, мёртвые ссылки вычищены.
+
+**Фаза 2 — граф и карточки** (`3d40115`, `6d28b2d`):
+- `PROJECT_MEMORY_GRAPH.md` (47 строк, единый вход сессии: Boot Rule + Global Invariants + Domain Map + Change Routing + Spec Drift Gate + anti-context-bloat).
+- `openspec/specs/` — 9 карточек доменов (8 скелетов + vor-import пилот); `openspec/changes/_template/`; `openspec/spec-code-consistency-check.md`.
+- `AGENTS.md` — секция CONTRACT INDEX GATE (внесена Hermes, `ae62186`).
+
+**Фаза 3 — пилот vor-import** (`5248c04`, `1dd5e8b`): реальный прогон `load_vor_reference(dry_run=False)` на актуальных ВОР.xlsx → 573 строки / 554 с ценой / 573 distinct, идемпотентно без задвоения. Regression-база + контент-снимок (sha256 `59ce30c7`) зафиксированы в карточке.
+
+**Сопутствующие фиксы:**
+- chrono-петля разорвана: guard в `.git/hooks/post-commit` — `chrono:`-коммиты не логируются (иначе самопорождённая цепочка записей).
+- Дрейф «14 таблиц ОЖР» → 15 закрыт во всех доках (README 6 мест + PROJECT 2 места — `363fd9d`; AGENTS.md:255 — `ae8fb06`, внёс Hermes; INDEX/RUNBOOK/MASTER_SPEC — `ae62186`).
+- Фантом-модуль `ojr_sync.py` вычищен (README, INDEX, RUNBOOK, MASTER_SPEC, ojr_fill_guide шапка «ИСТОРИЧЕСКИЙ»); роль синка распределена: `db.py` (facts/weather) + `whatsapp_commands.py` (фото/доки/pass_register).
+
+**Проверка:** merge в main `d200ad4` (--no-ff); post-merge pytest зелёный (23 passed / 124 passed полный прогон ранее); health :3000 connected + :8099 ok. Дерево чистое.
+
 ## 05.09.2026 — Консолидация документации (фаза 1, директива Сергея)
 
 **Причина:** иерархия документации — 148 .md без структуры, дубли фактов, мёртвые доки. Карта утверждена (с 3 правками Hermes), исполнение после approval Сергея.
@@ -2071,3 +2091,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 04:19** — docs: graph-view для Obsidian — 126 заметок-узлов с [[вики-связями]] + ALIKHAN GRAPH.canvas (126 узлов / 141 ребро, из knowledge_graph/graph.json) (`96742a2`)
 - **05.09.2026 05:04** — docs: vor-import — Regression Baseline + контент-снимок (sha256 59ce30c7) от job-hunter (`1dd5e8b`)
 - **05.09.2026 05:10** — docs: job-hunter правки — убран фантом ojr_sync.py из README + шапка ИСТОРИЧЕСКИЙ в ojr_fill_guide (`4fb88ba`)
+- **05.09.2026 05:11** — docs: дрейф '14 таблиц ОЖР' → 15 (канон графа) (`363fd9d`)
+- **05.09.2026 05:26** — docs: AGENTS.md канон ОЖР 15 таблиц (синхронизация с графом, дрейф закрыт 363fd9d) (`ae8fb06`)
