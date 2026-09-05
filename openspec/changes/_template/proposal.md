@@ -1,43 +1,32 @@
-# OpenSpec Change Template
+# Change Proposal: <name>
 
-## proposal.md
-```markdown
-# Change: <краткое название>
+## Problem
+<что сломано / чего не хватает>
 
-## Why
-<проблема / мотивация>
+## Desired Behavior
+<как должно работать после>
 
-## What Changes
-- <домен> → <что меняется>
+## Contract Index Route
+- Domain node: <из PROJECT_MEMORY_GRAPH.md>
+- Domain card: openspec/specs/<домен>.md
+- Deep sources read: <какие именно, по карточке>
 
-## Affected Domains
-- <карточка openspec/specs/*.md>
+## Impacted Requirements
+<какие требования карточки затронуты>
 
-## Impact
-- Инварианты затрагиваются? (да/нет, какие)
-- Тесты: <какие обновятся/добавятся>
-```
+## Directly Affected Modules
+<файлы кода, которые меняются>
 
-## design.md
-```markdown
-# Design: <название>
+## Neighbor Modules At Risk
+<соседи риска из карточки/графа>
 
-## Approach
-<выбранный подход + альтернативы>
+## Regression Scenario
+- **GIVEN** <контекст>
+- **WHEN** <действие>
+- **THEN** <ожидание — проверяемое тестом>
 
-## Data / Schema
-<если затрагивает БД — точные изменения>
+## Non-Goals
+<что сознательно не делаем>
 
-## Risks
-- <риск> → <митигация>
-```
-
-## tasks.md
-```markdown
-# Tasks
-- [ ] <шаг 1>
-- [ ] <шаг 2>
-- [ ] Обновить карточку openspec/specs/<домен>.md
-- [ ] Обновить PROJECT_MEMORY_GRAPH.md (или запись 'Contract index update: not needed')
-- [ ] pytest bot/ -q зелёный
-```
+## User/Product Questions
+<вопросы Сергею, если есть>

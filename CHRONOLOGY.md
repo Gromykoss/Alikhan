@@ -2059,3 +2059,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **05.09.2026 03:55** — docs: Contract Index Gate в AGENTS.md; ojr_sync.py мёртвые ссылки исправлены (INDEX x2, MASTER_SPEC, RUNBOOK) — находка Alikhan, диагноз: модуль не существовал в git, роль в db.py+whatsapp_commands.py (`ae62186`)
 - **05.09.2026 03:55** — chrono: ae62186 gate+ojr_sync (`c6c1836`)
 - **05.09.2026 03:55** — chrono: c6c1836 (окончательное, без следующей самозаписи) (`d762d7f`)
+- **05.09.2026 03:56** — docs: ojr-data-contract — убрана мёртвая ссылка ojr_sync.py + распределение синка facts→OJR (db.py section1/3+weather, whatsapp_commands фото/доки/pass_register) (`6d28b2d`)

@@ -1,43 +1,22 @@
-# OpenSpec Change Template
-
-## proposal.md
-```markdown
-# Change: <краткое название>
-
-## Why
-<проблема / мотивация>
-
-## What Changes
-- <домен> → <что меняется>
-
-## Affected Domains
-- <карточка openspec/specs/*.md>
-
-## Impact
-- Инварианты затрагиваются? (да/нет, какие)
-- Тесты: <какие обновятся/добавятся>
-```
-
-## design.md
-```markdown
-# Design: <название>
+# Design: <name>
 
 ## Approach
-<выбранный подход + альтернативы>
+<как реализуем, какие альтернативы отвергли>
 
-## Data / Schema
-<если затрагивает БД — точные изменения>
+## Files To Change
+<список файлов>
 
-## Risks
-- <риск> → <митигация>
-```
+## Data Flow Impact
+<затрагивает ли граф разбора / ОЖР-таблицы>
 
-## tasks.md
-```markdown
-# Tasks
-- [ ] <шаг 1>
-- [ ] <шаг 2>
-- [ ] Обновить карточку openspec/specs/<домен>.md
-- [ ] Обновить PROJECT_MEMORY_GRAPH.md (или запись 'Contract index update: not needed')
-- [ ] pytest bot/ -q зелёный
-```
+## Compatibility
+<обратная совместимость: API, БД, Excel-шаблоны>
+
+## Migration / Backfill
+<если меняются данные — как мигрируем>
+
+## Rollback / Fallback
+<как откатить: git revert / скрипт>
+
+## Neighbor Risk Mitigation
+<как защищаем соседей риска>
