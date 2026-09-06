@@ -2113,3 +2113,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **06.09.2026 18:37** — SDG v1.4.1 E2E: D16 abort-hygiene + consume (`48e49fd`)
 - **06.09.2026 18:38** — SDG v1.4.1 E2E: D16 abort-hygiene + consume (`bd93be1`)
 - **06.09.2026 18:52** — SDG v1.4.1: writeback E2E D16 (journal-only, починка формата строки D16) (`740bb1c`)
+- **06.09.2026 22:22** — SDG v1.4.2: REHAB кривого writeback v1.4 (c29698ca — SHA указывал не на тот коммит) (`9676c22`)
