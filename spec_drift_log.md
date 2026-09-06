@@ -6,3 +6,4 @@
 | Время (UTC) | Что меняю | Зачем | Что НЕ трогаю | SHA/пусто |
 |---|---|---|---|---|
 | 2026-09-06T14:30 | ops/ | SDG v1.4 E2E DAG probe | docs/ |  |
+| 2026-09-06T14:07 | ops/ | SDG v1.4 E2E DAG probe (corrected time) | docs/ |  |
