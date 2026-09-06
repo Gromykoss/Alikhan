@@ -2109,3 +2109,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **06.09.2026 14:45** — SDG: закрывает последний открытый интент (probe 14:30 был поглощён DAG-цепочкой 11:00) (`6133ce9`)
 - **06.09.2026 15:06** — [drift-intent] ops probe removal (`0d215c4`)
 - **06.09.2026 15:06** — SDG: удаляет ops/_sdg_e2e_probe.md (мусор E2E) (`c29698c`)
+- **06.09.2026 15:06** — SDG: writeback probe-removal SHA (`74e0252`)
