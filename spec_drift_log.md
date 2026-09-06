@@ -19,3 +19,4 @@
 | 2026-09-06T17:37 | ops/_e2e_d16.md | D16 live E2E abort-gigiena | docs/ | bd93be177a18 |
 | 2026-09-06T18:38 | ops/_e2e_d16.md | D16 E2E cleanup: удаление probe-файла | docs/ | 464ed677978b |
 | REHAB | c29698ca | writeback v1.4-цикла указывал на chrono-коммит вместо коммита удаления probe (операторская ошибка журнала 06.09, вскрыта D22 v1.4.2) | - | 9676c22f2aa4 |
+| 2026-09-06T23:02 | briefings/2026-09-06.md, knowledge_graph/graph.json, knowledge_graph/maintenance_report.json | chrono auto-sync cron: суточный брифинг и KG-обновление (machine-generated state) | bot/, docs/, AGENTS.md, CHRONOLOGY.md |  |

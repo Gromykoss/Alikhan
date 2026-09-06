@@ -1,10 +1,10 @@
 {
-  "built_at": "2026-09-05T20:00:49.504273+00:00",
+  "built_at": "2026-09-06T20:00:40.570248+00:00",
   "project": "alikhan",
   "domain": "WhatsApp bot / PostgreSQL ОЖР / Hermes Bridge / ЕЖО",
   "stats": {
     "nodes": 397,
-    "edges": 610,
+    "edges": 609,
     "projects": 1,
     "events": 79,
     "bugs": 27,
@@ -3331,13 +3331,6 @@
       "target": "AGENTS.md",
       "predicate": "mentioned_in",
       "source_file": "/home/hermes-workspace/Alikhan-migration/AGENTS.md",
-      "confidence": 0.85
-    },
-    {
-      "source": "bot_component/db",
-      "target": "MEMORY.md",
-      "predicate": "mentioned_in",
-      "source_file": "/home/hermes-workspace/.hermes/profiles/alikhan/memories/MEMORY.md",
       "confidence": 0.85
     },
     {

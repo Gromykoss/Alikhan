@@ -2114,3 +2114,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **06.09.2026 18:38** — SDG v1.4.1 E2E: D16 abort-hygiene + consume (`bd93be1`)
 - **06.09.2026 18:52** — SDG v1.4.1: writeback E2E D16 (journal-only, починка формата строки D16) (`740bb1c`)
 - **06.09.2026 22:22** — SDG v1.4.2: REHAB кривого writeback v1.4 (c29698ca — SHA указывал не на тот коммит) (`9676c22`)
+- **06.09.2026 22:22** — SDG: writeback REHAB c29698ca (`bc475d2`)
+- **06.09.2026 23:10** — chrono: 2026-09-06 — авто-синхронизация cron. За 24ч ~22 коммита, все — Spec Drift Gate (SDG): bootstrap v1.3.1 (`3c0ef66`), E2E-циклы v1.4/v1.4.1/v1.4.2 (DAG-цепочка, D16 abort-hygiene, REHAB исторических нарушений — 5 хвостов легитимизированы, revert-пары 11:04 OK-REVERT-PAIR), writeback-фиксы SHA (`9676c22`/`bc475d2` — ошибка указания SHA вскрыта D22). Боевой код bot/ не тронут. Живость 23:00 UTC: bridge connected (uptime ~11.6ч), extractor ok, bot_memory_messages +0/24ч (прорабы не пишут), открытых интентов SDG 0. Брифинг: `briefings/2026-09-06.md`.
