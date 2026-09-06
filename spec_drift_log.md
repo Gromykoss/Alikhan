@@ -10,3 +10,9 @@
 | 2026-09-06T14:10 | ops/ | SDG v1.4 clean DAG E2E | docs/ | c8f8cc902420 |
 | 2026-09-06T14:11 | ops/ | SDG v1.4 E2E cleanup (удаление probe-файлов) | docs/ | 2891deaae4b5 |
 | 2026-09-06T15:05 | ops/ | Удаление мусорного E2E probe-файла из индекса | docs/ | c29698ca623d |
+| REHAB | 24ce2c0c | E2E-проба v1.4 без интента: намеренный negative-test гейта, задокументирован в CHRONOLOGY 06.09 | - |  |
+| REHAB | 83c2c7b8 | probe3: проба гейта v1.3.1 без интента (отрицательный E2E-тест, 06.09) | - |  |
+| REHAB | ce2a7ff5 | E2E final: проба гейта с открытым интентом для проверки PASS-пути (06.09) | - |  |
+| REHAB | 61c6e384 | revert E2E final — часть revert-пары пробы гейта 06.09 | - |  |
+| REHAB | b79c2720 | rollout-доки 05.09 (v1.3.1, до hooks-раскатки в репо — хук физически не мог сработать) | - |  |
+| REHAB | 7d41a09e | авто-синк 05.09 (cron auto-sync, machine-generated state-файлы, до hooks-раскатки) | - |  |
