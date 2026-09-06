@@ -18,3 +18,4 @@
 | REHAB | 7d41a09e | авто-синк 05.09 (cron auto-sync, machine-generated state-файлы, до hooks-раскатки) | - |  |
 | 2026-09-06T17:37 | ops/_e2e_d16.md | D16 live E2E abort-gigiena | docs/ | bd93be177a18 |
 | 2026-09-06T18:38 | ops/_e2e_d16.md | D16 E2E cleanup: удаление probe-файла | docs/ | 464ed677978b |
+| REHAB | c29698ca | writeback v1.4-цикла указывал на chrono-коммит вместо коммита удаления probe (операторская ошибка журнала 06.09, вскрыта D22 v1.4.2) | - |  |
