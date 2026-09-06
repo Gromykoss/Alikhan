@@ -9,4 +9,4 @@
 | 2026-09-06T14:07 | ops/ | SDG v1.4 E2E DAG probe (corrected time) | docs/ | fb98e9d895ef |
 | 2026-09-06T14:10 | ops/ | SDG v1.4 clean DAG E2E | docs/ | c8f8cc902420 |
 | 2026-09-06T14:11 | ops/ | SDG v1.4 E2E cleanup (удаление probe-файлов) | docs/ | 2891deaae4b5 |
-| 2026-09-06T15:05 | ops/ | Удаление мусорного E2E probe-файла из индекса | docs/ |  |
+| 2026-09-06T15:05 | ops/ | Удаление мусорного E2E probe-файла из индекса | docs/ | c29698ca623d |
