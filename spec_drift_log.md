@@ -7,5 +7,5 @@
 |---|---|---|---|---|
 | 2026-09-06T14:30 | ops/ | SDG v1.4 E2E DAG probe | docs/ |  |
 | 2026-09-06T14:07 | ops/ | SDG v1.4 E2E DAG probe (corrected time) | docs/ | fb98e9d895ef |
-| 2026-09-06T14:10 | ops/ | SDG v1.4 clean DAG E2E | docs/ |  |
+| 2026-09-06T14:10 | ops/ | SDG v1.4 clean DAG E2E | docs/ | c8f8cc902420 |
 | 2026-09-06T14:11 | ops/ | SDG v1.4 E2E cleanup (удаление probe-файлов) | docs/ | 2891deaae4b5 |
