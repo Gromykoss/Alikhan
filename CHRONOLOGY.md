@@ -2098,3 +2098,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 
 - **06.09.2026 14:07** — [drift-intent] SDG v1.4 DAG E2E (`eb45fef`)
 - **06.09.2026 14:08** — [drift-intent] SDG v1.4 DAG E2E corrected (`fb98e9d`)
+- **06.09.2026 14:08** — SDG v1.4 E2E DAG code phase (`ed92db5`)
