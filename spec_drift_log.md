@@ -16,3 +16,4 @@
 | REHAB | 61c6e384 | revert E2E final — часть revert-пары пробы гейта 06.09 | - |  |
 | REHAB | b79c2720 | rollout-доки 05.09 (v1.3.1, до hooks-раскатки в репо — хук физически не мог сработать) | - |  |
 | REHAB | 7d41a09e | авто-синк 05.09 (cron auto-sync, machine-generated state-файлы, до hooks-раскатки) | - |  |
+| 2026-09-06T17:37 | ops/_e2e_d16.md | D16 live E2E abort-gigiena | docs/ |  |
