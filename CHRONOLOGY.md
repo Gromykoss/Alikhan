@@ -2136,3 +2136,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **08.09.2026 14:09** — SDG: writeback cc57cc8 (`68c9ef9`)
 - **08.09.2026 16:16** — GWT: phase 4.2 — avr-generation domain (3 scenarios, map, paths) (`2da0dd6`)
 - **08.09.2026 16:16** — SDG: writeback 2da0dd6 (`723f5fb`)
+- **08.09.2026 16:34** — GWT: 4.2 fix — lint --tests += test_avr (node pinning) (`2de6c1b`)
