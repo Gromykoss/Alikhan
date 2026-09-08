@@ -19,3 +19,8 @@
 
 ## Update Rule
 Менялся маршрут записи сырья → обнови DATA_CONTRACT.md + эту карточку.
+
+### GIVEN боевая БД, фото за сегодня `data-ingestion.photo_pipeline_smoke`
+<!-- no-ci -->
+- WHEN SELECT из ojr_photo_log + bot_memory_messages за сегодня
+- THEN фото с local_path существуют; 0 = WARNING не FAIL (семантика smoke-теста); live-DB — в CI не переносим (bot/test_smoke.py::test_smoke_photo_pipeline)
