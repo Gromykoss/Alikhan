@@ -2119,3 +2119,17 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 
 - **07.09.2026 23:05** — chrono: 2026-09-07 — авто-синхронизация cron. За 24ч новых коммитов нет (последний код-коммит — chrono 06.09 23:02, `6b18e40`); боевой код bot/ не тронут, открытых интентов SDG 0. Активность: KG auto-rebuild (built_at 07.09 20:00 UTC), входящие документы в песочницу: 2 xlsx от прораба 07.09 09:00/09:02 (ЕЖО за 05.09 и 06.09, ~7МБ и ~14.8МБ, кэш `~/.hermes/cache/documents/doc_1012a8d44923__*`, `doc_6a109993a9cb__*`) — первый контент от прорабов за ~2 дня. Живость 23:00 UTC: bridge connected (uptime ~10.7ч), extractor ok, bot_memory_messages +2/24ч. Брифинг: `briefings/2026-09-07.md`.
 - **08.09.2026 05:49** — GWT: phase 2 scenario map completeness (`26ad6f4`)
+- **08.09.2026 05:50** — SDG: writeback 26ad6f4 (`9ecc835`)
+- **08.09.2026 06:06** — GWT: phase 2 fixes — fail-closed base, per-card override, exact .ci whitelist, checker in paths (`2ec6a2f`)
+- **08.09.2026 06:07** — SDG: writeback 2ec6a2f (`4f19e6d`)
+- **08.09.2026 11:35** — GWT: phase 3 lint — card shape, dup ids, node pinning (`64aeb10`)
+- **08.09.2026 11:35** — SDG: writeback 64aeb10 (`919d14a`)
+- **08.09.2026 11:57** — GWT: phase 3 fixes — lint in completeness whitelist, fail-closed map, strict node pinning (`7829b42`)
+- **08.09.2026 11:57** — SDG: writeback 7829b42 (`46c375a`)
+- **08.09.2026 11:58** — SDG: writeback 7829b42 (`7c3646e`)
+- **08.09.2026 13:02** — GWT: phase 4 — qa-parser domain (3 scenarios, map, paths) (`9b573ac`)
+- **08.09.2026 13:03** — SDG: writeback 9b573ac (`2bd9364`)
+- **08.09.2026 13:23** — GWT: phase 4 fix — qa-parser card path trigger, golden fixture coverage (`4cca4a3`)
+- **08.09.2026 13:23** — SDG: writeback 4cca4a3 (`318483b`)
+- **08.09.2026 13:24** — SDG: writeback 4cca4a3 (`8ccb6f1`)
+- **08.09.2026 14:09** — GWT: CI fixes — psycopg2-binary in scenarios, no-ci-aware card rule (`cc57cc8`)
