@@ -236,9 +236,19 @@ def mapped_paths(scenarios):
     return paths
 
 
-def check_diff_coverage(scenarios, changed):
+def check_diff_coverage(scenarios, changed, base):
     covered = mapped_paths(scenarios)
-    uncovered = [path for path in changed if not whitelisted(path) and path not in covered]
+    uncovered = [
+        path
+        for path in changed
+        if not whitelisted(path)
+        and path not in covered
+        and not (
+            path.startswith("openspec/specs/")
+            and path.endswith(".md")
+            and changes_only_no_ci(base, path)
+        )
+    ]
     if uncovered:
         fail_check(["files outside mapped domains and whitelist:"] + [f"  {path}" for path in uncovered])
 
@@ -272,6 +282,7 @@ def no_ci_block_lines(path):
     for index, line in enumerate(lines):
         if not SCENARIO_HEADER_RE.match(line):
             continue
+        heading = line.strip()
         block = []
         for next_line in lines[index + 1 :]:
             if ANY_HEADER_RE.match(next_line):
@@ -280,6 +291,7 @@ def no_ci_block_lines(path):
         first_non_empty = [item for item in block if item.strip()][:3]
         if not NO_CI_RE.search("\n".join(first_non_empty)):
             continue
+        no_ci_lines.add(heading)
         no_ci_lines.update(item.strip() for item in block if item.strip())
     return no_ci_lines
 
@@ -331,7 +343,7 @@ def main(argv=None):
     scenarios = load_map(MAP_PATH)
     check_three_way_binding(scenarios)
     changed = changed_files(args.base)
-    check_diff_coverage(scenarios, changed)
+    check_diff_coverage(scenarios, changed, args.base)
     check_card_change_rule(scenarios, changed, args.base)
 
     print(f"scenario map completeness OK: {len(scenarios)} scenarios, {len(changed)} changed files")
