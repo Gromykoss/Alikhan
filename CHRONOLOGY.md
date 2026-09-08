@@ -2138,3 +2138,7 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **08.09.2026 16:16** — SDG: writeback 2da0dd6 (`723f5fb`)
 - **08.09.2026 16:34** — GWT: 4.2 fix — lint --tests += test_avr (node pinning) (`2de6c1b`)
 - **08.09.2026 16:34** — SDG: writeback 2de6c1b (`23065cb`)
+- **08.09.2026 18:29** — GWT: phase 4.3 — ejo-generation domain (3 scenarios, map+fixture, paths) (`fc4d705`)
+- **08.09.2026 18:29** — SDG: writeback fc4d705 (`b4d4f68`)
+- **08.09.2026 18:29** — SDG: writeback fc4d705 (`97777a4`)
+- **08.09.2026 18:39** — GWT: 4.3 fix — readiness THEN exact, poll.py in code (`5f63469`)
