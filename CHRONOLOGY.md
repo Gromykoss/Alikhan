@@ -2133,3 +2133,6 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **08.09.2026 13:23** — SDG: writeback 4cca4a3 (`318483b`)
 - **08.09.2026 13:24** — SDG: writeback 4cca4a3 (`8ccb6f1`)
 - **08.09.2026 14:09** — GWT: CI fixes — psycopg2-binary in scenarios, no-ci-aware card rule (`cc57cc8`)
+- **08.09.2026 14:09** — SDG: writeback cc57cc8 (`68c9ef9`)
+- **08.09.2026 16:16** — GWT: phase 4.2 — avr-generation domain (3 scenarios, map, paths) (`2da0dd6`)
+- **08.09.2026 16:16** — SDG: writeback 2da0dd6 (`723f5fb`)
