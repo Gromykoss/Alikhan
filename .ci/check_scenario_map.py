@@ -14,6 +14,7 @@ MAP_PATH = Path(__file__).with_name("scenario_map.yaml")
 SCENARIO_ID_RE = re.compile(r"^[a-z0-9-]+\.[a-z0-9_]+$")
 CARD_ID_RE = re.compile(r"^#{2,4}\s.*`([a-z0-9-]+\.[a-z0-9_]+)`\s*$")
 TEST_ID_RE = re.compile(r'@pytest\.mark\.scenario\("([a-z0-9-]+\.[a-z0-9_]+)"\)')
+SCENARIO_HEADER_RE = re.compile(r"^#{3,4}\s+.*$")
 ANY_HEADER_RE = re.compile(r"^#{1,6}\s+")
 NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
 
@@ -246,6 +247,51 @@ def commit_messages_for_path(base, path):
     return run_git(["log", "--format=%B", f"{base}..HEAD", "--", path])
 
 
+def changed_content_lines(base, path):
+    output = run_git(["diff", f"{base}..HEAD", "--", path])
+    lines = []
+    for line in output.splitlines():
+        if line.startswith(("+++", "---")):
+            continue
+        if not line.startswith(("+", "-")):
+            continue
+        text = line[1:].strip()
+        if text:
+            lines.append(text)
+    return lines
+
+
+def no_ci_block_lines(path):
+    card_path = ROOT / path
+    try:
+        lines = card_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        fail_config(f"cannot read card {path}: {exc}")
+
+    no_ci_lines = set()
+    for index, line in enumerate(lines):
+        if not SCENARIO_HEADER_RE.match(line):
+            continue
+        block = []
+        for next_line in lines[index + 1 :]:
+            if ANY_HEADER_RE.match(next_line):
+                break
+            block.append(next_line)
+        first_non_empty = [item for item in block if item.strip()][:3]
+        if not NO_CI_RE.search("\n".join(first_non_empty)):
+            continue
+        no_ci_lines.update(item.strip() for item in block if item.strip())
+    return no_ci_lines
+
+
+def changes_only_no_ci(base, path):
+    changed_lines = changed_content_lines(base, path)
+    if not changed_lines:
+        return False
+    allowed_lines = no_ci_block_lines(path)
+    return bool(allowed_lines) and all(line in allowed_lines for line in changed_lines)
+
+
 def check_card_change_rule(scenarios, changed, base):
     changed_set = set(changed)
     changed_cards = {scenario["card"] for scenario in scenarios if scenario["card"] in changed_set}
@@ -263,6 +309,8 @@ def check_card_change_rule(scenarios, changed, base):
     }
     problems = []
     for card in sorted(changed_cards):
+        if changes_only_no_ci(base, card):
+            continue
         if test_by_card.get(card, set()) & changed_tests:
             continue
         messages = commit_messages_for_path(base, card)
