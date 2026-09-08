@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MAP_PATH = Path(__file__).with_name("scenario_map.yaml")
 SCENARIO_ID_RE = re.compile(r"^[a-z0-9-]+\.[a-z0-9_]+$")
 VALID_ID_IN_TICKS_RE = re.compile(r"`([a-z0-9-]+\.[a-z0-9_]+)`")
@@ -34,7 +33,7 @@ def fail_config(message):
 
 def load_map(path):
     if not path.exists():
-        return None
+        fail_config(f"scenario map not found: {path}")
 
     scenarios = []
     seen_ids = set()
@@ -131,7 +130,7 @@ def parse_card(path):
                 break
             block.append(next_line)
 
-        if block and NO_CI_RE.search(block[0]):
+        if NO_CI_RE.search("\n".join(block)):
             warnings.append(f"skipped (no-ci): {heading}")
             continue
 
@@ -151,7 +150,10 @@ def parse_card(path):
         for body_line in block:
             when_match = WHEN_RE.match(body_line)
             if when_match:
-                when_lines.append(when_match.group(1).strip())
+                when_text = when_match.group(1).strip()
+                when_lines.append(when_text)
+                if not when_text:
+                    errors.append(f"empty WHEN: {path}:{start_line}: {heading}")
             then_match = THEN_RE.match(body_line)
             if then_match:
                 then_text = then_match.group(1).strip()
@@ -204,8 +206,6 @@ def collect_cards(specs_dir):
 
 
 def map_by_id(scenarios):
-    if scenarios is None:
-        return None
     mapped = {}
     for scenario in scenarios:
         mapped[scenario["id"]] = scenario
@@ -215,7 +215,7 @@ def map_by_id(scenarios):
 def apply_untested_warnings(per_file, card_scenarios, mapped):
     warnings = 0
     for scenario in card_scenarios:
-        if mapped is not None and scenario["id"] in mapped:
+        if scenario["id"] in mapped:
             continue
         message = f"UNTESTED: {scenario['id']}"
         per_file[scenario["path"]]["warnings"].append(message)
@@ -223,24 +223,32 @@ def apply_untested_warnings(per_file, card_scenarios, mapped):
     return warnings
 
 
-def decorator_scenario_id(decorator):
-    if not isinstance(decorator, ast.Call):
-        return None
-    func = decorator.func
+def is_scenario_mark(func):
     if not isinstance(func, ast.Attribute) or func.attr != "scenario":
-        return None
+        return False
     mark = func.value
     if not isinstance(mark, ast.Attribute) or mark.attr != "mark":
-        return None
+        return False
     pytest_name = mark.value
     if not isinstance(pytest_name, ast.Name) or pytest_name.id != "pytest":
-        return None
-    if len(decorator.args) != 1 or decorator.keywords:
-        return None
+        return False
+    return True
+
+
+def scenario_decorator(decorator):
+    func = decorator.func if isinstance(decorator, ast.Call) else decorator
+    if not is_scenario_mark(func):
+        return None, None
+    if not isinstance(decorator, ast.Call):
+        return None, "missing call parentheses"
+    if decorator.keywords:
+        return None, "keywords are not allowed"
+    if len(decorator.args) != 1:
+        return None, "expected exactly one positional argument"
     arg = decorator.args[0]
     if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-        return arg.value
-    return None
+        return arg.value, None
+    return None, "argument must be a string literal"
 
 
 def collect_test_markers(path):
@@ -254,15 +262,23 @@ def collect_test_markers(path):
         return None, [f"syntax error: {path}:{exc.lineno}: {exc.msg}"]
 
     markers = []
+    errors = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef):
+        if not hasattr(node, "decorator_list"):
             continue
         for decorator in node.decorator_list:
-            scenario_id = decorator_scenario_id(decorator)
-            if scenario_id is None:
+            scenario_id, malformed = scenario_decorator(decorator)
+            if scenario_id is None and malformed is None:
+                continue
+            line = getattr(decorator, "lineno", getattr(node, "lineno", "?"))
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                errors.append(f"scenario marker on non-function: {scenario_id or '?'}: {path}:{line}")
+                continue
+            if malformed:
+                errors.append(f"malformed scenario marker: {path}:{line}: {malformed}")
                 continue
             markers.append({"id": scenario_id, "function": node.name, "line": node.lineno})
-    return markers, []
+    return markers, errors
 
 
 def check_tests(test_paths, card_ids, mapped):
@@ -283,7 +299,7 @@ def check_tests(test_paths, card_ids, mapped):
                 )
             if scenario_id not in card_ids:
                 per_file[path]["errors"].append(f"marker id not in any card: {scenario_id}")
-            if mapped is not None and scenario_id in mapped:
+            if scenario_id in mapped:
                 map_node = mapped[scenario_id].get("test", "")
                 map_file, _, map_func = map_node.partition("::")
                 if Path(map_file).name != path.name or map_func != marker["function"]:

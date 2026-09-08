@@ -26,6 +26,7 @@ WHITELIST = (
     ".ci/scenario_map.yaml",
     ".ci/run_affected.py",
     ".ci/check_scenario_map.py",
+    ".ci/lint_gwt_cards.py",
     ".github/workflows/gwt.yml",
     "pytest.ini",
 )
