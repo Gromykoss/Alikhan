@@ -10,6 +10,7 @@ on:
       - "bot/vor_reference.py"
       - "bot/db.py"
       - "report/templates/**"
+      - ".ci/lint_gwt_cards.py"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
       - ".ci/check_scenario_map.py"
@@ -17,7 +18,18 @@ on:
       - "pytest.ini"
 
 jobs:
+  lint-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: lint GWT cards
+        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py
+
   completeness:
+    needs: lint-cards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
