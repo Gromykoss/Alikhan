@@ -4,6 +4,7 @@
 import os
 import sys
 
+import pytest
 from openpyxl import Workbook
 
 
@@ -63,6 +64,7 @@ def test_parse_work_sheet_inherits_building(monkeypatch):
     assert saved[1][0][3] == "АБК"
 
 
+@pytest.mark.scenario("ejo-generation.readiness_found_by_label_not_row")
 def test_readiness_found_by_label_not_hardcoded_row(monkeypatch):
     import ejo_backfill
 

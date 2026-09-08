@@ -48,3 +48,21 @@ avr-generation.ks6_grouped_rows_complete:
   test: bot/test_avr.py::test_generate_ks6_has_one_grouped_table_and_every_ejo_row
   code:
     - bot/avr.py
+ejo-generation.template_columns_k_u_contract:
+  card: openspec/specs/ejo-generation.md
+  test: bot/tests/test_ejo_template_contract.py::test_template_columns_k_u_headers
+  code:
+    - bot/update_template.py
+    - bot/ejo_backfill.py
+  fixture: bot/tests/fixtures/ejo_template_snapshot.xlsx
+ejo-generation.template_columns_match_readers:
+  card: openspec/specs/ejo-generation.md
+  test: bot/tests/test_ejo_template_contract.py::test_template_columns_match_readers
+  code:
+    - bot/ejo_backfill.py
+  fixture: bot/tests/fixtures/ejo_template_snapshot.xlsx
+ejo-generation.readiness_found_by_label_not_row:
+  card: openspec/specs/ejo-generation.md
+  test: bot/test_ejo_backfill.py::test_readiness_found_by_label_not_hardcoded_row
+  code:
+    - bot/ejo_backfill.py

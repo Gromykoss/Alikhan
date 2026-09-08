@@ -3,6 +3,7 @@
 from pathlib import Path
 import re
 
+import pytest
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
@@ -66,6 +67,7 @@ def _headers():
         wb.close()
 
 
+@pytest.mark.scenario("ejo-generation.template_columns_k_u_contract")
 def test_template_columns_k_u_headers():
     group, detail = _headers()
 
@@ -78,6 +80,7 @@ def test_template_columns_k_u_headers():
     assert any(group[col] or detail[col] for col in CANON)
 
 
+@pytest.mark.scenario("ejo-generation.template_columns_match_readers")
 def test_template_columns_match_readers():
     _group, detail = _headers()
     assert detail[12] == "План"

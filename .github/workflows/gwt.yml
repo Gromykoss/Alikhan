@@ -8,6 +8,7 @@ on:
       - "openspec/specs/vor-import.md"
       - "openspec/specs/qa-parser.md"
       - "openspec/specs/avr-generation.md"
+      - "openspec/specs/ejo-generation.md"
       - "bot/test_vor_reference.py"
       - "bot/vor_reference.py"
       - "bot/db.py"
@@ -18,6 +19,12 @@ on:
       - "bot/tests/golden_qa_facts.json"
       - "bot/avr.py"
       - "bot/test_avr.py"
+      - "bot/ejo_backfill.py"
+      - "bot/fill_ejo.py"
+      - "bot/update_template.py"
+      - "bot/tests/test_ejo_template_contract.py"
+      - "bot/test_ejo_backfill.py"
+      - "bot/tests/fixtures/ejo_template_snapshot.xlsx"
       - ".ci/lint_gwt_cards.py"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
@@ -34,7 +41,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: lint GWT cards
-        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py bot/test_qa_parser.py bot/tests/test_qa_golden.py bot/test_avr.py
+        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py bot/test_qa_parser.py bot/tests/test_qa_golden.py bot/test_avr.py bot/tests/test_ejo_template_contract.py bot/test_ejo_backfill.py
 
   completeness:
     needs: lint-cards
