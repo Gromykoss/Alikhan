@@ -60,6 +60,7 @@ ejo-generation.template_columns_match_readers:
   test: bot/tests/test_ejo_template_contract.py::test_template_columns_match_readers
   code:
     - bot/ejo_backfill.py
+    - bot/poll.py
   fixture: bot/tests/fixtures/ejo_template_snapshot.xlsx
 ejo-generation.readiness_found_by_label_not_row:
   card: openspec/specs/ejo-generation.md
