@@ -5,10 +5,13 @@ from decimal import Decimal
 import os
 import sys
 
+import pytest
+
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+@pytest.mark.scenario("vor-import.code_keeps_distinct_decimal_like_strings")
 def test_code_keeps_distinct_decimal_like_strings():
     from vor_reference import _code
 
@@ -17,13 +20,14 @@ def test_code_keeps_distinct_decimal_like_strings():
     assert _code("2,1") == "2.1"
 
 
+@pytest.mark.scenario("vor-import.correct_excel_dry_run_reads_real_files")
 def test_load_vor_reference_dry_run_reads_real_files():
     from vor_reference import load_vor_reference
 
     result = load_vor_reference(dry_run=True)
 
-    assert result["total"] > 500
-    assert result["with_price"] > 500
+    assert result["total"] == 573
+    assert result["with_price"] == 554
     assert result["inserted"] == 0
     assert result["updated"] == 0
 
@@ -61,6 +65,7 @@ class _ConflictConn:
         self.closed = True
 
 
+@pytest.mark.scenario("vor-import.conflicting_identity_skipped")
 def test_load_vor_reference_skips_conflicting_identity(monkeypatch):
     import vor_reference
 

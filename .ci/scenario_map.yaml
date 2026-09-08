@@ -1,0 +1,19 @@
+vor-import.correct_excel_dry_run_reads_real_files:
+  card: openspec/specs/vor-import.md
+  test: bot/test_vor_reference.py::test_load_vor_reference_dry_run_reads_real_files
+  code:
+    - bot/vor_reference.py
+    - bot/db.py
+  fixture: "report/templates/ВОР.xlsx"
+vor-import.code_keeps_distinct_decimal_like_strings:
+  card: openspec/specs/vor-import.md
+  test: bot/test_vor_reference.py::test_code_keeps_distinct_decimal_like_strings
+  code:
+    - bot/vor_reference.py
+vor-import.conflicting_identity_skipped:
+  card: openspec/specs/vor-import.md
+  test: bot/test_vor_reference.py::test_load_vor_reference_skips_conflicting_identity
+  code:
+    - bot/vor_reference.py
+    - bot/db.py
+  fixture: "report/templates/ВОР.xlsx"

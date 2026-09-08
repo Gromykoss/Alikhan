@@ -20,19 +20,20 @@
 
 ## GIVEN / WHEN / THEN
 
-### GIVEN корректный Excel с кодами ВОР
+### GIVEN корректный Excel с кодами ВОР `vor-import.correct_excel_dry_run_reads_real_files`
 - WHEN `load_vor_reference(dry_run=True)` читает реальные файлы
 - THEN `result.total > 500` И `result.with_price > 500` И `inserted == 0` И `updated == 0` (dry-run не пишет в БД)
 
-### GIVEN код вида «5.10» и «5.1»
+### GIVEN код вида «5.10» и «5.1» `vor-import.code_keeps_distinct_decimal_like_strings`
 - WHEN вызван `_code(...)`
 - THEN `_code("5.10") == "5.10"`, `_code("5.1") == "5.1"` (не схлопываются), `_code("2,1") == "2.1"` (запятая→точка)
 
-### GIVEN строка уже есть в `ojr_vor_reference`, но work_name/unit изменились
+### GIVEN строка уже есть в `ojr_vor_reference`, но work_name/unit изменились `vor-import.conflicting_identity_skipped`
 - WHEN `load_vor_reference(dry_run=False)` встречает такой код
 - THEN строка НЕ upsert-ится, `skipped_conflict` увеличивается, `inserted/updated` не меняются (конфликт идентичности)
 
 ### GIVEN цена (`unit_price`) уже есть в справочнике
+**UNTESTED (CI):** требует живой БД-контекст, в CI не переносим (прод-инвариант); покрыт ручным прогоном baseline 05.09.
 - WHEN upsert нового источника без цены
 - THEN существующая `unit_price` сохраняется (COALESCE), не затирается NULL
 
@@ -56,4 +57,3 @@
 - Пост-прогон БД: `ojr_vor_reference` = 573 строки, 554 с ценой, **573 distinct `vor_code`** (без задвоения, идемпотентно).
 
 Инвариант: повторный прогон НЕ увеличивает `total` и НЕ создаёт дублей кодов; `inserted` остаётся 0 при неизменных файлах (upsert переписывает, не добавляет). Дрейф `total`, рост `distinct_codes` выше 573 или несовпадение sha256-снимка = новый источник/файл ВОР или смысловой дрейф (цена молча переписалась) — обновить базу и карточку.
-
