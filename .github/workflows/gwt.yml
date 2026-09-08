@@ -12,6 +12,7 @@ on:
       - "report/templates/**"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
+      - ".ci/check_scenario_map.py"
       - ".github/workflows/gwt.yml"
       - "pytest.ini"
 
@@ -34,8 +35,8 @@ jobs:
             BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
           fi
           if [ -z "$BASE" ]; then
-            echo "No base — skipping completeness"
-            exit 0
+            echo "No base resolved — completeness cannot run"
+            exit 3
           fi
           python3 .ci/check_scenario_map.py --base "$BASE"
 

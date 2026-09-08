@@ -23,7 +23,9 @@ WHITELIST = (
     "briefings/**",
     "knowledge_graph/**",
     "docs/**",
-    ".ci/**",
+    ".ci/scenario_map.yaml",
+    ".ci/run_affected.py",
+    ".ci/check_scenario_map.py",
     ".github/workflows/gwt.yml",
     "pytest.ini",
 )
@@ -129,31 +131,37 @@ def validate_entries(scenarios):
         if not (ROOT / test_file).is_file():
             fail_config(f"{scenario_id}: test file not found: {test_file}")
 
-
-def domain_prefix(scenario_id):
-    return scenario_id.split(".", 1)[0]
+        for key in ("card", "test", "fixture"):
+            value = scenario.get(key)
+            if value and ".." in Path(value).parts:
+                fail_config(f"{scenario_id}: mapped {key} path contains '..': {value}")
+        for code_path in scenario.get("code", []):
+            if ".." in Path(code_path).parts:
+                fail_config(f"{scenario_id}: mapped code path contains '..': {code_path}")
+            if not (ROOT / code_path).is_file():
+                fail_config(f"{scenario_id}: code file not found: {code_path}")
+        fixture = scenario.get("fixture")
+        if fixture and not (ROOT / fixture).is_file():
+            fail_config(f"{scenario_id}: fixture file not found: {fixture}")
 
 
 def collect_card_ids(scenarios):
-    domains = {domain_prefix(scenario["id"]) for scenario in scenarios}
     ids = set()
     for card in sorted({scenario["card"] for scenario in scenarios}):
         path = ROOT / card
         for line in path.read_text(encoding="utf-8").splitlines():
             match = CARD_ID_RE.search(line)
-            if match and domain_prefix(match.group(1)) in domains:
+            if match:
                 ids.add(match.group(1))
     return ids
 
 
 def collect_test_ids(scenarios):
-    domains = {domain_prefix(scenario["id"]) for scenario in scenarios}
     ids = set()
     for test_file in sorted({scenario["test"].split("::", 1)[0] for scenario in scenarios}):
         path = ROOT / test_file
         for match in TEST_ID_RE.finditer(path.read_text(encoding="utf-8")):
-            if domain_prefix(match.group(1)) in domains:
-                ids.add(match.group(1))
+            ids.add(match.group(1))
     return ids
 
 
@@ -222,8 +230,8 @@ def check_diff_coverage(scenarios, changed):
         fail_check(["files outside mapped domains and whitelist:"] + [f"  {path}" for path in uncovered])
 
 
-def commit_messages(base):
-    return run_git(["log", "--format=%B", f"{base}..HEAD"])
+def commit_messages_for_path(base, path):
+    return run_git(["log", "--format=%B", f"{base}..HEAD", "--", path])
 
 
 def check_card_change_rule(scenarios, changed, base):
@@ -241,13 +249,12 @@ def check_card_change_rule(scenarios, changed, base):
         for scenario in scenarios
         if scenario["test"].split("::", 1)[0] in changed_set or scenario["test"] in changed_set
     }
-    messages = commit_messages(base)
-    has_override = any(line.strip() == "tests update: not needed" for line in messages.splitlines())
-
     problems = []
     for card in sorted(changed_cards):
         if test_by_card.get(card, set()) & changed_tests:
             continue
+        messages = commit_messages_for_path(base, card)
+        has_override = any(line.strip() == "tests update: not needed" for line in messages.splitlines())
         if has_override:
             continue
         problems.append(f"{card}: card changed without domain test change or 'tests update: not needed'")
