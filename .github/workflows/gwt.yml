@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "openspec/specs/vor-import.md"
+      - "openspec/specs/qa-parser.md"
       - "bot/test_vor_reference.py"
       - "bot/vor_reference.py"
       - "bot/db.py"
@@ -13,6 +14,7 @@ on:
       - "bot/qa.py"
       - "bot/test_qa_parser.py"
       - "bot/tests/test_qa_golden.py"
+      - "bot/tests/golden_qa_facts.json"
       - ".ci/lint_gwt_cards.py"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
