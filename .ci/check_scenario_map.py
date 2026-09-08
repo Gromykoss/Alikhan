@@ -14,6 +14,8 @@ MAP_PATH = Path(__file__).with_name("scenario_map.yaml")
 SCENARIO_ID_RE = re.compile(r"^[a-z0-9-]+\.[a-z0-9_]+$")
 CARD_ID_RE = re.compile(r"^#{2,4}\s.*`([a-z0-9-]+\.[a-z0-9_]+)`\s*$")
 TEST_ID_RE = re.compile(r'@pytest\.mark\.scenario\("([a-z0-9-]+\.[a-z0-9_]+)"\)')
+ANY_HEADER_RE = re.compile(r"^#{1,6}\s+")
+NO_CI_RE = re.compile(r"<!--\s*no-ci\s*-->", re.IGNORECASE)
 
 # Repo-level/meta outputs are intentionally outside scenario ownership.
 # Domain implementation/spec/test/fixture files must still be present in the map.
@@ -150,9 +152,18 @@ def collect_card_ids(scenarios):
     ids = set()
     for card in sorted({scenario["card"] for scenario in scenarios}):
         path = ROOT / card
-        for line in path.read_text(encoding="utf-8").splitlines():
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
             match = CARD_ID_RE.search(line)
             if match:
+                block = []
+                for next_line in lines[index + 1 :]:
+                    if ANY_HEADER_RE.match(next_line):
+                        break
+                    block.append(next_line)
+                first_non_empty = [item for item in block if item.strip()][:3]
+                if NO_CI_RE.search("\n".join(first_non_empty)):
+                    continue
                 ids.add(match.group(1))
     return ids
 

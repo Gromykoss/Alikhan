@@ -130,7 +130,8 @@ def parse_card(path):
                 break
             block.append(next_line)
 
-        if NO_CI_RE.search("\n".join(block)):
+        first_non_empty = [item for item in block if item.strip()][:3]
+        if NO_CI_RE.search("\n".join(first_non_empty)):
             warnings.append(f"skipped (no-ci): {heading}")
             continue
 

@@ -59,6 +59,7 @@ def test_golden_structure(golden):
 
 # ─── is_qa() detection tests ────────────────────────────────────────────────
 
+@pytest.mark.scenario("qa-parser.question_text_is_not_qa")
 def test_is_qa_negative_messages(golden):
     """Negative entries should NOT trigger QA."""
     negatives = [e for e in golden['entries'] if e['category'] == 'negative']

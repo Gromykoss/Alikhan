@@ -10,6 +10,9 @@ on:
       - "bot/vor_reference.py"
       - "bot/db.py"
       - "report/templates/**"
+      - "bot/qa.py"
+      - "bot/test_qa_parser.py"
+      - "bot/tests/test_qa_golden.py"
       - ".ci/lint_gwt_cards.py"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
@@ -26,7 +29,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: lint GWT cards
-        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py
+        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py bot/test_qa_parser.py bot/tests/test_qa_golden.py
 
   completeness:
     needs: lint-cards

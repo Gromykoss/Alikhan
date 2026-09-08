@@ -17,6 +17,7 @@ from qa import (
 )
 
 
+@pytest.mark.scenario("qa-parser.vor_code_extraction_numbers")
 def test_plan_na_zavtra():
     text = 'Планы на завтра 3.1.5 = 142,66'
     facts, remaining = _extract_vor_codes(text)
@@ -102,6 +103,7 @@ def test_sender_personnel_specialties_collapse_to_workers():
     ]
 
 
+@pytest.mark.scenario("qa-parser.personnel_specialties_aggregate_no_double_count")
 def test_grok_personnel_specialties_aggregate_before_save():
     facts = [
         ('общая', 'персонал', 'ИТР 3'),
