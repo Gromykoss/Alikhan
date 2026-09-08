@@ -16,7 +16,31 @@ on:
       - "pytest.ini"
 
 jobs:
+  completeness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: scenario map completeness
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BASE" ]; then
+            echo "No base — skipping completeness"
+            exit 0
+          fi
+          python3 .ci/check_scenario_map.py --base "$BASE"
+
   scenarios:
+    needs: completeness
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
