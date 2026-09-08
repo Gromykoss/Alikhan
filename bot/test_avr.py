@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 from openpyxl import Workbook, load_workbook
 
 from bot.avr import generate_ks2, generate_ks6, load_pricing
@@ -40,6 +41,7 @@ def _write_pricing(path):
     workbook.save(path)
 
 
+@pytest.mark.scenario("avr-generation.pricing_exact_vor_code_no_prefix_match")
 def test_pricing_uses_exact_vor_code_and_column_f(tmp_path):
     pricing_path = tmp_path / "pricing.xlsx"
     _write_pricing(pricing_path)
@@ -48,6 +50,7 @@ def test_pricing_uses_exact_vor_code_and_column_f(tmp_path):
     assert "2.1" not in pricing
 
 
+@pytest.mark.scenario("avr-generation.ks2_from_ejo_columns")
 def test_generate_ks2_from_ejo(tmp_path, monkeypatch):
     ejo_path = tmp_path / "ejo.xlsx"
     pricing_path = tmp_path / "pricing.xlsx"
@@ -78,6 +81,7 @@ def test_generate_ks2_from_ejo(tmp_path, monkeypatch):
     assert summary["missing_prices"] == ["9.9.9"]
 
 
+@pytest.mark.scenario("avr-generation.ks6_grouped_rows_complete")
 def test_generate_ks6_has_one_grouped_table_and_every_ejo_row(tmp_path, monkeypatch):
     ejo_path = tmp_path / "ejo.xlsx"
     pricing_path = tmp_path / "pricing.xlsx"

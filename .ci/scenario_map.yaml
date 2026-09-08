@@ -33,3 +33,18 @@ qa-parser.question_text_is_not_qa:
   code:
     - bot/qa.py
   fixture: bot/tests/golden_qa_facts.json
+avr-generation.pricing_exact_vor_code_no_prefix_match:
+  card: openspec/specs/avr-generation.md
+  test: bot/test_avr.py::test_pricing_uses_exact_vor_code_and_column_f
+  code:
+    - bot/avr.py
+avr-generation.ks2_from_ejo_columns:
+  card: openspec/specs/avr-generation.md
+  test: bot/test_avr.py::test_generate_ks2_from_ejo
+  code:
+    - bot/avr.py
+avr-generation.ks6_grouped_rows_complete:
+  card: openspec/specs/avr-generation.md
+  test: bot/test_avr.py::test_generate_ks6_has_one_grouped_table_and_every_ejo_row
+  code:
+    - bot/avr.py

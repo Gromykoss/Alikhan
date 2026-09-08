@@ -7,6 +7,7 @@ on:
     paths:
       - "openspec/specs/vor-import.md"
       - "openspec/specs/qa-parser.md"
+      - "openspec/specs/avr-generation.md"
       - "bot/test_vor_reference.py"
       - "bot/vor_reference.py"
       - "bot/db.py"
@@ -15,6 +16,8 @@ on:
       - "bot/test_qa_parser.py"
       - "bot/tests/test_qa_golden.py"
       - "bot/tests/golden_qa_facts.json"
+      - "bot/avr.py"
+      - "bot/test_avr.py"
       - ".ci/lint_gwt_cards.py"
       - ".ci/scenario_map.yaml"
       - ".ci/run_affected.py"
