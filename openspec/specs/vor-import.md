@@ -22,7 +22,7 @@
 
 ### GIVEN корректный Excel с кодами ВОР `vor-import.correct_excel_dry_run_reads_real_files`
 - WHEN `load_vor_reference(dry_run=True)` читает реальные файлы
-- THEN `result.total > 500` И `result.with_price > 500` И `inserted == 0` И `updated == 0` (dry-run не пишет в БД)
+- THEN `result.total == 573` И `result.with_price == 554` И `inserted == 0` И `updated == 0` (dry-run не пишет в БД; числа = Regression Baseline, смена источника = красный CI)
 
 ### GIVEN код вида «5.10» и «5.1» `vor-import.code_keeps_distinct_decimal_like_strings`
 - WHEN вызван `_code(...)`

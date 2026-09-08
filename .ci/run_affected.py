@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Print GWT scenario tests affected by changed files."""
+"""Print GWT scenario tests affected by changed files.
+
+Scenario ids must be unique. A scenario is affected by its card, fixture,
+watched code paths, or its own pytest node/file path.
+"""
 
 import argparse
 import sys
@@ -22,6 +26,7 @@ def load_map(path):
         raise SystemExit(3)
 
     scenarios = []
+    seen_ids = set()
     current = None
     current_list = None
 
@@ -31,6 +36,10 @@ def load_map(path):
 
         if not raw_line.startswith(" ") and raw_line.endswith(":"):
             scenario_id = raw_line[:-1].strip()
+            if scenario_id in seen_ids:
+                print(f"duplicate scenario id: {scenario_id} (line {line_no})", file=sys.stderr)
+                raise SystemExit(2)
+            seen_ids.add(scenario_id)
             current = {"id": scenario_id, "code": []}
             scenarios.append(current)
             current_list = None
@@ -68,6 +77,8 @@ def affected_tests(scenarios, changed):
     changed_set = set(changed)
     for scenario in scenarios:
         watched = set(scenario.get("code", []))
+        watched.add(scenario["test"])
+        watched.add(scenario["test"].split("::", 1)[0])
         for key in ("card", "fixture"):
             if scenario.get(key):
                 watched.add(scenario[key])

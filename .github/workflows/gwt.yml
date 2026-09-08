@@ -11,30 +11,46 @@ on:
       - "bot/db.py"
       - "report/templates/**"
       - ".ci/scenario_map.yaml"
+      - ".ci/run_affected.py"
       - ".github/workflows/gwt.yml"
+      - "pytest.ini"
 
 jobs:
   scenarios:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 2}
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install pytest openpyxl
       - name: affected scenarios
         run: |
-          # Pilot approximation: one commit per push, so HEAD~1 is the comparison base.
-          CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
-          if [ -z "$CHANGED" ]; then
+          # Диапазон: push = before..HEAD; PR = base.sha..HEAD; fallback HEAD~1
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || true)"
+          fi
+          if [ -z "$BASE" ]; then
             AFFECTED=$(python3 .ci/run_affected.py --all)
           else
-            AFFECTED=$(python3 .ci/run_affected.py --changed $CHANGED)
+            # core.quotePath=false: кириллические пути (ВОР.xlsx) без octal-экранирования
+            CHANGED=$(git -c core.quotePath=false diff --name-only "$BASE" HEAD || true)
+            if [ -z "$CHANGED" ]; then
+              AFFECTED=$(python3 .ci/run_affected.py --all)
+            else
+              AFFECTED=$(python3 .ci/run_affected.py --changed $CHANGED)
+            fi
           fi
           echo "Affected: $AFFECTED"
           if [ -z "$AFFECTED" ]; then
             echo "No affected scenarios — nothing to run"
             exit 0
           fi
-          pytest $AFFECTED -m scenario -q --maxfail=1
+          ARGS=()
+          while IFS= read -r t; do [ -n "$t" ] && ARGS+=("$t"); done <<< "$AFFECTED"
+          pytest "${ARGS[@]}" -m scenario -q --maxfail=1
