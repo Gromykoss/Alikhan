@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, get_args, get_origin
 
 import jsonschema
+import pytest
 
 import data_sources
 from generate_namedtuple_schemas import NAMEDTUPLE_NAMES, generate_schemas
@@ -75,6 +76,7 @@ def _as_json(value: Any) -> Any:
     return value
 
 
+@pytest.mark.scenario("ojr-data-contract.namedtuple_schemas_match_generator")
 def test_namedtuple_schema_files_exist_parse_and_match_generator():
     generated = generate_schemas()
     assert set(generated) == set(NAMEDTUPLE_NAMES)
@@ -85,6 +87,7 @@ def test_namedtuple_schema_files_exist_parse_and_match_generator():
         assert json.loads(path.read_text(encoding="utf-8")) == expected_schema
 
 
+@pytest.mark.scenario("ojr-data-contract.instances_validate_against_schemas")
 def test_namedtuple_instances_validate_against_schemas():
     for name in NAMEDTUPLE_NAMES:
         cls = getattr(data_sources, name)

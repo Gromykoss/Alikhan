@@ -25,5 +25,19 @@
 - Канон 15, в БД 17 (`ojr_pass_register` + `ojr_vor_reference` — НЕ канон).
 - `source_message_id` — BIGINT FK → `bot_memory_messages(id)`, НЕ синтетический хеш.
 
+## GWT Scenarios
+
+### GIVEN закоммиченные JSON-схемы NamedTuple `ojr-data-contract.namedtuple_schemas_match_generator`
+- WHEN `generate_schemas()` генерирует схемы из `bot/data_sources.py`
+- THEN множество имён == `NAMEDTUPLE_NAMES`, и каждый файл `bot/tests/schemas/<Name>.json` побайтово == сгенерированному (схема-артефакт запина)
+
+### GIVEN сэмпл-инстансы всех NamedTuple `ojr-data-contract.instances_validate_against_schemas`
+- WHEN валидация Draft7 против committed JSON-схем
+- THEN все инстансы проходят валидацию (контракт полей = контракт таблиц ОЖР)
+
+### GIVEN `save_work_log` в `bot/db.py` `ojr-data-contract.work_log_on_conflict_matches_unique`
+- WHEN проверка ON CONFLICT-колонок в db.py
+- THEN `ON CONFLICT (work_date, vor_code, building, category)` == `uq_ojr_work_log` (данные не молча дедуплицируются по чужому ключу)
+
 ## Update Rule
 Менялась схема → обнови `db/ojr_schema.sql` + DATA_CONTRACT.md + `tests/test_namedtuple_schemas.py`.

@@ -14,6 +14,8 @@ import ast
 import os
 import sys
 
+import pytest
+
 
 # Добавляем bot/ в путь для импорта модулей проекта
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -330,6 +332,7 @@ def test_contract_on_conflict_columns():
 # Тест 11: save_work_log ON CONFLICT = uq_ojr_work_log
 # ═══════════════════════════════════════════════════════════════════════════
 
+@pytest.mark.scenario("ojr-data-contract.work_log_on_conflict_matches_unique")
 def test_contract_work_log_on_conflict_matches_unique():
     """Контракт: ON CONFLICT work_log = (work_date, vor_code, building, category)."""
     db_path = os.path.join(os.path.dirname(__file__), 'db.py')

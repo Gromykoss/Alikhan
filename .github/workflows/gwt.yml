@@ -11,12 +11,15 @@ on:
       - "openspec/specs/ejo-generation.md"
       - "openspec/specs/data-ingestion.md"
       - "openspec/specs/document-extraction.md"
+      - "openspec/specs/ojr-data-contract.md"
       - "bot/test_vor_reference.py"
       - "bot/vor_reference.py"
       - "bot/db.py"
+      - "bot/data_sources.py"
       - "bot/db_memory.py"
       - "bot/whatsapp_commands.py"
       - "bot/document_extractor.py"
+      - "db/ojr_schema.sql"
       - "report/templates/**"
       - "bot/qa.py"
       - "bot/test_qa_parser.py"
@@ -46,7 +49,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: lint GWT cards
-        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py bot/test_qa_parser.py bot/tests/test_qa_golden.py bot/test_avr.py bot/tests/test_ejo_template_contract.py bot/test_ejo_backfill.py
+        run: python3 .ci/lint_gwt_cards.py openspec/specs --tests bot/test_vor_reference.py bot/test_qa_parser.py bot/tests/test_qa_golden.py bot/test_avr.py bot/tests/test_ejo_template_contract.py bot/test_ejo_backfill.py bot/tests/test_namedtuple_schemas.py bot/test_contracts.py
 
   completeness:
     needs: lint-cards
@@ -81,7 +84,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest openpyxl psycopg2-binary
+      - run: pip install pytest openpyxl psycopg2-binary jsonschema
       - name: affected scenarios
         run: |
           # Диапазон: push = before..HEAD; PR = base.sha..HEAD; fallback HEAD~1

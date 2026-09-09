@@ -67,3 +67,22 @@ ejo-generation.readiness_found_by_label_not_row:
   test: bot/test_ejo_backfill.py::test_readiness_found_by_label_not_hardcoded_row
   code:
     - bot/ejo_backfill.py
+ojr-data-contract.namedtuple_schemas_match_generator:
+  card: openspec/specs/ojr-data-contract.md
+  test: bot/tests/test_namedtuple_schemas.py::test_namedtuple_schema_files_exist_parse_and_match_generator
+  code:
+    - bot/data_sources.py
+    - bot/tests/generate_namedtuple_schemas.py
+  fixture: "bot/tests/schemas/PhotoFile.json"
+ojr-data-contract.instances_validate_against_schemas:
+  card: openspec/specs/ojr-data-contract.md
+  test: bot/tests/test_namedtuple_schemas.py::test_namedtuple_instances_validate_against_schemas
+  code:
+    - bot/data_sources.py
+    - bot/tests/generate_namedtuple_schemas.py
+ojr-data-contract.work_log_on_conflict_matches_unique:
+  card: openspec/specs/ojr-data-contract.md
+  test: bot/test_contracts.py::test_contract_work_log_on_conflict_matches_unique
+  code:
+    - bot/db.py
+    - db/ojr_schema.sql
