@@ -21,8 +21,8 @@
 
 ### GIVEN .docx, extractor :8099 вернул только metadata `document-extraction.docx_metadata_fallback_local`
 <!-- no-ci -->
-**UNTESTED (CI):** исполняемого теста нет (долг); локальный fallback покрыт боевой эксплуатацией сервиса :8099.
-- WHEN `_extract_docx_text()` на .docx с metadata-ответом
+**UNTESTED (CI):** исполняемого теста нет (долг); fallback живёт в клиенте `bot/whatsapp_commands.py::_extract_docx_text()` (вызывается после metadata-ответа сервиса :8099), покрыт боевой эксплуатацией.
+- WHEN клиент `_extract_docx_text()` (`bot/whatsapp_commands.py`) разбирает .docx после metadata-ответа сервиса :8099
 - THEN текст извлечён локально (zipfile + ElementTree), НЕ metadata
 
 ## Update Rule
