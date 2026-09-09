@@ -2189,3 +2189,5 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **09.09.2026 04:51** — GWT: test-DB hardening — chat_id filter asserted, R3-guard ping (`27b09d5`)
 - **09.09.2026 04:51** — SDG: writeback 27b09d5 (`0b90d8e`)
 - **09.09.2026 10:33** — CHRONOLOGY: writeback записи 09.09 (тираж GWT) (`ed9c1fc`)
+- **09.09.2026 10:40** — CHRONOLOGY: SHA closure записи 09.09 (финал тиража GWT) (`3569ba1`)
+- **09.09.2026 23:00** — chrono: авто-синхронизация (без новых коммитов после 10:40; брифинг briefings/2026-09-09.md — итог тиража GWT)
