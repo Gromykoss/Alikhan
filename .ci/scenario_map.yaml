@@ -105,7 +105,6 @@ agent-routing-safety.can_send_fail_closed:
   test: bot/test_authority.py::test_can_send_fail_closed
   code:
     - bot/authority.py
-    - bot/config.py
 agent-routing-safety.is_mutation_allowed_matrix:
   card: openspec/specs/agent-routing-safety.md
   test: bot/test_authority.py::test_is_mutation_allowed_matrix

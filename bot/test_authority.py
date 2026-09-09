@@ -41,6 +41,13 @@ def test_is_mutation_allowed_matrix():
     assert is_mutation_allowed(AuthorityLevel.ANALYZE, actor_is_orchestrator=True) is True
     assert is_mutation_allowed(AuthorityLevel.LOCAL, actor_is_orchestrator=True) is False
 
+    orchestrator_allowed = {AuthorityLevel.READ, AuthorityLevel.ANALYZE}
+    for level in AuthorityLevel:
+        assert (
+            is_mutation_allowed(level, actor_is_orchestrator=True)
+            is (level in orchestrator_allowed)
+        )
+
     operator_allowed = {
         AuthorityLevel.READ,
         AuthorityLevel.ANALYZE,
