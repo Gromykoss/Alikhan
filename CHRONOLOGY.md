@@ -2155,3 +2155,6 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **09.09.2026 00:56** — SDG: writeback c1c975a (`4edc55f`)
 - **09.09.2026 00:57** — SDG: writeback c1c975a (`7959d58`)
 - **09.09.2026 01:14** — GWT: 4.5 fix — fallback is client-side (whatsapp_commands), not service (`1b88fe0`)
+- **09.09.2026 01:14** — SDG: writeback 1b88fe0 (`6b5372b`)
+- **09.09.2026 01:37** — GWT: phase 4.6 — ojr-data-contract 3 scenarios + map + paths (`de24f65`)
+- **09.09.2026 01:37** — SDG: writeback de24f65 (`45bc104`)

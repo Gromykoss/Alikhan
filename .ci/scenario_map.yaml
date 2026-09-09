@@ -85,4 +85,3 @@ ojr-data-contract.work_log_on_conflict_matches_unique:
   test: bot/test_contracts.py::test_contract_work_log_on_conflict_matches_unique
   code:
     - bot/db.py
-    - db/ojr_schema.sql

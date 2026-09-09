@@ -29,7 +29,7 @@
 
 ### GIVEN закоммиченные JSON-схемы NamedTuple `ojr-data-contract.namedtuple_schemas_match_generator`
 - WHEN `generate_schemas()` генерирует схемы из `bot/data_sources.py`
-- THEN множество имён == `NAMEDTUPLE_NAMES`, и каждый файл `bot/tests/schemas/<Name>.json` побайтово == сгенерированному (схема-артефакт запина)
+- THEN множество имён == `NAMEDTUPLE_NAMES`, и каждый файл `bot/tests/schemas/<Name>.json` семантически == сгенерированному (dict equality после json.loads; схема-артефакт запина)
 
 ### GIVEN сэмпл-инстансы всех NamedTuple `ojr-data-contract.instances_validate_against_schemas`
 - WHEN валидация Draft7 против committed JSON-схем
