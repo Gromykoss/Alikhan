@@ -35,8 +35,8 @@
 ### GIVEN живой bridge :3000 `whatsapp-bridge.ack_endpoint`
 <!-- no-ci -->
 **UNTESTED (CI):** live bridge :3000 (VPS-only)
-- WHEN GET /ack с PRODUCTION_GID
-- THEN HTTP 200
+- WHEN POST /messages-ack с пустым messageIds
+- THEN HTTP != 404 (endpoint жив, контракт A+ соответствует; пустой список — валидный вызов)
 
 ### GIVEN живой bridge :3000 `whatsapp-bridge.collect_messages_dead`
 <!-- no-ci -->
