@@ -43,7 +43,7 @@ def _top_level_imports(filepath):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Тест 1: bridge_wrapper — fill_ejo.py должен импортировать EVO, KEY
+# Тест 1: messaging — messaging.py должен импортировать EVO, KEY из config
 # ═══════════════════════════════════════════════════════════════════════════
 
 @pytest.mark.scenario("agent-routing-safety.fill_ejo_no_evolution_imports")

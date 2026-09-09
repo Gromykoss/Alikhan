@@ -22,6 +22,7 @@ on:
       - "bot/whatsapp_commands.py"
       - "bot/messaging.py"
       - "bot/authority.py"
+      - "bot/config.py"
       - "bot/claim_gate.py"
       - "bot/authorized_senders.json"
       - "bot/document_extractor.py"

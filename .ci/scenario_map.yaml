@@ -95,7 +95,6 @@ agent-routing-safety.messaging_imports_secrets_from_config:
   test: bot/test_contracts.py::test_contract_messaging_imports_bridge
   code:
     - bot/messaging.py
-    - bot/config.py
 agent-routing-safety.fill_ejo_no_evolution_imports:
   card: openspec/specs/agent-routing-safety.md
   test: bot/test_contracts.py::test_contract_bridge_wrapper_import

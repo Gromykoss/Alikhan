@@ -22,7 +22,7 @@
 
 ### GIVEN messaging.py для отправки `agent-routing-safety.messaging_imports_secrets_from_config`
 - WHEN AST-анализ top-level imports `bot/messaging.py`
-- THEN `EVO` и `KEY` импортируются из `config` (секреты через конфиг, не хардкод)
+- THEN `EVO` и `KEY` импортируются из `config`, и НЕ импортируются из `bridge_wrapper`
 
 ### GIVEN fill_ejo.py и мёртвый Evolution API `agent-routing-safety.fill_ejo_no_evolution_imports`
 - WHEN AST-анализ top-level imports `bot/fill_ejo.py`
