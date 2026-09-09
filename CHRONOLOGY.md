@@ -2160,3 +2160,4 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **09.09.2026 01:37** — SDG: writeback de24f65 (`45bc104`)
 - **09.09.2026 01:49** — GWT: 4.6 fix — THEN S1 semantic equality; ojr_schema.sql out of S3 code (dead trigger) (`e453769`)
 - **09.09.2026 01:49** — SDG: writeback e453769 (`34b4fc3`)
+- **09.09.2026 01:53** — GWT: 4.6 CI fix — pip scenarios += requests (data_sources top-level import) (`1750de7`)
