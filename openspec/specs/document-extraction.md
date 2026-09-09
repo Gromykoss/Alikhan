@@ -25,5 +25,17 @@
 - WHEN клиент `_extract_docx_text()` (`bot/whatsapp_commands.py`) разбирает .docx после metadata-ответа сервиса :8099
 - THEN текст извлечён локально (zipfile + ElementTree), НЕ metadata
 
+### GIVEN metadata fallback extractor helper `document-extraction.fallback_text_format`
+- WHEN `_fallback_text(filename, data_length, path)` строит локальную metadata-строку
+- THEN формат `[document metadata: filename=...]` сохраняет filename, optional path, optional bytes и подставляет `document` для пустого filename
+
+### GIVEN подсчёт содержательного текста `document-extraction.meaningful_len_ignores_whitespace`
+- WHEN `_meaningful_len(text)` считает длину текста
+- THEN пробелы, переводы строк и табы игнорируются; пустой/whitespace-only текст даёт 0
+
+### GIVEN base64 и data URI payload `document-extraction.decode_base64_data_uri`
+- WHEN `_decode_base64(value)` получает plain base64 или `data:*;base64,` URI
+- THEN префикс data URI отбрасывается, пустой payload даёт `b""`, а некорректный padding пробрасывает `binascii.Error`
+
 ## Update Rule
 Менялся extractor → обнови `INDEX.md` (endpoint) + эту карточку.

@@ -100,3 +100,44 @@ agent-routing-safety.fill_ejo_no_evolution_imports:
   test: bot/test_contracts.py::test_contract_bridge_wrapper_import
   code:
     - bot/fill_ejo.py
+agent-routing-safety.can_send_fail_closed:
+  card: openspec/specs/agent-routing-safety.md
+  test: bot/test_authority.py::test_can_send_fail_closed
+  code:
+    - bot/authority.py
+    - bot/config.py
+agent-routing-safety.is_mutation_allowed_matrix:
+  card: openspec/specs/agent-routing-safety.md
+  test: bot/test_authority.py::test_is_mutation_allowed_matrix
+  code:
+    - bot/authority.py
+agent-routing-safety.buzz_send_argv_canon:
+  card: openspec/specs/agent-routing-safety.md
+  test: bot/test_authority.py::test_buzz_send_argv_canon
+  code:
+    - bot/authority.py
+agent-routing-safety.guard_tool_call_file_boundary:
+  card: openspec/specs/agent-routing-safety.md
+  test: bot/test_authority.py::test_guard_tool_call_file_boundary
+  code:
+    - bot/authority.py
+agent-routing-safety.guard_terminal_fragments:
+  card: openspec/specs/agent-routing-safety.md
+  test: bot/test_authority.py::test_guard_terminal_fragments
+  code:
+    - bot/authority.py
+document-extraction.fallback_text_format:
+  card: openspec/specs/document-extraction.md
+  test: bot/test_document_extractor.py::test_fallback_text_format
+  code:
+    - bot/document_extractor.py
+document-extraction.meaningful_len_ignores_whitespace:
+  card: openspec/specs/document-extraction.md
+  test: bot/test_document_extractor.py::test_meaningful_len_ignores_whitespace
+  code:
+    - bot/document_extractor.py
+document-extraction.decode_base64_data_uri:
+  card: openspec/specs/document-extraction.md
+  test: bot/test_document_extractor.py::test_decode_base64_data_uri
+  code:
+    - bot/document_extractor.py
