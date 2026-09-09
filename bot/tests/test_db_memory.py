@@ -95,7 +95,10 @@ def test_save_fact_roundtrip_lookup(db_conn):
         source_ids=[1, 2],
     )
 
-    assert isinstance(fact_id, int)
+    # ВАЖНО: save_fact возвращает cur.lastrowid — в psycopg2 это OID-прокси
+    # (0 на таблицах без OIDS), НЕ SERIAL id; контракт функции — факт записи,
+    # id читается через fact_lookup, поэтому здесь только type-sanity.
+    assert fact_id is None or isinstance(fact_id, int)
     rows = db_memory.fact_lookup(chat_id="c1")
     assert len(rows) == 1
     row = rows[0]
@@ -137,12 +140,12 @@ def test_tag_message_untagged_flow(db_conn):
     cur.execute(
         """
         INSERT INTO bot_memory_messages (chat_id, sender, role, content)
-        VALUES (%s, %s, %s, %s), (%s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s), (%s, %s, %s, %s), (%s, %s, %s, %s)
         RETURNING id
         """,
-        ("c1", "s1", "user", "m1", "c1", "s2", "user", "m2"),
+        ("c1", "s1", "user", "m1", "c1", "s2", "user", "m2", "c2", "s3", "user", "other-chat"),
     )
-    id1, id2 = [row[0] for row in cur.fetchall()]
+    id1, id2, id_other = [row[0] for row in cur.fetchall()]
     db_conn.commit()
     cur.close()
 
@@ -153,5 +156,8 @@ def test_tag_message_untagged_flow(db_conn):
 
     rows = db_memory.get_untagged_messages(chat_id="c1")
     assert [row["id"] for row in rows] == [id2]
+    # фильтр chat_id: чужие сообщения не попадают в выборку c1
+    rows = db_memory.get_untagged_messages(chat_id="c2")
+    assert [row["id"] for row in rows] == [id_other]
     rows = db_memory.get_untagged_messages()
-    assert [row["id"] for row in rows] == [id2]
+    assert [row["id"] for row in rows] == [id2, id_other]

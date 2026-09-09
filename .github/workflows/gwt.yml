@@ -109,6 +109,16 @@ jobs:
         env:
           GWT_TEST_DB_DSN: postgres://gwt:gwt@localhost:5433/gwt_test
         run: |
+          # R3-guard: test-DB обязана отвечать; иначе db_memory тесты молча skip'нутся
+          python3 - <<'PYEOF'
+          import os, sys, psycopg2
+          dsn = os.environ.get("GWT_TEST_DB_DSN")
+          assert dsn, "GWT_TEST_DB_DSN не задан — CI-конфигурация сломана"
+          try:
+              psycopg2.connect(dsn, connect_timeout=5).close()
+          except Exception as e:
+              sys.exit(f"test-DB недоступна: {e}")
+          PYEOF
           # Диапазон: push = before..HEAD; PR = base.sha..HEAD; fallback HEAD~1
           BASE="${{ github.event.before }}"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then

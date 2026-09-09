@@ -2181,3 +2181,8 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **09.09.2026 04:05** — GWT: debt closure — authority+extractor 8 CI scenarios, no-ci converted (`5cde0c8`)
 - **09.09.2026 04:05** — SDG: writeback 5cde0c8 (`d53a162`)
 - **09.09.2026 04:19** — GWT: debt fix — can_send code dead trigger out, is_mutation orchestrator sweep (`17c2ecb`)
+- **09.09.2026 04:19** — SDG: writeback 17c2ecb (`4c4f18f`)
+- **09.09.2026 04:31** — GWT: data-ingestion test-DB — 4 db_memory scenarios on postgres service (`7c5c965`)
+- **09.09.2026 04:31** — SDG: writeback 7c5c965 (`6209e4c`)
+- **09.09.2026 04:33** — GWT: data-ingestion test-DB — 4 db_memory scenarios on postgres service (`575d7ac`)
+- **09.09.2026 04:33** — SDG: writeback 575d7ac (`eac1b7b`)
