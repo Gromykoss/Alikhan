@@ -2166,3 +2166,8 @@ Evolution API заменён на Hermes WhatsApp Bridge (:3000).
 - **09.09.2026 02:16** — SDG: writeback bb0c74d (`7522809`)
 - **09.09.2026 02:16** — SDG: writeback bb0c74d (`ad6ea17`)
 - **09.09.2026 02:26** — GWT: 4.7 fix — ack scenario matches actual test (POST /messages-ack != 404) (`00dc92a`)
+- **09.09.2026 02:26** — SDG: writeback 00dc92a (`93365d9`)
+- **09.09.2026 02:44** — GWT: phase 4.8 — agent-routing-safety 2 CI contracts + can_send UNTESTED debt (`9c73da2`)
+- **09.09.2026 02:45** — SDG: writeback 9c73da2 (`7ece0c0`)
+- **09.09.2026 02:45** — SDG: writeback 9c73da2 (`f40fa21`)
+- **09.09.2026 03:00** — GWT: 4.8 fix — config.py dead trigger out of S1 code, THEN 3rd assert, header comment (`12f0383`)
