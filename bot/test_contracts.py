@@ -46,6 +46,7 @@ def _top_level_imports(filepath):
 # Тест 1: bridge_wrapper — fill_ejo.py должен импортировать EVO, KEY
 # ═══════════════════════════════════════════════════════════════════════════
 
+@pytest.mark.scenario("agent-routing-safety.fill_ejo_no_evolution_imports")
 def test_contract_bridge_wrapper_import():
     """Контракт: fill_ejo.py НЕ импортирует EVO/KEY из bridge_wrapper — фото читаются с диска напрямую (Evolution API мёртв)."""
     fill_ejo_path = os.path.join(os.path.dirname(__file__), 'fill_ejo.py')
@@ -176,6 +177,7 @@ def test_contract_fill_ejo_no_direct_db():
 # Тест 5: messaging.py импортирует EVO, KEY из config
 # ═══════════════════════════════════════════════════════════════════════════
 
+@pytest.mark.scenario("agent-routing-safety.messaging_imports_secrets_from_config")
 def test_contract_messaging_imports_bridge():
     """Контракт v6: messaging.py импортирует EVO, KEY из config, не bridge_wrapper."""
     messaging_path = os.path.join(os.path.dirname(__file__), 'messaging.py')
