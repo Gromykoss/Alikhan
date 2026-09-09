@@ -20,5 +20,29 @@
 - `curl :3000/health` → `status:connected` НЕ значит, что inbound расшифровывается (decrypt-ошибки «No session found»).
 - Активный journal: `~/.hermes/profiles/alikhan/whatsapp/session/collect_journal.jsonl` (НЕ legacy `whatsapp/collect_journal.jsonl`).
 
+## GWT Scenarios
+
+### GIVEN OpenAPI-контракт моста `whatsapp-bridge.openapi_contract_valid`
+- WHEN чтение `docs/bridge_openapi.json`
+- THEN json содержит непустые `paths` и `components`
+
+### GIVEN живой bridge :3000 `whatsapp-bridge.health_matches_openapi`
+<!-- no-ci -->
+**UNTESTED (CI):** тест ходит в live bridge :3000 (VPS-only), в runner моста нет; прогон на VPS при деплое bridge
+- WHEN GET /health
+- THEN HTTP 200, поля status/queueLength/uptime/scriptHash/sendReadReceipts присутствуют, status == connected
+
+### GIVEN живой bridge :3000 `whatsapp-bridge.ack_endpoint`
+<!-- no-ci -->
+**UNTESTED (CI):** live bridge :3000 (VPS-only)
+- WHEN GET /ack с PRODUCTION_GID
+- THEN HTTP 200
+
+### GIVEN живой bridge :3000 `whatsapp-bridge.collect_messages_dead`
+<!-- no-ci -->
+**UNTESTED (CI):** live bridge :3000 (VPS-only)
+- WHEN GET /collect-messages
+- THEN HTTP 404 (dead-контракт: endpoint удалён и не должен оживать)
+
 ## Update Rule
 Менялись endpoints / поведение моста → обнови CONTRACTS.md §bridge + эту карточку.

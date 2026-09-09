@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import requests
 
 
@@ -52,6 +53,7 @@ def test_bridge_collect_messages_dead():
     assert resp.status_code == 404, f"/collect-messages должен быть dead 404, получил {resp.status_code}"
 
 
+@pytest.mark.scenario("whatsapp-bridge.openapi_contract_valid")
 def test_bridge_openapi_valid():
     data = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
 
