@@ -140,3 +140,23 @@ document-extraction.decode_base64_data_uri:
   test: bot/test_document_extractor.py::test_decode_base64_data_uri
   code:
     - bot/document_extractor.py
+data-ingestion.ensure_memory_tables_idempotent:
+  card: openspec/specs/data-ingestion.md
+  test: bot/tests/test_db_memory.py::test_ensure_memory_tables_idempotent
+  code:
+    - bot/db_memory.py
+data-ingestion.save_fact_roundtrip_lookup:
+  card: openspec/specs/data-ingestion.md
+  test: bot/tests/test_db_memory.py::test_save_fact_roundtrip_lookup
+  code:
+    - bot/db_memory.py
+data-ingestion.fact_lookup_filters_and_order:
+  card: openspec/specs/data-ingestion.md
+  test: bot/tests/test_db_memory.py::test_fact_lookup_filters_and_order
+  code:
+    - bot/db_memory.py
+data-ingestion.tag_message_untagged_flow:
+  card: openspec/specs/data-ingestion.md
+  test: bot/tests/test_db_memory.py::test_tag_message_untagged_flow
+  code:
+    - bot/db_memory.py

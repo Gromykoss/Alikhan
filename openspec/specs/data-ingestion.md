@@ -24,3 +24,19 @@
 <!-- no-ci -->
 - WHEN SELECT из ojr_photo_log + bot_memory_messages за сегодня
 - THEN фото с local_path существуют; 0 = WARNING не FAIL (семантика smoke-теста); live-DB — в CI не переносим (bot/test_smoke.py::test_smoke_photo_pipeline)
+
+### GIVEN тестовая Postgres `data-ingestion.ensure_memory_tables_idempotent`
+- WHEN `ensure_memory_tables()` вызывается дважды
+- THEN оба вызова без исключений; `bot_memory_facts` существует; колонка `tags` (JSONB) у `bot_memory_messages` существует
+
+### GIVEN тестовая Postgres `data-ingestion.save_fact_roundtrip_lookup`
+- WHEN `save_fact()` пишет факт (building/category/date/source_ids) и `fact_lookup()` читает
+- THEN roundtrip полей точный (INTEGER[] source_ids сохраняется), lookup по другому category пуст
+
+### GIVEN тестовая Postgres `data-ingestion.fact_lookup_filters_and_order`
+- WHEN факты за 3 даты/2 здания, `fact_lookup()` с фильтрами
+- THEN ORDER BY fact_date DESC, LIMIT отсекает, фильтры building/start_date/end_date сужают до ожидаемых строк
+
+### GIVEN тестовая Postgres `data-ingestion.tag_message_untagged_flow`
+- WHEN `tag_message()` проставляет теги сообщению
+- THEN `get_untagged_messages()` исключает тегнутое, фильтр chat_id работает
